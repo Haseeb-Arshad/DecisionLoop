@@ -1,4 +1,4 @@
-import { sql } from "@/db/client";
+import { sql, toJsonValue } from "@/db/client";
 import type {
   McpVerification,
   MemoryChunkCandidate,
@@ -50,14 +50,14 @@ export async function recordMemoryTrace(input: {
       ${input.tenantId}, ${input.actionType},
       ${input.relatedDecisionId ?? null}, ${input.relatedDocumentId ?? null},
       ${input.queryText ?? null}, ${input.renderedSql ?? null},
-      ${sql.json(input.candidates ?? [])},
+      ${sql.json(toJsonValue(input.candidates ?? []))},
       ${input.usedChunkIds ?? []},
       ${input.llmReasoning ?? null},
-      ${input.mcpVerification ? sql.json(input.mcpVerification as unknown as object) : null}
+      ${input.mcpVerification ? sql.json(toJsonValue(input.mcpVerification)) : null}
     )
     RETURNING *
   `;
-  return mapTrace(row);
+  return mapTrace(row!);
 }
 
 export async function attachMcpVerification(
@@ -65,7 +65,7 @@ export async function attachMcpVerification(
   verification: McpVerification,
 ): Promise<void> {
   await sql`
-    UPDATE memory_traces SET mcp_verification = ${sql.json(verification as unknown as object)}
+    UPDATE memory_traces SET mcp_verification = ${sql.json(toJsonValue(verification))}
     WHERE id = ${traceId}
   `;
 }

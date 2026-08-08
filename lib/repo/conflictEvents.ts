@@ -37,7 +37,7 @@ export async function createConflictEvent(input: {
     )
     RETURNING *
   `;
-  return mapConflict(row);
+  return mapConflict(row!);
 }
 
 export async function listConflictEventsForDecision(

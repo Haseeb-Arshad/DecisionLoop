@@ -1,4 +1,4 @@
-import { sql } from "@/db/client";
+import { sql, toJsonValue } from "@/db/client";
 import type { AuditEvent } from "@/lib/types";
 
 function mapAudit(row: Record<string, unknown>): AuditEvent {
@@ -32,11 +32,11 @@ export async function recordAuditEvent(input: {
       ${input.tenantId}, ${input.actorUserId ?? null},
       ${input.actorLabel ?? (input.actorUserId ? null : "system")},
       ${input.action}, ${input.entityType ?? null}, ${input.entityId ?? null},
-      ${input.metadata ? sql.json(input.metadata) : null}
+      ${input.metadata ? sql.json(toJsonValue(input.metadata)) : null}
     )
     RETURNING *
   `;
-  return mapAudit(row);
+  return mapAudit(row!);
 }
 
 export async function listRecentAuditEvents(

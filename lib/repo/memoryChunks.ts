@@ -46,7 +46,7 @@ export async function insertMemoryChunk(input: {
     )
     RETURNING *
   `;
-  return mapChunk(row);
+  return mapChunk(row!);
 }
 
 export interface VectorSearchResult {

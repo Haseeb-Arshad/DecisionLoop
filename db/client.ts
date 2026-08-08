@@ -40,12 +40,40 @@ function createClient() {
   });
 }
 
-// Reuse the pool across Next.js hot-reloads / lambda warm invocations instead
-// of leaking a new pool per reload.
-export const sql = globalThis.__decisionloop_sql__ ?? createClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalThis.__decisionloop_sql__ = sql;
+function getOrCreateClient(): ReturnType<typeof postgres> {
+  if (!globalThis.__decisionloop_sql__) {
+    globalThis.__decisionloop_sql__ = createClient();
+  }
+  return globalThis.__decisionloop_sql__;
 }
 
+// `sql` is a lazy proxy, not a live connection created at import time. Next.js
+// executes server-component modules during `next build` (route analysis,
+// "Collecting page data") even for routes that never touch the DB at build
+// time — eagerly connecting here would make a missing DATABASE_URL a build
+// failure instead of a runtime one. The proxy defers both the "is it set"
+// check and the actual TCP connection until the first real query.
+export const sql = new Proxy(function () {} as unknown as ReturnType<typeof postgres>, {
+  apply(_target, _thisArg, args) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (getOrCreateClient() as any)(...args);
+  },
+  get(_target, prop) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (getOrCreateClient() as any)[prop];
+  },
+});
+
 export type Sql = typeof sql;
+
+/**
+ * postgres.js types `sql.json()` against its own recursive JSONValue union,
+ * which our domain types (built from `unknown`-bearing interfaces) don't
+ * structurally satisfy even though they're always plain JSON at runtime.
+ * This is the one sanctioned escape hatch for that — use it instead of an
+ * inline `as any` so every JSONB write goes through one visibly-named spot.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function toJsonValue(value: unknown): any {
+  return value;
+}

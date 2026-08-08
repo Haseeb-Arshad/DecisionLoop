@@ -100,7 +100,7 @@ export async function createDecision(
       )
       RETURNING *
     `;
-    const decision = mapDecision(decisionRow);
+    const decision = mapDecision(decisionRow!);
 
     const options: DecisionOption[] = [];
     for (const opt of input.options) {
@@ -113,7 +113,7 @@ export async function createDecision(
         )
         RETURNING *
       `;
-      options.push(mapOption(row));
+      options.push(mapOption(row!));
     }
 
     const assumptions: Assumption[] = [];
@@ -127,7 +127,7 @@ export async function createDecision(
         )
         RETURNING *
       `;
-      assumptions.push(mapAssumption(row));
+      assumptions.push(mapAssumption(row!));
     }
 
     return { ...decision, options, assumptions };

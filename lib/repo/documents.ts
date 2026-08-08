@@ -34,7 +34,7 @@ export async function createDocument(input: {
     )
     RETURNING *
   `;
-  return mapDocument(row);
+  return mapDocument(row!);
 }
 
 export async function updateDocumentStatus(

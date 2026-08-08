@@ -39,7 +39,7 @@ export async function createTenant(name: string): Promise<Tenant> {
     VALUES (${name}, ${slug})
     RETURNING id, name, slug, created_at
   `;
-  return mapTenant(row);
+  return mapTenant(row!);
 }
 
 export async function getTenantById(tenantId: string): Promise<Tenant | null> {

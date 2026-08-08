@@ -30,7 +30,7 @@ export async function createUser(input: {
     )
     RETURNING id, tenant_id, email, name, role, created_at
   `;
-  return mapUser(row);
+  return mapUser(row!);
 }
 
 export async function findUserByEmail(
