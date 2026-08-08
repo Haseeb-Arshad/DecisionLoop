@@ -126,7 +126,20 @@ Amplify already needs.
 - Multi-region CockroachDB topology — single-region Serverless cluster is sufficient to prove the
   product claim.
 
-## 10. Credentials this build needs (external services)
+## 10. Known limitations (explicit, not accidental)
+
+- No rate limiting on auth or API routes — acceptable for a hackathon demo behind a single
+  workspace; would add per-IP/per-tenant limits before any real traffic.
+- No email verification or password reset flow — signup is immediate. Fine for a demo account;
+  a real deployment would add both.
+- Document chunking (`lib/engine/documentIngestion.ts`) is paragraph-based with a fixed-size
+  fallback, not a token-aware splitter — sufficient for the pricing-sheet/short-report documents
+  this demo targets, not for very large or densely-formatted documents.
+- Conflict detection runs synchronously inside the upload-confirm request. Fine at demo volume;
+  a production build would move it to a queue so a slow LLM call doesn't hold the HTTP request
+  open.
+
+## 11. Credentials this build needs (external services)
 
 None of these block scaffolding, schema, or UI work — they're needed starting at the
 "CockroachDB connectivity" and "document ingestion" steps:
