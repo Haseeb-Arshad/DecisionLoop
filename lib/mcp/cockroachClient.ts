@@ -77,11 +77,25 @@ export async function verifyRowsViaMcp(
     };
   }
 
+  // chunkIds always come from our own memory_traces rows (never client input
+  // directly), but this string gets interpolated into SQL text handed to an
+  // external MCP server rather than passed as a bind parameter — the MCP
+  // protocol's select_query tool takes a single SQL string, not a
+  // parameterized query. Validate the shape defensively before building it.
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const validIds = chunkIds.filter((id) => uuidPattern.test(id));
+  if (validIds.length !== chunkIds.length) {
+    log.warn({ chunkIds }, "verifyRowsViaMcp received non-UUID chunk ids — dropping them");
+  }
+  if (validIds.length === 0) {
+    return { verified: true, toolCalls: [], rawRows: [] };
+  }
+
   try {
     return await withMcpClient(async (client) => {
       const query =
         `SELECT id, source_type, source_id, decision_id, left(content, 200) AS content_preview ` +
-        `FROM memory_chunks WHERE id IN (${chunkIds.map((id) => `'${id}'`).join(", ")})`;
+        `FROM memory_chunks WHERE id IN (${validIds.map((id) => `'${id}'`).join(", ")})`;
 
       const result = await client.callTool({
         name: "select_query",
