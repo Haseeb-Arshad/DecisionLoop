@@ -10,7 +10,7 @@ function mapTenant(row: Record<string, unknown>): Tenant {
   };
 }
 
-function slugify(name: string): string {
+export function slugify(name: string): string {
   return (
     name
       .toLowerCase()

@@ -16,26 +16,33 @@ const log = childLogger({ module: "documentIngestion" });
 // token-aware splitter.
 const MAX_CHUNKS_PER_DOCUMENT = 12;
 const MIN_CHUNK_LENGTH = 40;
+const MAX_CHUNK_LENGTH = 1200;
 
-function chunkText(text: string): string[] {
+function splitIntoWindows(text: string): string[] {
+  const windows: string[] = [];
+  for (let i = 0; i < text.length; i += MAX_CHUNK_LENGTH) {
+    const slice = text.slice(i, i + MAX_CHUNK_LENGTH).trim();
+    if (slice.length >= MIN_CHUNK_LENGTH) windows.push(slice);
+  }
+  return windows;
+}
+
+export function chunkText(text: string): string[] {
   const paragraphs = text
     .split(/\n{2,}/)
     .map((p) => p.trim())
     .filter((p) => p.length >= MIN_CHUNK_LENGTH);
 
-  if (paragraphs.length > 0) {
-    return paragraphs.slice(0, MAX_CHUNKS_PER_DOCUMENT);
-  }
+  // Paragraph splitting alone doesn't bound chunk size — a document with no
+  // blank-line breaks at all (or one enormous paragraph) would otherwise
+  // become a single oversized chunk. Further window any paragraph that's
+  // still too long, so every chunk this function returns is bounded.
+  const base = paragraphs.length > 0 ? paragraphs : [text.trim()].filter((t) => t.length >= MIN_CHUNK_LENGTH);
+  const bounded = base
+    .flatMap((p) => (p.length > MAX_CHUNK_LENGTH ? splitIntoWindows(p) : [p]))
+    .filter((p) => p.length >= MIN_CHUNK_LENGTH);
 
-  // Fallback for documents with no blank-line paragraph breaks: fixed-size
-  // character windows.
-  const windows: string[] = [];
-  const windowSize = 1200;
-  for (let i = 0; i < text.length && windows.length < MAX_CHUNKS_PER_DOCUMENT; i += windowSize) {
-    const slice = text.slice(i, i + windowSize).trim();
-    if (slice.length >= MIN_CHUNK_LENGTH) windows.push(slice);
-  }
-  return windows;
+  return bounded.slice(0, MAX_CHUNKS_PER_DOCUMENT);
 }
 
 export interface IngestionResult {
