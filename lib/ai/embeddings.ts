@@ -1,64 +1,77 @@
 import crypto from "node:crypto";
+import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 
 /**
- * Embedding provider abstraction. Default: Voyage AI (`voyage-3-lite`,
- * 512 dimensions — matches the memory_chunks.embedding VECTOR(512) column).
- * Voyage is Anthropic's recommended embeddings partner; Claude itself does
- * not serve an embeddings endpoint.
+ * Embedding provider abstraction. Default: Amazon Titan Text Embeddings V2
+ * on Bedrock (`BEDROCK_EMBEDDING_MODEL_ID`, default
+ * `amazon.titan-embed-text-v2:0`), requested at 512 dimensions — matching
+ * the memory_chunks.embedding VECTOR(512) column. Titan V2 retains ~99%
+ * retrieval accuracy at 512 dims vs its 1024 default
+ * (docs.aws.amazon.com/bedrock/latest/userguide/model-card-amazon-titan-text-embeddings-v2.html).
  *
- * When VOYAGE_API_KEY is unset, falls back to a deterministic local hash
- * embedding so `npm run dev`, `npm test`, and the seed script work without a
- * second external credential. The fallback has NO semantic meaning — it's a
+ * When AWS_REGION is unset, falls back to a deterministic local hash
+ * embedding so `npm run dev`, `npm test`, and the seed script work without
+ * live AWS credentials. The fallback has NO semantic meaning — it's a
  * stable pseudo-random unit vector derived from the text's SHA-256 hash, so
- * identical text always embeds identically (useful for tests) but similarity
- * between *different* text is meaningless. Demo/production correctness for
- * retrieval and conflict detection requires a real VOYAGE_API_KEY.
+ * identical text always embeds identically (useful for tests) but
+ * similarity between *different* text is meaningless. Demo/production
+ * correctness for retrieval and conflict detection requires real Bedrock
+ * access with Titan Embeddings model access enabled in the console.
  */
 export const EMBEDDING_DIMENSIONS = 512;
-const VOYAGE_MODEL = "voyage-3-lite";
+const BEDROCK_EMBEDDING_MODEL_ID =
+  process.env.BEDROCK_EMBEDDING_MODEL_ID ?? "amazon.titan-embed-text-v2:0";
 
 export interface EmbeddingProvider {
   readonly modelName: string;
   embed(texts: string[]): Promise<number[][]>;
 }
 
-class VoyageEmbeddingProvider implements EmbeddingProvider {
-  readonly modelName = VOYAGE_MODEL;
-  private readonly apiKey: string;
+let bedrockClient: BedrockRuntimeClient | null = null;
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
+function getBedrockClient(): BedrockRuntimeClient {
+  if (bedrockClient) return bedrockClient;
+  const region = process.env.AWS_REGION;
+  if (!region) {
+    throw new Error("AWS_REGION is not set. See .env.example.");
   }
+  bedrockClient = new BedrockRuntimeClient({ region });
+  return bedrockClient;
+}
+
+interface TitanEmbeddingResponse {
+  embedding: number[];
+  embeddingsByType?: Record<string, number[]>;
+}
+
+class BedrockEmbeddingProvider implements EmbeddingProvider {
+  readonly modelName = BEDROCK_EMBEDDING_MODEL_ID;
 
   async embed(texts: string[]): Promise<number[][]> {
     if (texts.length === 0) return [];
-    const response = await fetch("https://api.voyageai.com/v1/embeddings", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-      },
+    // Titan Text Embeddings V2 takes one inputText per InvokeModel call —
+    // there's no batch endpoint. Run concurrently; document-scale batches
+    // (a handful to ~12 chunks, see lib/engine/documentIngestion.ts) are
+    // well within Bedrock's per-account TPS limits for this.
+    return Promise.all(texts.map((text) => this.embedOne(text)));
+  }
+
+  private async embedOne(text: string): Promise<number[]> {
+    const command = new InvokeModelCommand({
+      modelId: BEDROCK_EMBEDDING_MODEL_ID,
+      contentType: "application/json",
+      accept: "application/json",
       body: JSON.stringify({
-        input: texts,
-        model: VOYAGE_MODEL,
-        input_type: "document",
-        output_dimension: EMBEDDING_DIMENSIONS,
+        inputText: text,
+        dimensions: EMBEDDING_DIMENSIONS,
+        normalize: true,
       }),
     });
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      throw new Error(
-        `Voyage embeddings request failed (${response.status}): ${body.slice(0, 500)}`,
-      );
-    }
-
-    const json = (await response.json()) as {
-      data: Array<{ embedding: number[]; index: number }>;
-    };
-    return json.data
-      .sort((a, b) => a.index - b.index)
-      .map((d) => d.embedding);
+    const response = await getBedrockClient().send(command);
+    const parsed = JSON.parse(
+      new TextDecoder().decode(response.body),
+    ) as TitanEmbeddingResponse;
+    return parsed.embedding;
   }
 }
 
@@ -101,9 +114,8 @@ let provider: EmbeddingProvider | null = null;
 
 export function getEmbeddingProvider(): EmbeddingProvider {
   if (provider) return provider;
-  const apiKey = process.env.VOYAGE_API_KEY;
-  provider = apiKey
-    ? new VoyageEmbeddingProvider(apiKey)
+  provider = process.env.AWS_REGION
+    ? new BedrockEmbeddingProvider()
     : new DeterministicHashEmbeddingProvider();
   return provider;
 }

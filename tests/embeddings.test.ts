@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { EMBEDDING_DIMENSIONS, embedText } from "@/lib/ai/embeddings";
 
-// These exercise the deterministic local fallback provider (no VOYAGE_API_KEY
+// These exercise the deterministic local fallback provider (no AWS_REGION
 // in the test environment) — see lib/ai/embeddings.ts. It has no semantic
 // meaning, but it must be well-formed: right dimensionality, deterministic,
 // and unit-length so cosine similarity in lib/repo/memoryChunks.ts behaves

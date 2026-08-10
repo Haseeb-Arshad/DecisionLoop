@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { UnauthenticatedError } from "@/lib/auth/currentUser";
-import { ClaudeRefusalError } from "@/lib/ai/anthropic";
+import { BedrockRefusalError } from "@/lib/ai/bedrock";
 import { childLogger } from "@/lib/logger";
 
 const log = childLogger({ module: "api" });
@@ -23,7 +23,7 @@ export function handleApiError(err: unknown): NextResponse {
   if (err instanceof ZodError) {
     return jsonError("Invalid request.", 400, err.flatten());
   }
-  if (err instanceof ClaudeRefusalError) {
+  if (err instanceof BedrockRefusalError) {
     return jsonError(
       "The AI declined to process this request.",
       422,

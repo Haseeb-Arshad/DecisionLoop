@@ -17,8 +17,14 @@ export async function GET() {
     checks.database = `error: ${err instanceof Error ? err.message : String(err)}`;
   }
 
-  checks.anthropic = Boolean(process.env.ANTHROPIC_API_KEY);
-  checks.voyageEmbeddings = Boolean(process.env.VOYAGE_API_KEY);
+  // AWS credentials configured is necessary but not sufficient — Bedrock
+  // model access is opt-in per account/region in the console, so this can't
+  // distinguish "reachable" from "will actually work." A real check would
+  // need a live InvokeModel call, which isn't worth the cost on a health
+  // probe hit repeatedly by uptime monitors.
+  checks.awsConfigured = Boolean(process.env.AWS_REGION);
+  checks.bedrockReasoningModel = process.env.BEDROCK_REASONING_MODEL_ID ?? "(using default)";
+  checks.bedrockEmbeddingModel = process.env.BEDROCK_EMBEDDING_MODEL_ID ?? "(using default)";
   checks.s3 = Boolean(process.env.S3_BUCKET_NAME);
   checks.cockroachMcp = mcpConfigured();
 

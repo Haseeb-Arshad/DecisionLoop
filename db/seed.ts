@@ -11,13 +11,14 @@
  * "assumption invalidation" pipelines, not a fixture that could drift from
  * what the app actually does.
  *
- * Requires ANTHROPIC_API_KEY (extraction + conflict judgment) and
- * DATABASE_URL at minimum. AWS S3 is bypassed here — the seed script writes
- * the "uploaded" document's text directly rather than round-tripping
- * through a real S3 presigned upload, since there's no browser in this
- * script. VOYAGE_API_KEY is optional (falls back to the deterministic local
- * embedding — conflict detection still works, just with a weaker retrieval
- * signal than a real embedding model).
+ * Requires DATABASE_URL and AWS credentials with Bedrock model access
+ * enabled for both BEDROCK_REASONING_MODEL_ID (extraction + conflict
+ * judgment) and BEDROCK_EMBEDDING_MODEL_ID (retrieval quality — falls back
+ * to a deterministic local embedding when AWS_REGION is unset, but conflict
+ * detection's retrieval signal is much weaker without a real embedding
+ * model). AWS S3 is bypassed here — the seed script writes the "uploaded"
+ * document's text directly rather than round-tripping through a real S3
+ * presigned upload, since there's no browser in this script.
  *
  * Usage: npm run db:seed
  */
@@ -155,7 +156,7 @@ async function main() {
     console.log(`  ${summary.conflictsFound} conflict(s) found. Decisions marked AT RISK: ${summary.decisionsMarkedAtRisk.join(", ")}`);
     console.log("\n✅ Demo scenario reproduced: DecisionLoop independently flagged the SignalForge decision.");
   } else {
-    console.log("  No conflicts found — check ANTHROPIC_API_KEY / VOYAGE_API_KEY are set to real credentials.");
+    console.log("  No conflicts found — check AWS credentials have Bedrock model access enabled for both BEDROCK_REASONING_MODEL_ID and BEDROCK_EMBEDDING_MODEL_ID.");
   }
 
   console.log(`\nOpen the app and sign in as ${DEMO_EMAIL} / ${DEMO_PASSWORD} to see it:`);

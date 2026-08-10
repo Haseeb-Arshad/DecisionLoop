@@ -15,7 +15,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.68.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1107.0",
     "@aws-sdk/client-s3": "^3.848.0",
     "@aws-sdk/s3-request-presigner": "^3.848.0",
     "@modelcontextprotocol/sdk": "^1.15.0",

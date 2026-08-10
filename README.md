@@ -46,10 +46,10 @@ quietly stopped applying.
 ## Stack
 
 Next.js 15 (App Router, TypeScript) · Tailwind CSS · TanStack Query + TanStack Table ·
-CockroachDB (structured data + native `VECTOR`/C-SPANN vector search) · Claude Opus 5
-(extraction & conflict reasoning) · Voyage AI (embeddings) · AWS S3 (document storage) ·
-CockroachDB Managed MCP Server (independent memory verification) · AWS Amplify Hosting
-(deployment).
+CockroachDB (structured data + native `VECTOR`/C-SPANN vector search) · Claude on Amazon Bedrock
+(extraction & conflict reasoning, behind a `ReasoningProvider` interface) · Amazon Titan Text
+Embeddings V2 on Bedrock · AWS S3 (document storage) · CockroachDB Managed MCP Server (independent
+memory verification) · AWS Amplify Hosting (deployment).
 
 Full decision log and rationale for every choice above: [`docs/architecture.md`](docs/architecture.md).
 
@@ -77,9 +77,10 @@ app at all:
 |---|---|
 | `DATABASE_URL` | Everything — CockroachDB Cloud connection string |
 | `SESSION_SECRET` | Auth (generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`) |
-| `ANTHROPIC_API_KEY` | Decision extraction, conflict judgment — the core product loop |
-| `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET_NAME` | Document upload |
-| `VOYAGE_API_KEY` | Real embeddings (optional — falls back to a deterministic local embedding for dev/tests, see `lib/ai/embeddings.ts`) |
+| `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Document upload (S3) and reasoning/embeddings (Bedrock) |
+| `S3_BUCKET_NAME` | Document upload |
+| `BEDROCK_REASONING_MODEL_ID` | Decision extraction, conflict judgment — the core product loop. **Bedrock model access must be enabled per model in the AWS console** — an IAM key alone doesn't grant it. Defaults to Claude Sonnet 4.5's US inference profile. |
+| `BEDROCK_EMBEDDING_MODEL_ID` | Real embeddings (optional — falls back to a deterministic local embedding for dev/tests when `AWS_REGION` is unset, see `lib/ai/embeddings.ts`). Defaults to Amazon Titan Text Embeddings V2. |
 | `COCKROACHDB_MCP_SERVICE_KEY` | The Memory Inspector's independent MCP verification panel (optional — degrades gracefully) |
 
 ### Tests
@@ -112,7 +113,7 @@ app/            Next.js App Router pages and API routes
   api/          Route handlers — the only place lib/repo functions get tenant-scoped input
 components/     Shared UI (AppShell, DataTable, status badges)
 db/             SQL migrations, connection pool, migration runner, demo seed script
-lib/ai/         Claude extraction + conflict reasoning, embeddings
+lib/ai/         Bedrock-backed extraction + conflict reasoning (ReasoningProvider), embeddings
 lib/aws/        S3 client, presigned upload/download
 lib/auth/       Session cookies, password hashing, tenant-scoped auth context
 lib/engine/     Orchestration: decision memory indexing, document ingestion, conflict detection

@@ -1,6 +1,6 @@
 # DecisionLoop — Architecture & Implementation Decisions
 
-> Living document. Updated as the build progresses. Last updated: 2026-08-09.
+> Living document. Updated as the build progresses. Last updated: 2026-08-11.
 
 ## 1. What DecisionLoop is (and isn't)
 
@@ -51,8 +51,9 @@ Three features get disproportionate engineering attention:
 | Auth | Email + password (bcrypt), signed httpOnly session cookie (`jose` HS256 JWT) | Enough real auth to demonstrate tenant isolation without pulling in an external IdP (extra credential we don't have, and not the point of the demo). |
 | Multitenancy | `tenant_id` (a "workspace") on every table; every query scoped by session tenant; enforced in the repository layer, not ad hoc in route handlers | Cheap, auditable, testable. Row-Level Security is noted as a hardening follow-up, not required for the demo. |
 | Object storage | **AWS S3**, presigned PUT for upload, presigned GET for retrieval | Spec requirement. Presigned URLs avoid proxying large files through the Next.js server. |
-| LLM (extraction, conflict reasoning) | **Anthropic Claude, `claude-opus-5`**, via `@anthropic-ai/sdk`, structured outputs (`output_config.format`) for every extraction call | Highest-quality model for judgment calls (extracting assumptions, deciding whether a new fact contradicts an old one). Structured outputs remove JSON-parsing flakiness. |
-| Embeddings | **Voyage AI `voyage-3-lite`** by default, pluggable `EmbeddingProvider` interface; deterministic local hash-embedding fallback when no `VOYAGE_API_KEY` is set (tests / offline dev) | Anthropic does not serve an embeddings endpoint; Voyage is Anthropic's recommended embeddings partner. The fallback keeps `npm test` and local dev working without a second external credential. |
+| LLM (extraction, conflict reasoning) | **Claude on Amazon Bedrock** (`BEDROCK_REASONING_MODEL_ID`, default Claude Sonnet 4.5's US cross-region inference profile), invoked via `@aws-sdk/client-bedrock-runtime`'s `InvokeModel` using the Anthropic message format, structured outputs (`output_config.format`) for every extraction call. Reached only through the `ReasoningProvider` interface (`lib/ai/reasoningProvider.ts`) — `lib/ai/bedrock.ts#BedrockReasoningProvider` is the sole implementation. | AWS-native reasoning is a named judging criterion, not just "an LLM somewhere" — Bedrock's `InvokeModel` structured-outputs support (GA Feb 2026) matches Anthropic's own `output_config.format` shape closely enough that this was a transport swap, not a rewrite. The interface keeps the transport swappable without touching `lib/ai/extraction.ts` / `lib/ai/conflict.ts`. Bedrock model access is opt-in per account/region in the console — an IAM key alone doesn't grant it. |
+| Deterministic conflict check | Before any model call, `lib/ai/bedrock.ts#tryDeterministicConflictCheck` compares a stated numeric fact against an assumption's structured `{metric, operator, value, unit}` directly — no LLM involved when both sides are structured and the metric/unit match. | A pure numeric contradiction (`price < 25000` vs `price = 42000`) shouldn't need a model to detect. Falls through to the LLM judgment only for cross-metric, unstructured, or inequality-shaped facts. |
+| Embeddings | **Amazon Titan Text Embeddings V2** on Bedrock (`BEDROCK_EMBEDDING_MODEL_ID`), requested at 512 dimensions; deterministic local hash-embedding fallback when `AWS_REGION` is unset (tests / offline dev) | Same AWS-native rationale as reasoning — one cloud provider for both. Titan V2 retains ~99% retrieval accuracy at 512 dims vs. its 1024 default. The fallback keeps `npm test` and local dev working without live AWS credentials. |
 | CockroachDB MCP | Real client of CockroachDB's **Managed MCP Server** (`https://cockroachlabs.cloud/mcp`), invoked from the Memory Inspector API route, using a service-account API key | The Managed MCP Server is designed for AI dev tools, not app runtime traffic — so it is *not* on the hot path for every request. It is used specifically where its purpose lines up with ours: independently proving, through Anthropic's own MCP tool calls (`select_query`, `get_table_schema`), that the rows the Memory Inspector claims were used really are in CockroachDB. This is a genuine second, independent verification path, not a relabeled internal DB call. |
 | Deployment | **AWS Amplify Hosting** (SSR, connects directly to the GitHub repo, builds on push) with a `Dockerfile` kept for an App Runner / ECS fallback | Needs no local Docker/AWS CLI to stand up; judges can watch a build in the Amplify console. |
 | Observability | Structured JSON logs (`pino`), `audit_events` table for every mutating action, `/api/health` and `/api/observability/recent` endpoints | Enough to demonstrate the requirement without standing up Prometheus/Grafana for a hackathon judge to look at once. |
@@ -90,12 +91,12 @@ guessing wrong at build time.
 
 1. Document uploaded → text extracted → chunked → embedded → `memory_chunks` rows written.
 2. A background-triggered (synchronous, for demo simplicity) analysis step:
-   - Extracts structured "facts" from the new document via Claude (`{"subject","metric","value","unit"}`).
+   - Extracts structured "facts" from the new document via Bedrock (`{"subject","metric","value","unit"}`).
    - For each fact, vector-searches `memory_chunks` for the nearest **assumptions** across *all* the
      tenant's decisions (no hint about which decision) — this is what makes it "independently recall".
-   - For each candidate assumption, asks Claude to judge, given the fact and the assumption's
-     `constraint`, whether the fact **invalidates** the assumption, with a structured
-     `{"invalidated": bool, "explanation": string}` output.
+   - For each candidate assumption: try the deterministic numeric comparison first (§3); only if that's
+     inconclusive, ask Claude (via Bedrock) to judge whether the fact **invalidates** the assumption,
+     with a structured `{"invalidated": bool, "explanation": string, "suggestedOptionName": string}` output.
    - Every step (query embedding, SQL run, candidates + scores, verdict) is written to
      `memory_traces` before any decision status changes — so the Memory Inspector can show the
      trace even for the branch that produced no change.
@@ -113,7 +114,7 @@ guessing wrong at build time.
 
 AWS Amplify Hosting, connected to `github.com/Haseeb-Arshad/DecisionLoop`, `main` branch.
 `amplify.yml` runs `npm ci && npm run build`. Environment variables (CockroachDB connection
-string, S3 bucket/region, Anthropic/Voyage keys, CockroachDB MCP service key, session secret) are
+string, S3 bucket/region, Bedrock model IDs, CockroachDB MCP service key, session secret) are
 set in the Amplify console, never committed. A `Dockerfile` is kept in the repo as a portable
 fallback (App Runner / ECS / any container host) since it requires no extra setup beyond what
 Amplify already needs.
@@ -146,10 +147,13 @@ None of these block scaffolding, schema, or UI work — they're needed starting 
 
 - `DATABASE_URL` — CockroachDB Cloud connection string (Serverless or Basic cluster).
 - `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` / `S3_BUCKET_NAME` — for document
-  storage and (later) app deployment.
-- `ANTHROPIC_API_KEY` — Claude Opus 5 for extraction and conflict reasoning.
-- `VOYAGE_API_KEY` — embeddings (optional at dev time; falls back to a deterministic local hash
-  embedding so tests and `npm run dev` work without it).
+  storage, Bedrock reasoning + embeddings, and (later) app deployment. **Bedrock model access must
+  also be enabled per model in the AWS console (Bedrock → Model access)** — the IAM credentials
+  alone don't grant it, and a missing grant fails at call time, not at credential-check time.
+- `BEDROCK_REASONING_MODEL_ID` — defaults to Claude Sonnet 4.5's US cross-region inference profile;
+  override if your account has a different model enabled.
+- `BEDROCK_EMBEDDING_MODEL_ID` — defaults to Amazon Titan Text Embeddings V2 (optional at dev time;
+  falls back to a deterministic local hash embedding when `AWS_REGION` is unset).
 - `COCKROACHDB_MCP_SERVICE_KEY` — service-account API key for CockroachDB's Managed MCP Server,
   used only by the Memory Inspector's independent-verification call.
 - `SESSION_SECRET` — random 32+ byte string for signing auth cookies.
