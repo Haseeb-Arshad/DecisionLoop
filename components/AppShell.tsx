@@ -6,10 +6,14 @@ import { useLogout } from "@/lib/queries";
 import type { Tenant, User } from "@/lib/types";
 
 const NAV_ITEMS = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/projects", label: "Projects" },
   { href: "/decisions", label: "Decisions" },
-  { href: "/documents", label: "Documents" },
+  { href: "/at-risk", label: "At risk" },
+  { href: "/documents", label: "Evidence" },
+  { href: "/ask", label: "Ask" },
   { href: "/inspector", label: "Memory Inspector" },
-  { href: "/audit", label: "Audit log" },
+  { href: "/system", label: "System" },
 ];
 
 export function AppShell({
@@ -32,23 +36,23 @@ export function AppShell({
 
   return (
     <div className="min-h-screen">
-      <div className="border-b border-ink-800 bg-ink-950/80 backdrop-blur-md">
+      <div className="sticky top-0 z-20 border-b border-ink-800 bg-ink-950/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <div className="flex items-center gap-8">
-            <Link href="/decisions" className="flex items-center gap-2">
+            <Link href="/dashboard" className="flex items-center gap-2">
               <div className="flex h-6 w-6 items-center justify-center rounded-md bg-signal-500 text-xs font-bold text-ink-950">
                 D
               </div>
               <span className="text-sm font-semibold">DecisionLoop</span>
             </Link>
-            <nav className="hidden items-center gap-1 sm:flex">
+            <nav className="hidden items-center gap-0.5 lg:flex">
               {NAV_ITEMS.map((item) => {
                 const active = pathname?.startsWith(item.href);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`rounded-md px-3 py-1.5 text-sm transition ${
+                    className={`rounded-md px-2.5 py-1.5 text-sm transition ${
                       active
                         ? "bg-ink-800 text-ink-50"
                         : "text-ink-300 hover:bg-ink-900 hover:text-ink-100"
@@ -70,12 +74,12 @@ export function AppShell({
             </button>
           </div>
         </div>
-        <nav className="flex items-center gap-1 overflow-x-auto px-4 pb-2 sm:hidden">
+        <nav className="flex items-center gap-1 overflow-x-auto px-4 pb-2 lg:hidden">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="whitespace-nowrap rounded-md px-3 py-1.5 text-xs text-ink-300 hover:bg-ink-900"
+              className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs text-ink-300 hover:bg-ink-900"
             >
               {item.label}
             </Link>

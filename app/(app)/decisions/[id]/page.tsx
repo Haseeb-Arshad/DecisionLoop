@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { AssumptionStatusBadge, DecisionStatusBadge } from "@/components/StatusBadge";
+import { DecisionAtRiskCard } from "@/components/DecisionAtRiskCard";
+import { MemoryTimeline } from "@/components/MemoryTimeline";
+import {
+  AssumptionStatusBadge,
+  DecisionStatusBadge,
+  SourceTypeBadge,
+} from "@/components/StatusBadge";
 import { useDecision } from "@/lib/queries";
 
 export default function DecisionDetailPage() {
@@ -20,9 +26,11 @@ export default function DecisionDetailPage() {
     );
   }
 
-  const { decision, conflicts, traces } = data;
+  const { decision, conflicts, traces, evidence, timeline } = data;
   const chosen = decision.options.find((o) => o.isChosen);
   const rejected = decision.options.filter((o) => !o.isChosen);
+  const openConflict = conflicts.find((c) => !c.resolution);
+  const supportingEvidence = evidence.filter((e) => e.evidenceType === "SUPPORTING");
 
   return (
     <div className="animate-fade-in mx-auto max-w-3xl space-y-6">
@@ -39,29 +47,22 @@ export default function DecisionDetailPage() {
         )}
       </div>
 
-      {decision.status === "AT_RISK" && decision.riskExplanation && (
-        <div className="card border-risk-500/40 bg-risk-500/[0.06] p-5">
-          <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-risk-400">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-risk-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-risk-400" />
-            </span>
-            This decision is at risk
-          </p>
-          <p className="text-sm leading-relaxed text-ink-200">{decision.riskExplanation}</p>
-          {conflicts[0]?.suggestedOptionId && (
-            <p className="mt-2 text-sm text-ink-300">
-              Suggested reconsideration:{" "}
-              <span className="font-medium text-ink-100">
-                {decision.options.find((o) => o.id === conflicts[0]?.suggestedOptionId)?.name}
-              </span>
-            </p>
-          )}
+      {openConflict && (
+        <DecisionAtRiskCard
+          decision={decision}
+          conflict={openConflict}
+          evidence={evidence}
+        />
+      )}
+
+      {decision.status === "SUPERSEDED" && decision.supersededByDecisionId && (
+        <div className="card p-4 text-sm text-ink-300">
+          This decision was superseded.{" "}
           <Link
-            href={`/inspector?decisionId=${decision.id}`}
-            className="mt-3 inline-block text-xs text-risk-400 underline decoration-risk-500/40 underline-offset-2 hover:text-risk-300"
+            href={`/decisions/${decision.supersededByDecisionId}`}
+            className="text-signal-400 hover:text-signal-300"
           >
-            See exactly what CockroachDB data drove this →
+            View the decision that replaced it →
           </Link>
         </div>
       )}
@@ -70,6 +71,10 @@ export default function DecisionDetailPage() {
         <div className="card p-5">
           <p className="label !mb-2">Reasoning</p>
           <p className="text-sm leading-relaxed text-ink-200">{decision.reasoning}</p>
+          <p className="mt-3 text-xs text-ink-600">
+            Confidence at commit time: {decision.confidence.toFixed(2)} · importance{" "}
+            {decision.importance.toFixed(2)}
+          </p>
         </div>
       )}
 
@@ -103,20 +108,24 @@ export default function DecisionDetailPage() {
             <div
               key={a.id}
               className={`flex items-start justify-between gap-3 rounded-lg border p-3 ${
-                a.status === "INVALIDATED"
+                a.validityStatus === "INVALIDATED"
                   ? "border-risk-500/40 bg-risk-500/[0.05]"
-                  : "border-ink-700 bg-ink-900/40"
+                  : a.validityStatus === "CHALLENGED"
+                    ? "border-amber-500/40 bg-amber-500/[0.04]"
+                    : "border-ink-700 bg-ink-900/40"
               }`}
             >
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-ink-100">{a.statement}</p>
-                {a.metric && a.operator && a.value !== null && (
-                  <p className="mt-1 font-mono text-xs text-ink-500">
-                    {a.metric} {a.operator} {a.value} {a.unit}
-                  </p>
+                {a.normalizedStatement && (
+                  <p className="mt-1 font-mono text-xs text-ink-500">{a.normalizedStatement}</p>
                 )}
+                <p className="mt-1 text-[11px] text-ink-600">
+                  importance {a.importance.toFixed(2)} · authority {a.authorityScore.toFixed(2)} ·{" "}
+                  {a.assumptionType.toLowerCase()}
+                </p>
               </div>
-              <AssumptionStatusBadge status={a.status} />
+              <AssumptionStatusBadge status={a.validityStatus} />
             </div>
           ))}
           {decision.assumptions.length === 0 && (
@@ -125,19 +134,64 @@ export default function DecisionDetailPage() {
         </div>
       </div>
 
+      {supportingEvidence.length > 0 && (
+        <div className="card p-5">
+          <p className="label !mb-3">Supporting evidence</p>
+          <div className="space-y-2">
+            {supportingEvidence.map((e) => (
+              <div key={e.id} className="rounded-lg border border-ink-700 bg-ink-900/40 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  {e.documentId ? (
+                    <Link
+                      href={`/documents/${e.documentId}`}
+                      className="text-sm text-signal-400 hover:text-signal-300"
+                    >
+                      {e.documentFilename ?? "Document"}
+                      {e.pageNumber ? ` — page ${e.pageNumber}` : ""}
+                    </Link>
+                  ) : (
+                    <span className="text-sm text-ink-300">Recorded at commit time</span>
+                  )}
+                  {e.documentSourceType && (
+                    <SourceTypeBadge
+                      sourceType={e.documentSourceType}
+                      authorityScore={e.documentAuthorityScore ?? undefined}
+                    />
+                  )}
+                </div>
+                {e.excerpt && (
+                  <p className="mt-2 text-xs italic text-ink-400">“{e.excerpt}”</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="card p-5">
+        <p className="label !mb-3">Memory timeline</p>
+        <MemoryTimeline events={timeline} />
+      </div>
+
       {conflicts.length > 0 && (
         <div className="card p-5">
           <p className="label !mb-3">Conflict history</p>
           <div className="space-y-3">
             {conflicts.map((c) => (
-              <div key={c.id} className="rounded-lg border border-risk-500/30 bg-risk-500/[0.04] p-3">
-                <p className="text-xs text-ink-500">
-                  {new Date(c.detectedAt).toLocaleString()}
-                </p>
-                <p className="mt-1 text-sm text-ink-100">
-                  New fact: <span className="italic">&quot;{c.factStatement}&quot;</span>
-                </p>
-                <p className="mt-1 text-sm text-ink-300">{c.explanation}</p>
+              <div
+                key={c.id}
+                className="rounded-lg border border-ink-700 bg-ink-900/40 p-3"
+              >
+                <div className="flex flex-wrap items-center gap-2 text-xs text-ink-500">
+                  <span>{new Date(c.detectedAt).toLocaleString()}</span>
+                  <span className="font-mono">{c.conflictType.replaceAll("_", " ").toLowerCase()}</span>
+                  <span className="font-mono">confidence {c.confidence.toFixed(2)}</span>
+                  {c.resolution && (
+                    <span className="pill bg-ink-700/60 text-ink-200">{c.resolution}</span>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-ink-100">{c.factStatement}</p>
+                <p className="mt-1 text-sm text-ink-400">{c.explanation}</p>
               </div>
             ))}
           </div>

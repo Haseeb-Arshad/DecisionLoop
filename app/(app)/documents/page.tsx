@@ -2,21 +2,24 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import { DocumentStatusBadge } from "@/components/StatusBadge";
+import { DocumentStatusBadge, SourceTypeBadge } from "@/components/StatusBadge";
+import { SOURCE_TYPE_OPTIONS } from "@/lib/api/uploadTypes";
 import { useDocuments, useUploadDocument } from "@/lib/queries";
-import type { ConflictDetectionSummary } from "@/lib/engine/conflictDetection";
+import type { DocumentSourceType } from "@/lib/types";
+import type { UploadResult } from "@/lib/api/client";
 
 export default function DocumentsPage() {
   const { data, isLoading } = useDocuments();
   const upload = useUploadDocument();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [lastSummary, setLastSummary] = useState<ConflictDetectionSummary | null>(null);
+  const [lastResult, setLastResult] = useState<UploadResult | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [sourceType, setSourceType] = useState<DocumentSourceType>("VENDOR_OFFICIAL");
 
   async function handleFile(file: File) {
-    setLastSummary(null);
-    const result = await upload.mutateAsync(file);
-    setLastSummary(result.conflictSummary);
+    setLastResult(null);
+    const result = await upload.mutateAsync({ file, sourceType });
+    setLastResult(result);
   }
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -33,17 +36,40 @@ export default function DocumentsPage() {
   }
 
   const documents = data?.documents ?? [];
+  const summary = lastResult?.conflictSummary;
+  const activeSource = SOURCE_TYPE_OPTIONS.find((o) => o.value === sourceType);
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-ink-50">Documents</h1>
+        <h1 className="text-xl font-semibold text-ink-50">Evidence</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-400">
           Upload a document with no reference to any existing decision. DecisionLoop extracts
           facts, checks them against every stored assumption across your workspace, and flags a
-          decision as{" "}
-          <span className="font-medium text-risk-400">at risk</span> if one no longer holds.
+          decision as <span className="font-medium text-risk-400">at risk</span> if one no longer
+          holds.
         </p>
+      </div>
+
+      <div className="card p-4">
+        <label className="label" htmlFor="source-type">
+          Source type
+        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            id="source-type"
+            className="input max-w-xs"
+            value={sourceType}
+            onChange={(e) => setSourceType(e.target.value as DocumentSourceType)}
+          >
+            {SOURCE_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-ink-500">{activeSource?.hint}</p>
+        </div>
       </div>
 
       <div
@@ -67,7 +93,7 @@ export default function DocumentsPage() {
             browse
           </button>
         </p>
-        <p className="text-xs text-ink-500">PDF, TXT, or Markdown. Max 50MB.</p>
+        <p className="text-xs text-ink-500">PDF, TXT, or Markdown. Max 25MB.</p>
         <input
           ref={fileInputRef}
           type="file"
@@ -86,34 +112,65 @@ export default function DocumentsPage() {
         )}
       </div>
 
-      {lastSummary && (
+      {lastResult && (
         <div
           className={`card p-5 ${
-            lastSummary.conflictsFound > 0 ? "border-risk-500/40 bg-risk-500/[0.05]" : ""
+            summary && summary.conflictsFound > 0 ? "border-risk-500/40 bg-risk-500/[0.05]" : ""
           }`}
         >
-          <p className="mb-2 text-sm font-semibold text-ink-100">
-            {lastSummary.conflictsFound > 0
-              ? `${lastSummary.conflictsFound} conflict${lastSummary.conflictsFound === 1 ? "" : "s"} found`
-              : "No conflicts found"}
-          </p>
-          <p className="text-sm text-ink-400">
-            Extracted {lastSummary.factsExtracted} fact{lastSummary.factsExtracted === 1 ? "" : "s"},
-            checked against {lastSummary.candidatesConsidered} candidate assumption
-            {lastSummary.candidatesConsidered === 1 ? "" : "s"} retrieved from CockroachDB.
-          </p>
-          {lastSummary.decisionsMarkedAtRisk.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {lastSummary.decisionsMarkedAtRisk.map((id) => (
-                <Link
-                  key={id}
-                  href={`/decisions/${id}`}
-                  className="pill bg-risk-500/15 text-risk-400 ring-1 ring-inset ring-risk-500/30 hover:bg-risk-500/25"
-                >
-                  View decision now at risk →
-                </Link>
-              ))}
-            </div>
+          {lastResult.duplicateOf ? (
+            <>
+              <p className="mb-1 text-sm font-semibold text-ink-100">
+                Duplicate content — no re-analysis
+              </p>
+              <p className="text-sm text-ink-400">
+                This file&apos;s content matches a document already in memory, so DecisionLoop
+                skipped re-embedding it and did not raise the same conflicts twice.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="mb-2 text-sm font-semibold text-ink-100">
+                {summary && summary.conflictsFound > 0
+                  ? `${summary.conflictsFound} conflict${summary.conflictsFound === 1 ? "" : "s"} found`
+                  : "No conflicts found"}
+              </p>
+              <p className="text-sm text-ink-400">
+                Extracted {summary?.factsExtracted ?? 0} fact
+                {summary?.factsExtracted === 1 ? "" : "s"}, checked against{" "}
+                {summary?.candidatesConsidered ?? 0} candidate assumption
+                {summary?.candidatesConsidered === 1 ? "" : "s"} retrieved from CockroachDB.
+                {summary && summary.assumptionsChallenged > 0 && (
+                  <>
+                    {" "}
+                    <span className="text-amber-400">
+                      {summary.assumptionsChallenged} challenged
+                    </span>{" "}
+                    (source authority too low to invalidate outright).
+                  </>
+                )}
+              </p>
+              {summary?.injectionSuspected && (
+                <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/[0.06] p-3 text-xs text-amber-300">
+                  This document contains text that looks like instructions to an AI
+                  ({summary.injectionPatterns.join(", ")}). It was processed as data only — see
+                  the audit log.
+                </p>
+              )}
+              {summary && summary.decisionsMarkedAtRisk.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {summary.decisionsMarkedAtRisk.map((id) => (
+                    <Link
+                      key={id}
+                      href={`/decisions/${id}`}
+                      className="pill bg-risk-500/15 text-risk-400 ring-1 ring-inset ring-risk-500/30 hover:bg-risk-500/25"
+                    >
+                      View decision now at risk →
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -129,16 +186,26 @@ export default function DocumentsPage() {
         ) : (
           <div className="card divide-y divide-ink-800/60">
             {documents.map((doc) => (
-              <div key={doc.id} className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <p className="text-sm text-ink-100">{doc.filename}</p>
+              <Link
+                key={doc.id}
+                href={`/documents/${doc.id}`}
+                className="flex items-center justify-between gap-4 px-4 py-3 transition hover:bg-ink-800/40"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm text-ink-100">{doc.filename}</p>
                   <p className="mt-0.5 text-xs text-ink-500">
                     {new Date(doc.createdAt).toLocaleString()}
                     {doc.processingError ? ` — ${doc.processingError}` : ""}
                   </p>
                 </div>
-                <DocumentStatusBadge status={doc.status} />
-              </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <SourceTypeBadge
+                    sourceType={doc.sourceType}
+                    authorityScore={doc.authorityScore}
+                  />
+                  <DocumentStatusBadge status={doc.status} />
+                </div>
+              </Link>
             ))}
           </div>
         )}

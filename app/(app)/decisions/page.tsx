@@ -32,11 +32,15 @@ const columns: ColumnDef<DecisionWithDetails, unknown>[] = [
     header: "Assumptions",
     accessorFn: (d) => d.assumptions.length,
     cell: ({ row }) => {
-      const total = row.original.assumptions.length;
-      const invalidated = row.original.assumptions.filter((a) => a.status === "INVALIDATED").length;
+      const all = row.original.assumptions;
+      const valid = all.filter((a) => a.validityStatus === "VALID").length;
+      const challenged = all.filter((a) => a.validityStatus === "CHALLENGED").length;
+      const invalid = all.filter((a) => a.validityStatus === "INVALIDATED").length;
       return (
         <span className="text-xs text-ink-300">
-          {total - invalidated}/{total} valid
+          {valid}/{all.length} valid
+          {challenged > 0 && <span className="text-amber-400"> · {challenged} challenged</span>}
+          {invalid > 0 && <span className="text-risk-400"> · {invalid} invalidated</span>}
         </span>
       );
     },
@@ -70,7 +74,7 @@ export default function DecisionsPage() {
           <h1 className="text-xl font-semibold text-ink-50">Decisions</h1>
           <p className="mt-1 text-sm text-ink-400">
             {atRiskCount > 0
-              ? `${atRiskCount} decision${atRiskCount === 1 ? "" : "s"} at risk — new evidence contradicts a stored assumption.`
+              ? `${atRiskCount} decision${atRiskCount === 1 ? "" : "s"} at risk — an assumption changed.`
               : "Every stored assumption still holds, as far as DecisionLoop knows."}
           </p>
         </div>
@@ -90,7 +94,7 @@ export default function DecisionsPage() {
           columns={columns}
           data={decisions}
           onRowClick={(d) => router.push(`/decisions/${d.id}`)}
-          emptyLabel="No decisions committed yet. Start with 'Commit a decision'."
+          emptyLabel="No decisions committed yet. Make your first decision part of your organization's memory."
         />
       )}
     </div>

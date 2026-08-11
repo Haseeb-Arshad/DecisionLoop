@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type CreateDecisionInput } from "@/lib/api/client";
+import type { DecisionSourceUpload } from "@/lib/api/uploadTypes";
 import type { DecisionStatus } from "@/lib/types";
 
 // Centralized TanStack Query hooks. One file, kept small on purpose — this
@@ -11,12 +12,33 @@ import type { DecisionStatus } from "@/lib/types";
 
 export const queryKeys = {
   me: ["me"] as const,
-  decisions: (status?: DecisionStatus) => ["decisions", status ?? "all"] as const,
+  projects: ["projects"] as const,
+  project: (id: string) => ["project", id] as const,
+  decisions: (status?: DecisionStatus, projectId?: string) =>
+    ["decisions", status ?? "all", projectId ?? "all"] as const,
   decision: (id: string) => ["decision", id] as const,
   documents: ["documents"] as const,
+  document: (id: string) => ["document", id] as const,
   memoryTraces: (decisionId?: string) => ["memoryTraces", decisionId ?? "all"] as const,
+  observability: ["observability"] as const,
+  analystQuestions: ["analystQuestions"] as const,
   audit: ["audit"] as const,
 };
+
+/**
+ * Invalidated together after any mutation that can change decision state.
+ * Ingesting a document can flip a decision to AT_RISK, write memory traces,
+ * and move observability counters — so these travel as a set rather than
+ * being re-derived at each call site.
+ */
+function invalidateMemorySurface(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ["decisions"] });
+  qc.invalidateQueries({ queryKey: ["decision"] });
+  qc.invalidateQueries({ queryKey: ["memoryTraces"] });
+  qc.invalidateQueries({ queryKey: queryKeys.observability });
+  qc.invalidateQueries({ queryKey: queryKeys.projects });
+  qc.invalidateQueries({ queryKey: queryKeys.audit });
+}
 
 export function useMe() {
   return useQuery({ queryKey: queryKeys.me, queryFn: api.me });
@@ -46,10 +68,34 @@ export function useLogout() {
   });
 }
 
-export function useDecisions(status?: DecisionStatus) {
+// ── Projects ────────────────────────────────────────────────────────────────
+
+export function useProjects() {
+  return useQuery({ queryKey: queryKeys.projects, queryFn: api.listProjects });
+}
+
+export function useProject(id: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.decisions(status),
-    queryFn: () => api.listDecisions(status),
+    queryKey: queryKeys.project(id ?? ""),
+    queryFn: () => api.getProject(id as string),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCreateProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.createProject,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.projects }),
+  });
+}
+
+// ── Decisions ───────────────────────────────────────────────────────────────
+
+export function useDecisions(opts: { status?: DecisionStatus; projectId?: string } = {}) {
+  return useQuery({
+    queryKey: queryKeys.decisions(opts.status, opts.projectId),
+    queryFn: () => api.listDecisions(opts),
   });
 }
 
@@ -69,36 +115,70 @@ export function useCreateDecision() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateDecisionInput) => api.createDecision(input),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["decisions"] });
-    },
+    onSuccess: () => invalidateMemorySurface(qc),
   });
 }
+
+export function useReopenDecision() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { decisionId: string; conflictId?: string; note?: string }) =>
+      api.reopenDecision(input.decisionId, {
+        conflictId: input.conflictId,
+        note: input.note,
+      }),
+    onSuccess: () => invalidateMemorySurface(qc),
+  });
+}
+
+export function useResolveConflict() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      conflictId: string;
+      resolution: "dismiss" | "accept";
+      note?: string;
+    }) => api.resolveConflict(input.conflictId, { resolution: input.resolution, note: input.note }),
+    onSuccess: () => invalidateMemorySurface(qc),
+  });
+}
+
+// ── Documents ───────────────────────────────────────────────────────────────
 
 export function useDocuments() {
   return useQuery({ queryKey: queryKeys.documents, queryFn: api.listDocuments });
 }
 
+export function useDocument(id: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.document(id ?? ""),
+    queryFn: () => api.getDocument(id as string),
+    enabled: Boolean(id),
+  });
+}
+
 export function useUploadDocument() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async (input: DecisionSourceUpload) => {
       const { document, uploadUrl } = await api.requestUploadUrl({
-        filename: file.name,
-        mimeType: file.type || "application/octet-stream",
-        sizeBytes: file.size,
+        filename: input.file.name,
+        mimeType: input.file.type || "text/plain",
+        sizeBytes: input.file.size,
+        projectId: input.projectId,
+        sourceType: input.sourceType,
       });
-      await api.uploadToS3(uploadUrl, file);
-      const result = await api.confirmUpload(document.id);
-      return result;
+      await api.uploadToS3(uploadUrl, input.file);
+      return api.confirmUpload(document.id);
     },
-    onSuccess: () => {
+    onSuccess: (_data, _vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.documents });
-      qc.invalidateQueries({ queryKey: ["decisions"] });
-      qc.invalidateQueries({ queryKey: ["memoryTraces"] });
+      invalidateMemorySurface(qc);
     },
   });
 }
+
+// ── Memory ──────────────────────────────────────────────────────────────────
 
 export function useMemoryTraces(decisionId?: string) {
   return useQuery({
@@ -112,6 +192,40 @@ export function useVerifyTrace() {
   return useMutation({
     mutationFn: (traceId: string) => api.verifyTrace(traceId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["memoryTraces"] }),
+  });
+}
+
+export function useAsk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.ask,
+    // Asking a question writes an agent run and memory events, so the
+    // observability view is stale afterwards even though nothing "changed".
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.observability });
+      qc.invalidateQueries({ queryKey: ["memoryTraces"] });
+    },
+  });
+}
+
+// ── MCP analyst / observability ─────────────────────────────────────────────
+
+export function useAnalystQuestions() {
+  return useQuery({
+    queryKey: queryKeys.analystQuestions,
+    queryFn: api.listAnalystQuestions,
+  });
+}
+
+export function useRunAnalystQuestion() {
+  return useMutation({ mutationFn: api.runAnalystQuestion });
+}
+
+export function useObservability() {
+  return useQuery({
+    queryKey: queryKeys.observability,
+    queryFn: api.getObservability,
+    refetchInterval: 15_000,
   });
 }
 

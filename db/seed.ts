@@ -1,76 +1,116 @@
 /**
- * Deterministic demo data for the defining scenario in docs/architecture.md
- * §2: SignalForge vs MetricLake, committed in "session 1," then invalidated
- * by a pricing document uploaded in "session 2" with no reference back to
- * the original decision.
+ * Deterministic demo seed for the scenario in decision.md §42: Northstar
+ * Commerce choosing between SignalForge and MetricLake, then having that
+ * decision invalidated months later by a repricing notice.
  *
  * This calls the SAME engine functions the app's API routes call
- * (extractDecisionFromNotes, createDecision, indexDecisionMemory,
- * ingestDocument) rather than inserting pre-baked rows — so running this
- * script is itself a working end-to-end test of the "Commit Decision" and
- * "assumption invalidation" pipelines, not a fixture that could drift from
- * what the app actually does.
+ * (extractDecisionFromNotes → createDecision → indexDecisionMemory →
+ * runConflictDetectionForDocument) rather than inserting pre-baked rows —
+ * so running it is itself an end-to-end exercise of the commit and
+ * invalidation pipelines, not a fixture that can drift from what the app
+ * actually does. §67 is explicit that the demo result must come from the
+ * real pipeline.
  *
- * Requires DATABASE_URL and AWS credentials with Bedrock model access
- * enabled for both BEDROCK_REASONING_MODEL_ID (extraction + conflict
- * judgment) and BEDROCK_EMBEDDING_MODEL_ID (retrieval quality — falls back
- * to a deterministic local embedding when AWS_REGION is unset, but conflict
- * detection's retrieval signal is much weaker without a real embedding
- * model). AWS S3 is bypassed here — the seed script writes the "uploaded"
- * document's text directly rather than round-tripping through a real S3
- * presigned upload, since there's no browser in this script.
+ * Requires DATABASE_URL and AWS credentials with Bedrock model access for
+ * BEDROCK_REASONING_MODEL_ID and BEDROCK_EMBEDDING_MODEL_ID. S3 is bypassed
+ * — there is no browser here to perform a presigned upload, so document
+ * text is written directly.
  *
  * Usage: npm run db:seed
  */
 import "dotenv/config";
+import fs from "node:fs";
+import path from "node:path";
 import { hashPassword } from "@/lib/auth/password";
 import { extractDecisionFromNotes } from "@/lib/ai/extraction";
-import { runConflictDetectionForDocument } from "@/lib/engine/conflictDetection";
-import { indexDecisionMemory } from "@/lib/engine/decisionMemory";
 import { embedTexts } from "@/lib/ai/embeddings";
+import { authorityForSourceType } from "@/lib/domain/decisionStatus";
+import { runConflictDetectionForDocument } from "@/lib/engine/conflictDetection";
+import { chunkTextWithPages, hashContent } from "@/lib/engine/documentIngestion";
+import { indexDecisionMemory } from "@/lib/engine/decisionMemory";
 import { recordAuditEvent } from "@/lib/repo/auditEvents";
+import { startAgentRun, completeAgentRun } from "@/lib/repo/agentRuns";
 import { createDecision } from "@/lib/repo/decisions";
+import { createDecisionEvidence } from "@/lib/repo/evidence";
 import { createDocument, updateDocumentStatus } from "@/lib/repo/documents";
 import { insertMemoryChunk } from "@/lib/repo/memoryChunks";
+import { createProject } from "@/lib/repo/projects";
 import { createTenant } from "@/lib/repo/tenants";
 import { createUser, findUserByEmail } from "@/lib/repo/users";
-import type { User } from "@/lib/types";
+import type { DocumentRecord, DocumentSourceType, User } from "@/lib/types";
 
-const DEMO_EMAIL = "demo@decisionloop.dev";
+const DEMO_EMAIL = "maya.chen@northstar.example";
 const DEMO_PASSWORD = "decisionloop-demo";
+const DEMO_DIR = path.join(process.cwd(), "demo-data");
 
-const SESSION_1_NOTES = `
-We're choosing a workflow automation tool for the platform team.
+/** Session labels are what make the cross-session claim measurable. */
+const SESSION_ONE = "sess_demo_session_1";
+const SESSION_TWO = "sess_demo_session_2";
 
-We evaluated two vendors: SignalForge and MetricLake.
+function readDemoDoc(filename: string): string {
+  return fs.readFileSync(path.join(DEMO_DIR, filename), "utf8");
+}
 
-SignalForge has a cleaner API, faster support response times (under 2 hours
-in our trial), and their pricing is currently $22,000/year for our usage
-tier — comfortably under our $25,000/year budget ceiling for this category.
+/**
+ * Ingests a demo document the way the real pipeline does, minus the S3
+ * round-trip: hash, chunk with page attribution, embed, write memory chunks.
+ */
+async function ingestDemoDocument(input: {
+  tenantId: string;
+  projectId: string;
+  userId: string;
+  filename: string;
+  sourceType: DocumentSourceType;
+}): Promise<DocumentRecord> {
+  const text = readDemoDoc(input.filename);
 
-MetricLake has a broader integration catalog but their enterprise tier
-starts at $31,000/year, which is over budget, and their support SLA is
-24-48 hours.
+  const document = await createDocument({
+    tenantId: input.tenantId,
+    projectId: input.projectId,
+    uploadedBy: input.userId,
+    filename: input.filename,
+    mimeType: "text/markdown",
+    s3Key: `tenants/${input.tenantId}/documents/seed-${input.filename}`,
+    sizeBytes: text.length,
+    sourceType: input.sourceType,
+    authorityScore: authorityForSourceType(input.sourceType),
+  });
 
-Decision: going with SignalForge. The deciding factors were the pricing
-headroom (we assumed SignalForge stays under $25,000/year) and the faster
-support turnaround.
-`.trim();
+  const chunks = chunkTextWithPages(text);
+  const { embeddings, model } = await embedTexts(chunks.map((c) => c.content));
 
-const SESSION_2_DOCUMENT_TEXT = `
-SignalForge — Annual Contract Renewal Notice
+  await Promise.all(
+    embeddings.map((embedding, i) =>
+      insertMemoryChunk({
+        tenantId: input.tenantId,
+        projectId: input.projectId,
+        sourceType: "document",
+        sourceId: document.id,
+        content: chunks[i]!.content,
+        embedding,
+        embeddingModel: model,
+        pageNumber: chunks[i]!.pageNumber,
+        chunkIndex: chunks[i]!.index,
+        contentHash: hashContent(chunks[i]!.content),
+        importance: 0.5,
+        authorityScore: document.authorityScore,
+        metadata: { filename: input.filename, sourceType: input.sourceType },
+      }),
+    ),
+  );
 
-Effective next billing cycle, SignalForge's Growth tier pricing for your
-account's usage tier has been updated to $42,000/year, reflecting increased
-platform usage and the new compliance-tier support add-on.
+  await updateDocumentStatus(document.id, "PROCESSED", {
+    extractedText: text,
+    contentHash: hashContent(text),
+  });
 
-This renewal notice does not reference any internal vendor evaluation or
-prior purchasing decision — it is SignalForge's standard automated pricing
-update email.
-`.trim();
+  console.log(`  ingested ${input.filename} (${chunks.length} chunks, authority ${document.authorityScore.toFixed(2)})`);
+
+  return { ...document, status: "PROCESSED", extractedText: text };
+}
 
 async function main() {
-  console.log("Seeding DecisionLoop demo data…\n");
+  console.log("Seeding DecisionLoop demo data — Northstar Commerce\n");
 
   const existing = await findUserByEmail(DEMO_EMAIL);
   let user: User;
@@ -82,86 +122,183 @@ async function main() {
     user = rest;
     tenantId = existing.tenantId;
   } else {
-    const tenant = await createTenant("DecisionLoop Demo");
+    const tenant = await createTenant("Northstar Commerce");
     const passwordHash = await hashPassword(DEMO_PASSWORD);
     user = await createUser({
       tenantId: tenant.id,
       email: DEMO_EMAIL,
       passwordHash,
-      name: "Demo User",
+      name: "Maya Chen",
       role: "owner",
     });
     tenantId = tenant.id;
-    console.log(`Created tenant "${tenant.name}" (${tenant.id}) and user ${DEMO_EMAIL}.`);
+    console.log(`Created tenant "${tenant.name}" and user ${DEMO_EMAIL}`);
     console.log(`  Sign in with: ${DEMO_EMAIL} / ${DEMO_PASSWORD}\n`);
   }
 
-  // ── "Session 1": commit the SignalForge decision ──────────────────────
-  console.log("Session 1 — extracting and committing the SignalForge decision…");
-  const extracted = await extractDecisionFromNotes(SESSION_1_NOTES);
+  const project = await createProject({
+    tenantId,
+    name: "Analytics Infrastructure",
+    description: "Vendor selection and platform decisions for the retail analytics stack.",
+    createdBy: user.id,
+  });
+  console.log(`Created project "${project.name}"\n`);
+
+  // ── Session 1: evaluate vendors and commit the decision ─────────────────
+  console.log("── Session 1 ──────────────────────────────────────────────");
+  const runOne = await startAgentRun({
+    tenantId,
+    projectId: project.id,
+    sessionId: SESSION_ONE,
+    intent: "EXTRACT_DECISION",
+    request: "Which analytics vendor should we choose?",
+    createdBy: user.id,
+  });
+  const sessionOneStart = Date.now();
+
+  const signalforgeProposal = await ingestDemoDocument({
+    tenantId,
+    projectId: project.id,
+    userId: user.id,
+    filename: "signalforge-proposal.md",
+    sourceType: "VENDOR_OFFICIAL",
+  });
+  const metriclakeProposal = await ingestDemoDocument({
+    tenantId,
+    projectId: project.id,
+    userId: user.id,
+    filename: "metriclake-proposal.md",
+    sourceType: "VENDOR_OFFICIAL",
+  });
+  const architectureReview = await ingestDemoDocument({
+    tenantId,
+    projectId: project.id,
+    userId: user.id,
+    filename: "architecture-review.md",
+    sourceType: "INTERNAL_ANALYSIS",
+  });
+
+  console.log("\n  Analysing the three documents with Bedrock…");
+  const material = [signalforgeProposal, metriclakeProposal, architectureReview]
+    .map((d) => `Document: ${d.filename}\n${d.extractedText}`)
+    .join("\n\n---\n\n");
+
+  const extraction = await extractDecisionFromNotes(material);
+
   const decision = await createDecision({
     tenantId,
-    title: extracted.title,
-    problemStatement: extracted.problemStatement,
-    reasoning: extracted.reasoning,
+    projectId: project.id,
+    title: extraction.title,
+    problemStatement: extraction.problemStatement,
+    reasoning: extraction.reasoning,
+    confidence: extraction.confidence,
+    importance: 0.85,
     createdBy: user.id,
-    createdInSession: "session-1",
-    options: extracted.options,
-    assumptions: extracted.assumptions,
+    createdInSession: SESSION_ONE,
+    options: extraction.options,
+    assumptions: extraction.assumptions,
   });
-  await indexDecisionMemory(decision);
+
+  for (const doc of [signalforgeProposal, metriclakeProposal, architectureReview]) {
+    await createDecisionEvidence({
+      tenantId,
+      decisionId: decision.id,
+      documentId: doc.id,
+      evidenceType: "SUPPORTING",
+      relevance: 0.85,
+      excerpt: `Analysed during vendor evaluation (${doc.filename}).`,
+    });
+  }
+
+  await indexDecisionMemory(decision, { agentRunId: runOne.id, actorUserId: user.id });
+
   await recordAuditEvent({
     tenantId,
     actorUserId: user.id,
     action: "decision.committed",
     entityType: "decision",
     entityId: decision.id,
-    metadata: { title: decision.title, seeded: true },
-  });
-  console.log(`  Committed decision "${decision.title}" (${decision.id})`);
-  console.log(`  Assumptions stored: ${decision.assumptions.map((a) => a.statement).join("; ") || "(none extracted)"}\n`);
-
-  // ── "Session 2": upload a pricing document with no reference to session 1 ──
-  console.log("Session 2 — uploading SignalForge's new pricing notice (no mention of the earlier decision)…");
-  const document = await createDocument({
-    tenantId,
-    uploadedBy: user.id,
-    filename: "signalforge-renewal-notice.txt",
-    mimeType: "text/plain",
-    s3Key: `tenants/${tenantId}/documents/seed-demo-signalforge-renewal.txt`,
-    sizeBytes: SESSION_2_DOCUMENT_TEXT.length,
+    metadata: { title: decision.title, seeded: true, session: SESSION_ONE },
   });
 
-  // Index the document's text into memory_chunks the same way the real
-  // ingestion pipeline does (lib/engine/documentIngestion.ts), skipping only
-  // the S3 round-trip since this script has no browser to upload from.
-  const { embeddings, model } = await embedTexts([SESSION_2_DOCUMENT_TEXT]);
-  await insertMemoryChunk({
-    tenantId,
-    sourceType: "document",
-    sourceId: document.id,
-    decisionId: null,
-    content: SESSION_2_DOCUMENT_TEXT,
-    embedding: embeddings[0]!,
-    embeddingModel: model,
+  await completeAgentRun(runOne.id, {
+    status: "SUCCEEDED",
+    latencyMs: Date.now() - sessionOneStart,
+    memoriesWritten: decision.assumptions.length + 1,
+    outputSummary: `Committed "${decision.title}".`,
   });
-  await updateDocumentStatus(document.id, "PROCESSED", { extractedText: SESSION_2_DOCUMENT_TEXT });
-  const processedDocument = { ...document, status: "PROCESSED" as const, extractedText: SESSION_2_DOCUMENT_TEXT };
 
-  console.log("  Running assumption-conflict detection (independent recall, no decision hint given)…");
-  const summary = await runConflictDetectionForDocument(processedDocument);
-
-  console.log(`\nResult: extracted ${summary.factsExtracted} fact(s), checked ${summary.candidatesConsidered} candidate(s).`);
-  if (summary.conflictsFound > 0) {
-    console.log(`  ${summary.conflictsFound} conflict(s) found. Decisions marked AT RISK: ${summary.decisionsMarkedAtRisk.join(", ")}`);
-    console.log("\n✅ Demo scenario reproduced: DecisionLoop independently flagged the SignalForge decision.");
-  } else {
-    console.log("  No conflicts found — check AWS credentials have Bedrock model access enabled for both BEDROCK_REASONING_MODEL_ID and BEDROCK_EMBEDDING_MODEL_ID.");
+  console.log(`\n  Committed: "${decision.title}"`);
+  console.log(`  Chosen: ${decision.options.find((o) => o.isChosen)?.name ?? "—"}`);
+  for (const a of decision.assumptions) {
+    console.log(`    · ${a.statement}  [${a.normalizedStatement ?? "unstructured"}]`);
   }
 
-  console.log(`\nOpen the app and sign in as ${DEMO_EMAIL} / ${DEMO_PASSWORD} to see it:`);
-  console.log(`  Decision: /decisions/${decision.id}`);
+  console.log("\n  --- session 1 ends; agent state discarded ---\n");
+
+  // ── Session 2: new evidence arrives, with no mention of the decision ────
+  console.log("── Session 2 (weeks later, new session) ───────────────────");
+  const runTwo = await startAgentRun({
+    tenantId,
+    projectId: project.id,
+    sessionId: SESSION_TWO,
+    intent: "INGEST_EVIDENCE",
+    request: "Ingest document: signalforge-2027-pricing.md",
+    createdBy: user.id,
+  });
+  const sessionTwoStart = Date.now();
+
+  const renewalNotice = await ingestDemoDocument({
+    tenantId,
+    projectId: project.id,
+    userId: user.id,
+    filename: "signalforge-2027-pricing.md",
+    sourceType: "VENDOR_OFFICIAL",
+  });
+
+  console.log("\n  Running conflict detection — nothing tells it which decision this relates to…");
+  const summary = await runConflictDetectionForDocument(renewalNotice, {
+    run: runTwo,
+    stats: {
+      memoriesRetrieved: 0,
+      memoriesWritten: 0,
+      conflictsDetected: 0,
+      retrievalLatencyMs: 0,
+    },
+    recordRetrieval: () => undefined,
+    recordWrites: () => undefined,
+    recordConflicts: () => undefined,
+  });
+
+  await completeAgentRun(runTwo.id, {
+    status: "SUCCEEDED",
+    latencyMs: Date.now() - sessionTwoStart,
+    conflictsDetected: summary.conflictsFound,
+    outputSummary: `${summary.conflictsFound} conflict(s) across ${summary.candidatesConsidered} candidates.`,
+  });
+
+  console.log(
+    `\n  Extracted ${summary.factsExtracted} fact(s); checked ${summary.candidatesConsidered} candidate assumption(s).`,
+  );
+
+  if (summary.conflictsFound > 0) {
+    console.log(`  ${summary.conflictsFound} conflict(s) found.`);
+    console.log(`  Assumptions invalidated: ${summary.assumptionsInvalidated}, challenged: ${summary.assumptionsChallenged}`);
+    console.log(`  Decisions marked AT RISK: ${summary.decisionsMarkedAtRisk.join(", ")}`);
+    console.log("\n✅ Demo scenario reproduced end-to-end through the real pipeline.");
+  } else {
+    console.log(
+      "\n⚠️  No conflicts found. Check that AWS credentials have Bedrock model access enabled " +
+        "for both BEDROCK_REASONING_MODEL_ID and BEDROCK_EMBEDDING_MODEL_ID — the local " +
+        "fallback embedding has no semantic meaning, so retrieval cannot connect the pricing " +
+        "notice to the stored assumption without a real embedding model.",
+    );
+  }
+
+  console.log(`\nSign in as ${DEMO_EMAIL} / ${DEMO_PASSWORD}:`);
+  console.log(`  Decision:        /decisions/${decision.id}`);
   console.log(`  Memory Inspector: /inspector?decisionId=${decision.id}`);
+  console.log(`  Project:          /projects/${project.id}`);
 }
 
 main()
