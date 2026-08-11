@@ -119,6 +119,21 @@ set in the Amplify console, never committed. A `Dockerfile` is kept in the repo 
 fallback (App Runner / ECS / any container host) since it requires no extra setup beyond what
 Amplify already needs.
 
+## 8b. Companion documents
+
+This file records *stack* decisions. The rest of the design is documented separately so each
+document has one job:
+
+- [`memory-model.md`](memory-model.md) — how organizational memory is represented, the
+  spec-name → schema-name mapping, validity states, hybrid retrieval scoring, and what the
+  Memory Inspector reads.
+- [`security.md`](security.md) — threat model, tenant isolation, the prompt-injection
+  boundary, and an honest list of gaps.
+- [`deployment.md`](deployment.md) — CockroachDB and AWS setup, Bedrock model access, running
+  each tier of the test suite, troubleshooting.
+- [`demo-script.md`](demo-script.md) — the three-minute walkthrough.
+- [`judging-notes.md`](judging-notes.md) — where to look, and what is and isn't finished.
+
 ## 9. What's explicitly out of scope for the hackathon build
 
 - Enterprise SSO/OAuth — plain email/password is enough to demonstrate tenant isolation.

@@ -11,8 +11,13 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx db/migrate.ts",
     "db:seed": "tsx db/seed.ts",
+    "db:reset-demo": "tsx scripts/reset-demo.ts",
+    "verify:memory": "tsx scripts/verify-memory.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1107.0",
@@ -33,6 +38,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
