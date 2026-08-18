@@ -55,6 +55,53 @@ export async function createDecisionEvidence(input: {
   excerpt?: string | null;
   pageNumber?: number | null;
 }): Promise<DecisionEvidence> {
+  const [decision] = await sql`
+    SELECT project_id FROM decisions
+    WHERE id = ${input.decisionId} AND tenant_id = ${input.tenantId}
+  `;
+  if (!decision) throw new Error("Decision not found in this workspace.");
+
+  if (input.assumptionId) {
+    const [assumption] = await sql`
+      SELECT a.id
+      FROM assumptions a
+      JOIN decisions d ON d.id = a.decision_id
+      WHERE a.id = ${input.assumptionId}
+        AND a.decision_id = ${input.decisionId}
+        AND d.tenant_id = ${input.tenantId}
+    `;
+    if (!assumption) throw new Error("Assumption not found for this decision.");
+  }
+
+  if (input.documentId) {
+    const [document] = await sql`
+      SELECT project_id FROM documents
+      WHERE id = ${input.documentId} AND tenant_id = ${input.tenantId}
+    `;
+    if (!document) throw new Error("Document not found in this workspace.");
+    if ((document.project_id as string | null) !== (decision.project_id as string | null)) {
+      throw new Error("Evidence document does not belong to this decision project.");
+    }
+  }
+
+  if (input.memoryChunkId) {
+    const [chunk] = await sql`
+      SELECT id, source_type, source_id, decision_id
+      FROM memory_chunks
+      WHERE id = ${input.memoryChunkId} AND tenant_id = ${input.tenantId}
+    `;
+    if (!chunk) throw new Error("Memory chunk not found in this workspace.");
+    if (
+      input.documentId &&
+      (chunk.source_type !== "document" || chunk.source_id !== input.documentId)
+    ) {
+      throw new Error("Evidence memory chunk does not belong to the supplied document.");
+    }
+    if (chunk.decision_id && chunk.decision_id !== input.decisionId) {
+      throw new Error("Evidence memory chunk does not belong to this decision.");
+    }
+  }
+
   const [row] = await sql`
     INSERT INTO decision_evidence (
       tenant_id, decision_id, assumption_id, document_id, memory_chunk_id,
@@ -65,6 +112,11 @@ export async function createDecisionEvidence(input: {
       ${input.evidenceType}, ${input.relevance ?? 0.5},
       ${input.excerpt ?? null}, ${input.pageNumber ?? null}
     )
+    ON CONFLICT (tenant_id, decision_id, document_id, evidence_type)
+    DO UPDATE SET
+      relevance = EXCLUDED.relevance,
+      excerpt = EXCLUDED.excerpt,
+      page_number = EXCLUDED.page_number
     RETURNING *
   `;
   return mapEvidence(row!);

@@ -11,7 +11,7 @@ to run each tier of the test suite.
 | AWS account | IAM credentials or a role | Used for S3, Bedrock, and hosting |
 | Amazon Bedrock | **Model access enabled** for the reasoning and embedding models | This is opt-in per account *and* per region — an IAM key alone does not grant it |
 | S3 | A private bucket | Never make it public |
-| CockroachDB MCP *(optional)* | Service-account API key with `mcp:read` | The Memory Inspector degrades gracefully without it |
+| CockroachDB MCP *(optional)* | Service-account API key with `mcp:read`, `COCKROACHDB_MCP_CLUSTER_ID`, and the MCP database name if it differs from `DATABASE_URL` | The Memory Inspector degrades gracefully without it |
 
 ## 2. Enable Bedrock model access
 
@@ -113,8 +113,10 @@ cross-region profile checks both.
    → Environment variables**.
 3. Deploy.
 
-`amplify.yml` runs `npm run db:migrate` before `npm run build` on every deploy. Migrations are
-tracked in `schema_migrations` and applied at most once, so this is safe to repeat.
+`amplify.yml` runs `npm run lint`, then `npm run db:migrate`, before `npm run build` on every
+deploy. Migrations are tracked in `schema_migrations`; each statement is also recorded in
+`schema_migration_statements`, so a failed migration resumes from the first incomplete statement
+instead of replaying already-applied DDL.
 
 **Prefer a service role over static keys.** Attach the IAM policy above to the Amplify service
 role and omit `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` entirely — both `lib/aws/s3.ts`
@@ -159,7 +161,8 @@ npm run verify:memory
 schema is the full model, `memory_chunks.embedding` is a native `VECTOR` column, a real
 embedding provider is in use (not the local fallback), vector retrieval returns scored rows,
 at-risk decisions are backed by real conflict rows and traces, and cross-session recall has
-actually occurred. It exits non-zero on failure.
+actually occurred. It exits non-zero on failure. Run it only against a non-production validation
+cluster with real AWS credentials; a local build or HTTP 200 does not prove these conditions.
 
 ## 9. Running the tests
 

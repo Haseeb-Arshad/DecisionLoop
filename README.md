@@ -188,7 +188,7 @@ Full walkthrough: [`docs/demo-script.md`](docs/demo-script.md).
 ## Running locally
 
 ```bash
-npm install
+npm ci
 cp .env.example .env.local     # fill in the values below
 npm run db:migrate             # applies db/migrations/*.sql to your CockroachDB cluster
 npm run dev
@@ -214,12 +214,15 @@ Every variable is documented with where to get it in [`.env.example`](.env.examp
 | `BEDROCK_REASONING_MODEL_ID` | Extraction and conflict reasoning. **Bedrock model access is opt-in per account and region** — an IAM key alone doesn't grant it |
 | `BEDROCK_EMBEDDING_MODEL_ID` | Embeddings. Falls back to a deterministic local hash when `AWS_REGION` is unset — fine for tests, **not** for the demo |
 | `COCKROACHDB_MCP_SERVICE_KEY` | Memory Inspector's independent verification (optional; degrades gracefully) |
+| `COCKROACHDB_MCP_CLUSTER_ID` | CockroachDB MCP cluster scope; required when MCP verification is enabled |
+| `COCKROACHDB_MCP_DATABASE` | Optional MCP database name; otherwise derived from `DATABASE_URL` |
 | `RETRIEVAL_WEIGHTS` | Optional hybrid-scoring override, e.g. `semantic:0.5,importance:0.2` |
 
 ### Tests
 
 ```bash
-npm run test:unit          # 94 tests, no infrastructure needed
+npm run lint               # ESLint flat-config gate
+npm run test:unit          # no infrastructure needed
 npm run test:integration   # needs DATABASE_URL; skips itself without one
 npm run test:e2e           # needs E2E_BASE_URL; Playwright, runs against a deployment
 npm run typecheck
@@ -232,7 +235,7 @@ access, CockroachDB setup, S3 bucket and CORS, IAM policy, Amplify configuration
 troubleshooting.
 
 Short version: connect this repo to AWS Amplify Hosting, set the environment variables above,
-deploy. [`amplify.yml`](amplify.yml) runs migrations before every build.
+deploy. [`amplify.yml`](amplify.yml) runs linting and resumable migrations before every build.
 [`Dockerfile`](Dockerfile) is the portable fallback for App Runner / ECS.
 
 ## Project layout
@@ -274,9 +277,10 @@ tests/             unit / integration / e2e
 
 ## Status
 
-**Complete and verifiable:** schema, hybrid retrieval, conflict detection, decision lifecycle,
-prompt-injection defense, tenant isolation, Memory Inspector, MCP integration, observability,
-all UI. `npx tsc --noEmit`, `npm test` (94 unit tests), and `npm run build` (39 routes) pass.
+**Implemented and locally verifiable:** schema, hybrid retrieval, conflict detection, decision
+lifecycle, prompt-injection defense, tenant isolation, Memory Inspector, MCP integration,
+observability, and all UI. `npm run typecheck`, `npm run lint`, `npm test` (95 unit tests), and
+`npm run build` pass locally.
 
 **Not done:** the application has **not been deployed**, because no AWS account or CockroachDB
 cluster was available in the build environment. The deployment configuration is written and

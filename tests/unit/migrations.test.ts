@@ -55,4 +55,15 @@ describe("migration files", () => {
     expect([...files].sort()).toEqual(files.sort());
     expect(files[0]).toMatch(/^0001_/);
   });
+
+  it("includes resumable release hardening for retries and evidence", () => {
+    const hardening = fs.readFileSync(
+      path.join(dir, "0004_release_hardening.sql"),
+      "utf8",
+    );
+    expect(hardening).toContain("memory_index_status");
+    expect(hardening).toContain("commit_key");
+    expect(hardening).toContain("dedupe_key");
+    expect(hardening).toContain("decision_evidence_document_type_idx");
+  });
 });

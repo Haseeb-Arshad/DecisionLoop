@@ -59,6 +59,7 @@ export default function NewDecisionPage() {
   const [notes, setNotes] = useState("");
   const [sourceType, setSourceType] = useState<DocumentSourceType>("VENDOR_OFFICIAL");
   const [attachedIds, setAttachedIds] = useState<string[]>([]);
+  const commitKeyRef = useRef<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [problemStatement, setProblemStatement] = useState("");
@@ -86,7 +87,11 @@ export default function NewDecisionPage() {
     setRisks(result.risks);
     setOptions(result.options);
     setAssumptions(
-      result.assumptions.map((a) => ({ ...a, value: String(a.value) })),
+      result.assumptions.map((a) => ({
+        ...a,
+        operator: a.operator ?? "=",
+        value: a.value === undefined ? "" : String(a.value),
+      })),
     );
     setStep("review");
   }
@@ -104,7 +109,9 @@ export default function NewDecisionPage() {
   }
 
   async function onCommit() {
+    commitKeyRef.current ??= crypto.randomUUID();
     const result = await create.mutateAsync({
+      idempotencyKey: commitKeyRef.current,
       title,
       problemStatement,
       reasoning,
@@ -118,13 +125,13 @@ export default function NewDecisionPage() {
         rejectionReason: o.isChosen ? "" : o.rejectionReason,
       })),
       assumptions: assumptions
-        .filter((a) => a.statement.trim() && a.value.trim() !== "")
+        .filter((a) => a.statement.trim())
         .map((a) => ({
           statement: a.statement,
           assumptionType: a.assumptionType,
           metric: a.metric,
-          operator: a.operator,
-          value: Number(a.value),
+          operator: a.value.trim() === "" ? undefined : a.operator,
+          value: a.value.trim() === "" ? undefined : Number(a.value),
           unit: a.unit,
           importance: a.importance,
           confidence: a.confidence,

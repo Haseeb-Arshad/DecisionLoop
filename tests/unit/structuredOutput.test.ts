@@ -79,6 +79,24 @@ describe("decisionExtractionValidator", () => {
     expect(parsed.assumptions[0]!.value).toBe(25000);
   });
 
+  it("preserves a qualitative assumption without inventing numeric values", () => {
+    const parsed = decisionExtractionValidator.parse({
+      ...valid,
+      assumptions: [
+        {
+          statement: "The vendor remains compliant with the team's residency policy",
+          assumptionType: "REGULATORY",
+          metric: "",
+          unit: "",
+          importance: 0.9,
+          confidence: 0.8,
+        },
+      ],
+    });
+    expect(parsed.assumptions[0]!.operator).toBeUndefined();
+    expect(parsed.assumptions[0]!.value).toBeUndefined();
+  });
+
   it("rejects an extraction with no options — that is not a decision", () => {
     expect(() => decisionExtractionValidator.parse({ ...valid, options: [] })).toThrow();
   });

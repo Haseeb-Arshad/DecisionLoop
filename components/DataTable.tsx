@@ -27,6 +27,9 @@ export function DataTable<T>({
 }) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
+  // TanStack Table exposes intentionally mutable callbacks; React Compiler
+  // cannot safely memoize this third-party hook result.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,

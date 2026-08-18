@@ -53,6 +53,76 @@ export async function createConflictEvent(input: {
   suggestedOptionId?: string | null;
   memoryTraceId?: string | null;
 }): Promise<ConflictEvent> {
+  const [decision] = await sql`
+    SELECT project_id FROM decisions
+    WHERE id = ${input.decisionId} AND tenant_id = ${input.tenantId}
+  `;
+  if (!decision) throw new Error("Decision not found in this workspace.");
+
+  const [assumption] = await sql`
+    SELECT a.id
+    FROM assumptions a
+    JOIN decisions d ON d.id = a.decision_id
+    WHERE a.id = ${input.assumptionId}
+      AND a.decision_id = ${input.decisionId}
+      AND d.tenant_id = ${input.tenantId}
+  `;
+  if (!assumption) throw new Error("Assumption not found for this decision.");
+
+  if (input.documentId) {
+    const [document] = await sql`
+      SELECT project_id FROM documents
+      WHERE id = ${input.documentId} AND tenant_id = ${input.tenantId}
+    `;
+    if (!document) throw new Error("Document not found in this workspace.");
+    if ((document.project_id as string | null) !== (decision.project_id as string | null)) {
+      throw new Error("Conflict document does not belong to the decision project.");
+    }
+  }
+
+  if (input.memoryChunkId) {
+    const [chunk] = await sql`
+      SELECT id
+      FROM memory_chunks
+      WHERE id = ${input.memoryChunkId}
+        AND tenant_id = ${input.tenantId}
+        AND source_type = 'document'
+        ${input.documentId ? sql`AND source_id = ${input.documentId}` : sql``}
+    `;
+    if (!chunk) throw new Error("Conflict memory chunk not found in this workspace.");
+  }
+
+  if (input.agentRunId) {
+    const [run] = await sql`
+      SELECT id FROM agent_runs
+      WHERE id = ${input.agentRunId} AND tenant_id = ${input.tenantId}
+    `;
+    if (!run) throw new Error("Conflict agent run not found in this workspace.");
+  }
+
+  if (input.suggestedOptionId) {
+    const [option] = await sql`
+      SELECT o.id
+      FROM decision_options o
+      JOIN decisions d ON d.id = o.decision_id
+      WHERE o.id = ${input.suggestedOptionId}
+        AND o.decision_id = ${input.decisionId}
+        AND d.tenant_id = ${input.tenantId}
+    `;
+    if (!option) throw new Error("Suggested option not found for this decision.");
+  }
+
+  if (input.memoryTraceId) {
+    const [trace] = await sql`
+      SELECT id
+      FROM memory_traces
+      WHERE id = ${input.memoryTraceId}
+        AND tenant_id = ${input.tenantId}
+        AND (related_decision_id = ${input.decisionId} OR related_decision_id IS NULL)
+    `;
+    if (!trace) throw new Error("Memory trace not found for this decision.");
+  }
+
   const [row] = await sql`
     INSERT INTO conflict_events (
       tenant_id, decision_id, assumption_id, document_id, memory_chunk_id,
@@ -82,12 +152,14 @@ export async function findExistingConflict(
   tenantId: string,
   assumptionId: string,
   documentId: string | null,
+  decisionId?: string,
 ): Promise<ConflictEvent | null> {
   const [row] = await sql`
     SELECT * FROM conflict_events
     WHERE tenant_id = ${tenantId}
       AND assumption_id = ${assumptionId}
       ${documentId ? sql`AND document_id = ${documentId}` : sql`AND document_id IS NULL`}
+      ${decisionId ? sql`AND decision_id = ${decisionId}` : sql``}
     LIMIT 1
   `;
   return row ? mapConflict(row) : null;
@@ -120,10 +192,13 @@ export async function resolveConflict(
 }
 
 export async function listConflictEventsForDecision(
+  tenantId: string,
   decisionId: string,
 ): Promise<ConflictEvent[]> {
   const rows = await sql`
-    SELECT * FROM conflict_events WHERE decision_id = ${decisionId} ORDER BY detected_at DESC
+    SELECT * FROM conflict_events
+    WHERE tenant_id = ${tenantId} AND decision_id = ${decisionId}
+    ORDER BY detected_at DESC
   `;
   return rows.map(mapConflict);
 }

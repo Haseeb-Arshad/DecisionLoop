@@ -46,6 +46,7 @@ export default function SignupPage() {
             <input
               id="workspaceName"
               required
+              autoComplete="organization"
               className="input"
               value={workspaceName}
               onChange={(e) => setWorkspaceName(e.target.value)}
@@ -59,6 +60,7 @@ export default function SignupPage() {
             <input
               id="name"
               required
+              autoComplete="name"
               className="input"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -73,6 +75,7 @@ export default function SignupPage() {
               id="email"
               type="email"
               required
+              autoComplete="email"
               className="input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -88,6 +91,7 @@ export default function SignupPage() {
               type="password"
               required
               minLength={8}
+              autoComplete="new-password"
               className="input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

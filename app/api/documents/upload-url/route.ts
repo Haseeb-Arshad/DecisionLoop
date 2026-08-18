@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { handleApiError } from "@/lib/api/handler";
+import { MAX_UPLOAD_BYTES } from "@/lib/api/uploadTypes";
 import { requireAuth } from "@/lib/auth/currentUser";
 import { buildDocumentKey, getPresignedUploadUrl } from "@/lib/aws/s3";
 import { authorityForSourceType } from "@/lib/domain/decisionStatus";
 import { recordAuditEvent } from "@/lib/repo/auditEvents";
 import { createDocument } from "@/lib/repo/documents";
-import { getOrCreateDefaultProject } from "@/lib/repo/projects";
+import { getOrCreateDefaultProject, getProjectById } from "@/lib/repo/projects";
 
 /**
  * Allowed upload types (§31, §34): PDF, plain text, Markdown. Anything else
@@ -20,8 +21,6 @@ const ALLOWED_MIME_TYPES = [
   "text/markdown",
   "text/x-markdown",
 ] as const;
-
-const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 const RequestSchema = z.object({
   filename: z.string().min(1).max(255),
@@ -47,12 +46,14 @@ export async function POST(req: NextRequest) {
     const auth = await requireAuth();
     const body = RequestSchema.parse(await req.json());
 
-    const projectId =
-      body.projectId ??
-      (await getOrCreateDefaultProject(auth.tenantId, auth.user.id)).id;
+    const project = body.projectId
+      ? await getProjectById(auth.tenantId, body.projectId)
+      : await getOrCreateDefaultProject(auth.tenantId, auth.user.id);
+    if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });
+    const projectId = project.id;
 
     const s3Key = buildDocumentKey(auth.tenantId, body.filename);
-    const uploadUrl = await getPresignedUploadUrl(s3Key, body.mimeType);
+    const uploadUrl = await getPresignedUploadUrl(s3Key, body.mimeType, body.sizeBytes);
 
     const document = await createDocument({
       tenantId: auth.tenantId,

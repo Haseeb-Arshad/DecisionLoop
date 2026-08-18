@@ -217,7 +217,7 @@ describeIfDb("cross-session persistent memory", () => {
   });
 
   it("records a conflict with the old and new values and a source quote", async () => {
-    const conflicts = await listConflictEventsForDecision(decisionId);
+    const conflicts = await listConflictEventsForDecision(tenantId, decisionId);
     expect(conflicts).toHaveLength(1);
     const conflict = conflicts[0]!;
     expect(conflict.relation).toBe("CONTRADICTS");
@@ -261,7 +261,7 @@ describeIfDb("cross-session persistent memory", () => {
 
     await runConflictDetectionForDocument(processed);
 
-    const conflicts = await listConflictEventsForDecision(decisionId);
+    const conflicts = await listConflictEventsForDecision(tenantId, decisionId);
     expect(conflicts, "re-analysis must not duplicate the conflict").toHaveLength(1);
   });
 });

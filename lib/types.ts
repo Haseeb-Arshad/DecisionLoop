@@ -33,6 +33,8 @@ export type AssumptionType =
 
 export type DocumentStatus = "UPLOADED" | "PROCESSING" | "PROCESSED" | "FAILED";
 
+export type MemoryIndexStatus = "PENDING" | "INDEXED" | "FAILED";
+
 /** §11 — drives the default authority score for evidence from this source. */
 export type DocumentSourceType =
   | "CONTRACT"
@@ -191,6 +193,8 @@ export interface Decision {
   problemStatement: string | null;
   reasoning: string | null;
   status: DecisionStatus;
+  memoryIndexStatus: MemoryIndexStatus;
+  memoryIndexError: string | null;
   confidence: number;
   importance: number;
   riskExplanation: string | null;

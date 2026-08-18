@@ -9,6 +9,7 @@ import type {
   DecisionOption,
   DecisionStatus,
   DecisionWithDetails,
+  MemoryIndexStatus,
 } from "@/lib/types";
 
 function mapDecision(row: Record<string, unknown>): Decision {
@@ -20,6 +21,8 @@ function mapDecision(row: Record<string, unknown>): Decision {
     problemStatement: (row.problem_statement as string) ?? null,
     reasoning: (row.reasoning as string) ?? null,
     status: row.status as DecisionStatus,
+    memoryIndexStatus: (row.memory_index_status as MemoryIndexStatus) ?? "PENDING",
+    memoryIndexError: (row.memory_index_error as string) ?? null,
     confidence: Number(row.confidence ?? 0.7),
     importance: Number(row.importance ?? 0.6),
     riskExplanation: (row.risk_explanation as string) ?? null,
@@ -100,6 +103,8 @@ export interface NewDecisionInput {
   importance?: number;
   createdBy?: string | null;
   createdInSession?: string | null;
+  commitKey?: string | null;
+  commitFingerprint?: string | null;
   options: Array<{
     name: string;
     description?: string | null;
@@ -129,16 +134,31 @@ export async function createDecision(
   input: NewDecisionInput,
 ): Promise<DecisionWithDetails> {
   return sql.begin(async (tx) => {
+    if (input.projectId) {
+      const [project] = await tx`
+        SELECT id FROM projects WHERE id = ${input.projectId} AND tenant_id = ${input.tenantId}
+      `;
+      if (!project) throw new Error("Project not found in this workspace.");
+    }
+
+    if (input.createdBy) {
+      const [user] = await tx`
+        SELECT id FROM users WHERE id = ${input.createdBy} AND tenant_id = ${input.tenantId}
+      `;
+      if (!user) throw new Error("User not found in this workspace.");
+    }
+
     const [decisionRow] = await tx`
       INSERT INTO decisions (
         tenant_id, project_id, title, problem_statement, reasoning, status,
-        confidence, importance, created_by, created_in_session
+        confidence, importance, created_by, created_in_session, commit_key, commit_fingerprint
       ) VALUES (
         ${input.tenantId}, ${input.projectId ?? null}, ${input.title},
         ${input.problemStatement ?? null}, ${input.reasoning ?? null},
         ${input.status ?? "ACTIVE"}, ${input.confidence ?? 0.7},
         ${input.importance ?? 0.6}, ${input.createdBy ?? null},
-        ${input.createdInSession ?? null}
+        ${input.createdInSession ?? null}, ${input.commitKey ?? null},
+        ${input.commitFingerprint ?? null}
       )
       RETURNING *
     `;
@@ -177,6 +197,51 @@ export async function createDecision(
 
     return { ...decision, options, assumptions };
   });
+}
+
+export async function findDecisionByCommitKey(
+  tenantId: string,
+  commitKey: string,
+): Promise<{ decision: DecisionWithDetails; fingerprint: string | null } | null> {
+  const [row] = await sql`
+    SELECT id, commit_fingerprint
+    FROM decisions
+    WHERE tenant_id = ${tenantId} AND commit_key = ${commitKey}
+  `;
+  if (!row) return null;
+  const decision = await getDecisionById(tenantId, row.id as string);
+  return decision
+    ? { decision, fingerprint: (row.commit_fingerprint as string) ?? null }
+    : null;
+}
+
+export async function setDecisionMemoryIndexStatus(
+  tenantId: string,
+  decisionId: string,
+  status: MemoryIndexStatus,
+  error?: string | null,
+): Promise<Decision | null> {
+  const [row] = await sql`
+    UPDATE decisions
+    SET memory_index_status = ${status},
+        memory_index_error = ${error ?? null},
+        memory_indexed_at = CASE WHEN ${status} = 'INDEXED' THEN now() ELSE memory_indexed_at END,
+        updated_at = now()
+    WHERE id = ${decisionId} AND tenant_id = ${tenantId}
+    RETURNING *
+  `;
+  return row ? mapDecision(row) : null;
+}
+
+export async function getDecisionCommitKey(
+  tenantId: string,
+  decisionId: string,
+): Promise<string | null> {
+  const [row] = await sql`
+    SELECT commit_key FROM decisions
+    WHERE id = ${decisionId} AND tenant_id = ${tenantId}
+  `;
+  return row ? ((row.commit_key as string) ?? null) : null;
 }
 
 export async function getDecisionById(
@@ -274,6 +339,7 @@ export async function updateDecisionStatus(
 }
 
 export async function setAssumptionValidity(
+  tenantId: string,
   assumptionId: string,
   validity: AssumptionValidity,
   opts: { invalidatedByEvidenceId?: string | null } = {},
@@ -285,6 +351,10 @@ export async function setAssumptionValidity(
       invalidated_at = CASE WHEN ${validity} = 'INVALIDATED' THEN now() ELSE invalidated_at END,
       invalidated_by_evidence_id = COALESCE(${opts.invalidatedByEvidenceId ?? null}, invalidated_by_evidence_id)
     WHERE id = ${assumptionId}
+      AND EXISTS (
+        SELECT 1 FROM decisions d
+        WHERE d.id = assumptions.decision_id AND d.tenant_id = ${tenantId}
+      )
   `;
 }
 
@@ -318,9 +388,15 @@ export async function listOpenAssumptionsForTenant(
 }
 
 export async function getAssumptionById(
+  tenantId: string,
   assumptionId: string,
 ): Promise<Assumption | null> {
-  const [row] = await sql`SELECT * FROM assumptions WHERE id = ${assumptionId}`;
+  const [row] = await sql`
+    SELECT a.*
+    FROM assumptions a
+    JOIN decisions d ON d.id = a.decision_id
+    WHERE a.id = ${assumptionId} AND d.tenant_id = ${tenantId}
+  `;
   return row ? mapAssumption(row) : null;
 }
 

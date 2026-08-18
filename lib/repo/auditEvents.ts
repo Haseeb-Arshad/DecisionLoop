@@ -23,17 +23,20 @@ export async function recordAuditEvent(input: {
   action: string;
   entityType?: string | null;
   entityId?: string | null;
+  dedupeKey?: string | null;
   metadata?: Record<string, unknown> | null;
 }): Promise<AuditEvent> {
   const [row] = await sql`
     INSERT INTO audit_events (
-      tenant_id, actor_user_id, actor_label, action, entity_type, entity_id, metadata
+      tenant_id, actor_user_id, actor_label, action, entity_type, entity_id, dedupe_key, metadata
     ) VALUES (
       ${input.tenantId}, ${input.actorUserId ?? null},
       ${input.actorLabel ?? (input.actorUserId ? null : "system")},
       ${input.action}, ${input.entityType ?? null}, ${input.entityId ?? null},
+      ${input.dedupeKey ?? null},
       ${input.metadata ? sql.json(toJsonValue(input.metadata)) : null}
     )
+    ON CONFLICT (tenant_id, dedupe_key) DO UPDATE SET metadata = EXCLUDED.metadata
     RETURNING *
   `;
   return mapAudit(row!);

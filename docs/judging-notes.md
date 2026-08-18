@@ -98,16 +98,18 @@ Yes, and it's used where its purpose genuinely fits rather than on the hot path:
 The catalogue is fixed rather than free-form on purpose: an arbitrary-SQL endpoint over a
 shared MCP credential would be a cross-tenant read primitive.
 
-Without `COCKROACHDB_MCP_SERVICE_KEY` both degrade to an explicit "unavailable" message. We
-don't claim a verification that didn't happen.
+Without both `COCKROACHDB_MCP_SERVICE_KEY` and `COCKROACHDB_MCP_CLUSTER_ID`, both degrade to
+an explicit "unavailable" message. We don't claim a verification that didn't happen.
 
 ## 6. Honest status
 
 ### Working and verifiable
 
 Schema, retrieval, conflict detection, the full decision lifecycle, prompt-injection defense,
-tenant isolation, Memory Inspector, MCP integration, observability, all UI pages. `npx tsc
---noEmit`, `npm test` (94 unit tests), and `npm run build` (39 routes) all pass.
+tenant isolation, Memory Inspector, MCP integration, observability, all UI pages are implemented.
+Local static/unit/build gates pass when run without external infrastructure; database, AWS,
+MCP, and deployed-browser claims still require the credentials and validation environment in
+§7.
 
 ### Requires credentials to demonstrate
 
@@ -138,8 +140,8 @@ pricing sheets and short reports, not for large technical documents.
 ## 7. Fastest way to check we're not bluffing
 
 ```bash
-npm install
-npm run test:unit              # 94 tests, no infrastructure
+npm ci
+npm run test:unit              # 95 tests, no infrastructure
 
 # with a CockroachDB cluster:
 DATABASE_URL=... npm run db:migrate

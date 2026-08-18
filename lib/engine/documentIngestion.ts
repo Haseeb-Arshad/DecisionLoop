@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { embedTexts } from "@/lib/ai/embeddings";
+import { MAX_UPLOAD_BYTES } from "@/lib/api/uploadTypes";
 import { withAgentRun } from "@/lib/engine/agentRun";
 import { runConflictDetectionForDocument } from "@/lib/engine/conflictDetection";
 import { getObjectBuffer } from "@/lib/aws/s3";
@@ -127,7 +128,10 @@ export async function ingestDocument(
       await updateDocumentStatus(document.id, "PROCESSING");
 
       try {
-        const buffer = await getObjectBuffer(document.s3Key);
+         const buffer = await getObjectBuffer(document.s3Key, {
+           maxBytes: MAX_UPLOAD_BYTES,
+           expectedBytes: document.sizeBytes ?? undefined,
+         });
         const text = await extractTextFromBuffer(
           buffer,
           document.mimeType,

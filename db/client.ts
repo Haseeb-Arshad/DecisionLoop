@@ -16,7 +16,6 @@ import postgres from "postgres";
  * same column names a reader can grep for in the migrations.
  */
 declare global {
-  // eslint-disable-next-line no-var
   var __decisionloop_sql__: ReturnType<typeof postgres> | undefined;
 }
 
@@ -55,11 +54,9 @@ function getOrCreateClient(): ReturnType<typeof postgres> {
 // check and the actual TCP connection until the first real query.
 export const sql = new Proxy(function () {} as unknown as ReturnType<typeof postgres>, {
   apply(_target, _thisArg, args) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (getOrCreateClient() as any)(...args);
   },
   get(_target, prop) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (getOrCreateClient() as any)[prop];
   },
 });
@@ -73,7 +70,6 @@ export type Sql = typeof sql;
  * This is the one sanctioned escape hatch for that — use it instead of an
  * inline `as any` so every JSONB write goes through one visibly-named spot.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function toJsonValue(value: unknown): any {
   return value;
 }

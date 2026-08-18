@@ -8,10 +8,11 @@ applications:
             - npm ci
         build:
           commands:
+            - npm run lint
             # db:migrate is safe to run on every deploy — every migration is
-            # tracked in schema_migrations and applied at most once (see
-            # db/migrate.ts). Requires DATABASE_URL to be set as an Amplify
-            # environment variable.
+            # tracked in schema_migrations/schema_migration_statements and
+            # resumes safely after a partial failure (see db/migrate.ts).
+            # Requires DATABASE_URL to be set as an Amplify environment variable.
             - npm run db:migrate
             - npm run build
       artifacts:

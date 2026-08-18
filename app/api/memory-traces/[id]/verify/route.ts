@@ -26,7 +26,7 @@ export async function POST(
       ? trace.usedChunkIds
       : trace.candidates.slice(0, 5).map((c) => c.chunkId);
 
-    const verification = await verifyRowsViaMcp(chunkIds);
+    const verification = await verifyRowsViaMcp(auth.tenantId, chunkIds);
     await attachMcpVerification(trace.id, verification);
 
     await recordAuditEvent({

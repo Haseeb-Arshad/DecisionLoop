@@ -61,6 +61,7 @@ export interface AssumptionInput {
 }
 
 export interface CreateDecisionInput {
+  idempotencyKey?: string;
   projectId?: string;
   title: string;
   problemStatement?: string;
@@ -142,11 +143,14 @@ export const api = {
       { method: "POST", body: JSON.stringify(input) },
     ),
 
-  createDecision: (input: CreateDecisionInput) =>
-    request<{ decision: DecisionWithDetails }>("/api/decisions", {
+  createDecision: (input: CreateDecisionInput) => {
+    const { idempotencyKey, ...body } = input;
+    return request<{ decision: DecisionWithDetails; replayed?: boolean }>("/api/decisions", {
       method: "POST",
-      body: JSON.stringify(input),
-    }),
+      headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+      body: JSON.stringify(body),
+    });
+  },
 
   listDecisions: (opts: { status?: DecisionStatus; projectId?: string } = {}) => {
     const params = new URLSearchParams();
@@ -159,6 +163,12 @@ export const api = {
   },
 
   getDecision: (id: string) => request<DecisionDetailResponse>(`/api/decisions/${id}`),
+
+  retryDecisionMemory: (id: string) =>
+    request<{ decision: DecisionWithDetails | null; retried: boolean }>(
+      `/api/decisions/${id}/memory`,
+      { method: "POST" },
+    ),
 
   reopenDecision: (id: string, input: { conflictId?: string; note?: string } = {}) =>
     request<{ decision: Decision }>(`/api/decisions/${id}/actions`, {

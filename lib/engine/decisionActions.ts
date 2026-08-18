@@ -94,7 +94,7 @@ export async function dismissConflict(input: {
   const decision = await requireDecision(input.tenantId, conflict.decisionId);
 
   await resolveConflict(input.tenantId, conflict.id, "DISMISSED", input.userId);
-  await setAssumptionValidity(conflict.assumptionId, "VALID");
+  await setAssumptionValidity(input.tenantId, conflict.assumptionId, "VALID");
 
   // Only return the decision to ACTIVE once nothing else is still holding it
   // open — a second, unrelated conflict must keep it at risk.
@@ -154,7 +154,7 @@ export async function acceptConflictEvidence(input: {
   const decision = await requireDecision(input.tenantId, conflict.decisionId);
 
   await resolveConflict(input.tenantId, conflict.id, "ACCEPTED", input.userId);
-  await setAssumptionValidity(conflict.assumptionId, "INVALIDATED");
+  await setAssumptionValidity(input.tenantId, conflict.assumptionId, "INVALIDATED");
 
   await recordMemoryEvent({
     tenantId: input.tenantId,
@@ -210,7 +210,7 @@ export async function supersedeDecision(input: {
   // distinction rather than marking them invalidated.
   for (const assumption of decision.assumptions) {
     if (assumption.validityStatus === "INVALIDATED") continue;
-    await setAssumptionValidity(assumption.id, "SUPERSEDED");
+    await setAssumptionValidity(input.tenantId, assumption.id, "SUPERSEDED");
   }
 
   await recordMemoryEvent({

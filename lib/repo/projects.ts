@@ -19,6 +19,12 @@ export async function createProject(input: {
   description?: string | null;
   createdBy?: string | null;
 }): Promise<Project> {
+  if (input.createdBy) {
+    const [user] = await sql`
+      SELECT id FROM users WHERE id = ${input.createdBy} AND tenant_id = ${input.tenantId}
+    `;
+    if (!user) throw new Error("User not found in this workspace.");
+  }
   const [row] = await sql`
     INSERT INTO projects (tenant_id, name, description, created_by)
     VALUES (${input.tenantId}, ${input.name}, ${input.description ?? null}, ${input.createdBy ?? null})

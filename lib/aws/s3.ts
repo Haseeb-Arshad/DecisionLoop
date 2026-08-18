@@ -46,12 +46,14 @@ export function buildDocumentKey(tenantId: string, filename: string): string {
 export async function getPresignedUploadUrl(
   key: string,
   contentType: string,
+  contentLength: number,
   expiresInSeconds = 300,
 ): Promise<string> {
   const command = new PutObjectCommand({
     Bucket: getBucket(),
     Key: key,
     ContentType: contentType,
+    ContentLength: contentLength,
   });
   return getSignedUrl(getClient(), command, { expiresIn: expiresInSeconds });
 }
@@ -65,15 +67,37 @@ export async function getPresignedDownloadUrl(
 }
 
 /** Server-side fetch of the object body — used for text extraction right after upload. */
-export async function getObjectBuffer(key: string): Promise<Buffer> {
+export async function getObjectBuffer(
+  key: string,
+  opts: { maxBytes: number; expectedBytes?: number },
+): Promise<Buffer> {
   const command = new GetObjectCommand({ Bucket: getBucket(), Key: key });
   const response = await getClient().send(command);
   const body = response.Body;
   if (!body) throw new Error(`S3 object ${key} has no body`);
+  if (response.ContentLength !== undefined && response.ContentLength > opts.maxBytes) {
+    throw new Error(`S3 object exceeds the ${opts.maxBytes}-byte upload limit.`);
+  }
+  if (
+    opts.expectedBytes !== undefined &&
+    response.ContentLength !== undefined &&
+    response.ContentLength !== opts.expectedBytes
+  ) {
+    throw new Error("S3 object size does not match the declared upload size.");
+  }
   const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
   // @ts-expect-error - Body is a Node.js Readable in the AWS SDK v3 Node runtime.
   for await (const chunk of body) {
-    chunks.push(chunk as Uint8Array);
+    const bytes = chunk as Uint8Array;
+    totalBytes += bytes.byteLength;
+    if (totalBytes > opts.maxBytes) {
+      throw new Error(`S3 object exceeds the ${opts.maxBytes}-byte upload limit.`);
+    }
+    chunks.push(bytes);
+  }
+  if (opts.expectedBytes !== undefined && totalBytes !== opts.expectedBytes) {
+    throw new Error("S3 object size does not match the declared upload size.");
   }
   return Buffer.concat(chunks);
 }

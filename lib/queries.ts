@@ -111,6 +111,14 @@ export function useExtractDecision() {
   return useMutation({ mutationFn: api.extractDecision });
 }
 
+export function useRetryDecisionMemory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.retryDecisionMemory,
+    onSuccess: () => invalidateMemorySurface(qc),
+  });
+}
+
 export function useCreateDecision() {
   const qc = useQueryClient();
   return useMutation({

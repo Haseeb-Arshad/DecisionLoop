@@ -40,20 +40,22 @@ export async function recordMemoryEvent(input: {
   agentRunId?: string | null;
   actorType?: ActorType;
   actorUserId?: string | null;
+  dedupeKey?: string | null;
   summary?: string | null;
   metadata?: Record<string, unknown> | null;
 }): Promise<MemoryEvent> {
   const [row] = await sql`
     INSERT INTO memory_events (
       tenant_id, project_id, entity_type, entity_id, decision_id, event_type,
-      agent_run_id, actor_type, actor_user_id, summary, metadata
+      agent_run_id, actor_type, actor_user_id, dedupe_key, summary, metadata
     ) VALUES (
       ${input.tenantId}, ${input.projectId ?? null}, ${input.entityType},
       ${input.entityId}, ${input.decisionId ?? null}, ${input.eventType},
       ${input.agentRunId ?? null}, ${input.actorType ?? "SYSTEM"},
-      ${input.actorUserId ?? null}, ${input.summary ?? null},
+      ${input.actorUserId ?? null}, ${input.dedupeKey ?? null}, ${input.summary ?? null},
       ${input.metadata ? sql.json(toJsonValue(input.metadata)) : null}
     )
+    ON CONFLICT (tenant_id, dedupe_key) DO UPDATE SET metadata = EXCLUDED.metadata
     RETURNING *
   `;
   return mapEvent(row!);

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { sql } from "@/db/client";
 import { mcpConfigured } from "@/lib/mcp/cockroachClient";
+import { childLogger } from "@/lib/logger";
+
+const log = childLogger({ module: "health" });
 
 /** Basic liveness/readiness probe: confirms CockroachDB connectivity and
  * reports which optional integrations (embeddings, MCP) are configured. */
@@ -14,7 +17,8 @@ export async function GET() {
     checks.database = `ok (${Date.now() - start}ms)`;
   } catch (err) {
     dbOk = false;
-    checks.database = `error: ${err instanceof Error ? err.message : String(err)}`;
+    checks.database = "error";
+    log.error({ err }, "health database check failed");
   }
 
   // AWS credentials configured is necessary but not sufficient — Bedrock

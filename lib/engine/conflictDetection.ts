@@ -213,7 +213,7 @@ async function judgeCandidate(input: {
   const { document, fact, candidate, agentRunId, documentChunkId } = input;
   const scorePrefix = `[score ${candidate.finalScore.toFixed(3)} · sim ${candidate.semanticScore.toFixed(3)}]`;
 
-  const assumption = await getAssumptionById(candidate.sourceId);
+  const assumption = await getAssumptionById(document.tenantId, candidate.sourceId);
   if (!assumption) {
     return {
       recorded: false,
@@ -251,6 +251,7 @@ async function judgeCandidate(input: {
     document.tenantId,
     assumption.id,
     document.id,
+    decision.id,
   );
   if (duplicate) {
     return {
@@ -322,7 +323,7 @@ async function judgeCandidate(input: {
     excerpt: judgment.sourceQuote || fact.sourceQuote || fact.statement,
   });
 
-  await setAssumptionValidity(assumption.id, severity.nextValidity, {
+  await setAssumptionValidity(document.tenantId, assumption.id, severity.nextValidity, {
     invalidatedByEvidenceId: severity.nextValidity === "INVALIDATED" ? evidence.id : null,
   });
 

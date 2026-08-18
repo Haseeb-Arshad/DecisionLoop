@@ -9,11 +9,12 @@ import {
   DecisionStatusBadge,
   SourceTypeBadge,
 } from "@/components/StatusBadge";
-import { useDecision } from "@/lib/queries";
+import { useDecision, useRetryDecisionMemory } from "@/lib/queries";
 
 export default function DecisionDetailPage() {
   const params = useParams<{ id: string }>();
   const { data, isLoading, isError, error } = useDecision(params.id);
+  const retryMemory = useRetryDecisionMemory();
 
   if (isLoading) {
     return <div className="card px-6 py-12 text-center text-sm text-ink-400">Loading…</div>;
@@ -44,6 +45,20 @@ export default function DecisionDetailPage() {
         </div>
         {decision.problemStatement && (
           <p className="mt-2 text-sm text-ink-400">{decision.problemStatement}</p>
+        )}
+        {decision.memoryIndexStatus !== "INDEXED" && (
+          <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/[0.05] p-3 text-xs text-amber-200">
+            Memory indexing is {decision.memoryIndexStatus.toLowerCase()}.
+            {decision.memoryIndexError ? ` ${decision.memoryIndexError}` : " Retry the commit before relying on cross-session recall."}
+            <button
+              type="button"
+              className="ml-2 underline underline-offset-2"
+              disabled={retryMemory.isPending}
+              onClick={() => retryMemory.mutate(decision.id)}
+            >
+              {retryMemory.isPending ? "Retrying…" : "Retry now"}
+            </button>
+          </div>
         )}
       </div>
 

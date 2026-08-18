@@ -34,6 +34,19 @@ export async function createDocument(input: {
   sourceType?: DocumentSourceType;
   authorityScore?: number;
 }): Promise<DocumentRecord> {
+  if (input.projectId) {
+    const [project] = await sql`
+      SELECT id FROM projects WHERE id = ${input.projectId} AND tenant_id = ${input.tenantId}
+    `;
+    if (!project) throw new Error("Project not found in this workspace.");
+  }
+  if (input.uploadedBy) {
+    const [user] = await sql`
+      SELECT id FROM users WHERE id = ${input.uploadedBy} AND tenant_id = ${input.tenantId}
+    `;
+    if (!user) throw new Error("User not found in this workspace.");
+  }
+
   const [row] = await sql`
     INSERT INTO documents (
       tenant_id, project_id, uploaded_by, filename, mime_type, s3_key,

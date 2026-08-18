@@ -16,6 +16,11 @@
  * on older Serverless clusters the app falls back to a brute-force vector
  * scan instead (see lib/repo/memoryChunks.ts).
  *
+ * Successful statements are also recorded individually. CockroachDB schema
+ * changes cannot all share one transaction, so this progress ledger lets a
+ * later run resume after a known mid-file failure instead of replaying every
+ * earlier statement.
+ *
  * Usage: npm run db:migrate
  */
 import "dotenv/config";
@@ -57,6 +62,44 @@ export function splitSqlStatements(sql: string): string[] {
     .filter((statement) => statement.length > 0);
 }
 
+/**
+ * A previous runner version could apply a rename and then crash before the
+ * file-level migration row was written. Treat that one already-completed
+ * schema change as progress when the new statement ledger sees it for the
+ * first time. The migration files are trusted source, so parsing this narrow
+ * DDL form is safer than swallowing arbitrary database errors.
+ */
+async function renameAlreadyApplied(
+  sql: ReturnType<typeof postgres<Record<string, postgres.PostgresType>>>,
+  statement: string,
+): Promise<boolean> {
+  const match = statement.match(
+    /^ALTER\s+TABLE\s+([A-Za-z_][A-Za-z0-9_]*)\s+RENAME\s+COLUMN\s+([A-Za-z_][A-Za-z0-9_]*)\s+TO\s+([A-Za-z_][A-Za-z0-9_]*)$/i,
+  );
+  if (!match) return false;
+
+  const tableName = match[1]!;
+  const oldColumn = match[2]!;
+  const newColumn = match[3]!;
+  const rows = await sql`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND table_name = ${tableName}
+      AND column_name IN (${oldColumn}, ${newColumn})
+  `;
+  const columns = new Set(rows.map((row) => String(row.column_name)));
+  if (!columns.has(oldColumn) && columns.has(newColumn)) {
+    return true;
+  }
+  if (columns.has(oldColumn) && columns.has(newColumn)) {
+    throw new Error(
+      `Cannot resume rename on ${tableName}: both ${oldColumn} and ${newColumn} exist.`,
+    );
+  }
+  return false;
+}
+
 async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) {
@@ -72,6 +115,14 @@ async function main() {
       filename STRING PRIMARY KEY,
       applied_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       warning STRING
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS schema_migration_statements (
+      filename STRING NOT NULL,
+      statement_index INT8 NOT NULL,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (filename, statement_index)
     )
   `;
 
@@ -98,8 +149,30 @@ async function main() {
     const statements = splitSqlStatements(contents);
 
     try {
-      for (const statement of statements) {
+      for (const [statementIndex, statement] of statements.entries()) {
+        const completed = await sql`
+          SELECT 1 FROM schema_migration_statements
+          WHERE filename = ${file} AND statement_index = ${statementIndex}
+        `;
+        if (completed.length > 0) {
+          console.log(`resume ${file} statement ${statementIndex + 1}/${statements.length}`);
+          continue;
+        }
+        if (await renameAlreadyApplied(sql, statement)) {
+          console.log(`resume ${file} statement ${statementIndex + 1}/${statements.length} (rename already present)`);
+          await sql`
+            INSERT INTO schema_migration_statements (filename, statement_index)
+            VALUES (${file}, ${statementIndex})
+            ON CONFLICT (filename, statement_index) DO NOTHING
+          `;
+          continue;
+        }
         await sql.unsafe(statement);
+        await sql`
+          INSERT INTO schema_migration_statements (filename, statement_index)
+          VALUES (${file}, ${statementIndex})
+          ON CONFLICT (filename, statement_index) DO NOTHING
+        `;
       }
       await sql`INSERT INTO schema_migrations (filename) VALUES (${file})`;
       console.log(`apply  ${file} (${statements.length} statement${statements.length === 1 ? "" : "s"})`);

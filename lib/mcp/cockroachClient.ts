@@ -23,8 +23,8 @@ const log = childLogger({ module: "cockroachMcp" });
  *     a small set of named, parameterised analyst questions over structured
  *     organizational memory, answered by MCP `select_query` tool calls.
  *
- * Auth: a service-account API key (Cloud RBAC, scoped to this cluster with
- * `mcp:read`), sent as a Bearer token — the autonomous-environment auth
+ * Auth: a service-account API key (Cloud RBAC, scoped to this cluster), sent
+ * as a Bearer token — the autonomous-environment auth
  * path CockroachDB documents, as opposed to the OAuth 2.1 + PKCE flow meant
  * for interactive human sessions.
  *
@@ -35,18 +35,29 @@ const log = childLogger({ module: "cockroachMcp" });
  */
 
 function isConfigured(): boolean {
-  return Boolean(process.env.COCKROACHDB_MCP_SERVICE_KEY);
+  return Boolean(
+    process.env.COCKROACHDB_MCP_SERVICE_KEY && process.env.COCKROACHDB_MCP_CLUSTER_ID,
+  );
 }
 
 async function withMcpClient<T>(fn: (client: Client) => Promise<T>): Promise<T> {
   const url = process.env.COCKROACHDB_MCP_URL ?? "https://cockroachlabs.cloud/mcp";
   const apiKey = process.env.COCKROACHDB_MCP_SERVICE_KEY;
+  const clusterId = process.env.COCKROACHDB_MCP_CLUSTER_ID;
   if (!apiKey) {
     throw new Error("COCKROACHDB_MCP_SERVICE_KEY is not set.");
   }
+  if (!clusterId) {
+    throw new Error("COCKROACHDB_MCP_CLUSTER_ID is not set.");
+  }
 
   const transport = new StreamableHTTPClientTransport(new URL(url), {
-    requestInit: { headers: { Authorization: `Bearer ${apiKey}` } },
+    requestInit: {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "mcp-cluster-id": clusterId,
+      },
+    },
   });
 
   const client = new Client({ name: "decisionloop-memory-inspector", version: "0.1.0" });
@@ -70,7 +81,7 @@ function assertUuid(value: string, label: string): string {
 }
 
 const NOT_CONFIGURED_MESSAGE =
-  "COCKROACHDB_MCP_SERVICE_KEY is not configured — MCP cross-check unavailable. " +
+  "COCKROACHDB_MCP_SERVICE_KEY and COCKROACHDB_MCP_CLUSTER_ID are not configured — MCP cross-check unavailable. " +
   "The internal trace is still real CockroachDB data; this panel only adds a second, " +
   "independent verification path.";
 
@@ -78,7 +89,10 @@ const NOT_CONFIGURED_MESSAGE =
  * Independently re-runs a read-only SELECT against CockroachDB via the
  * Managed MCP Server's `select_query` tool, and reports what came back.
  */
-export async function verifyRowsViaMcp(chunkIds: string[]): Promise<McpVerification> {
+export async function verifyRowsViaMcp(
+  tenantId: string,
+  chunkIds: string[],
+): Promise<McpVerification> {
   if (chunkIds.length === 0) {
     return { verified: true, toolCalls: [], rawRows: [] };
   }
@@ -86,6 +100,7 @@ export async function verifyRowsViaMcp(chunkIds: string[]): Promise<McpVerificat
   if (!isConfigured()) {
     return { verified: false, toolCalls: [], rawRows: [], error: NOT_CONFIGURED_MESSAGE };
   }
+  assertUuid(tenantId, "tenantId");
 
   // These ids always come from our own memory_traces rows, never directly
   // from client input — but they are interpolated into SQL text handed to
@@ -105,17 +120,21 @@ export async function verifyRowsViaMcp(chunkIds: string[]): Promise<McpVerificat
         `SELECT id, source_type, source_id, decision_id, importance, authority_score, ` +
         `left(content, 200) AS content_preview ` +
         `FROM memory_chunks WHERE id IN (${validIds.map((id) => `'${id}'`).join(", ")})`;
+      const tenantSafeQuery = query.replace(
+        "FROM memory_chunks WHERE",
+        `FROM memory_chunks WHERE tenant_id = '${tenantId}' AND`,
+      );
 
       const result = await client.callTool({
         name: "select_query",
-        arguments: { sql: query },
+        arguments: { sql: tenantSafeQuery },
       });
 
       const rawRows = Array.isArray(result.content) ? result.content : [result.content];
 
       return {
         verified: true,
-        toolCalls: [{ tool: "select_query", input: { sql: query }, output: rawRows }],
+        toolCalls: [{ tool: "select_query", input: { sql: tenantSafeQuery }, output: rawRows }],
         rawRows,
       };
     });
@@ -137,16 +156,17 @@ export async function getMemorySchemaViaMcp(): Promise<McpVerification> {
   }
 
   try {
+    const database = mcpDatabaseName();
     return await withMcpClient(async (client) => {
       const result = await client.callTool({
         name: "get_table_schema",
-        arguments: { database: "defaultdb", table: "memory_chunks" },
+        arguments: { database, table: "memory_chunks" },
       });
       const rawRows = Array.isArray(result.content) ? result.content : [result.content];
       return {
         verified: true,
         toolCalls: [
-          { tool: "get_table_schema", input: { table: "memory_chunks" }, output: rawRows },
+          { tool: "get_table_schema", input: { database, table: "memory_chunks" }, output: rawRows },
         ],
         rawRows,
       };
@@ -159,6 +179,19 @@ export async function getMemorySchemaViaMcp(): Promise<McpVerification> {
       rawRows: [],
       error: err instanceof Error ? err.message : String(err),
     };
+  }
+}
+
+function mcpDatabaseName(): string {
+  const configured = process.env.COCKROACHDB_MCP_DATABASE?.trim();
+  if (configured) return configured;
+  const url = process.env.DATABASE_URL;
+  if (!url) return "defaultdb";
+  try {
+    const database = decodeURIComponent(new URL(url).pathname.replace(/^\/+/, ""));
+    return database || "defaultdb";
+  } catch {
+    return "defaultdb";
   }
 }
 

@@ -77,7 +77,7 @@ export async function askDecisionLoop(input: {
           let kind = chunk.sourceType as string;
 
           if (chunk.sourceType === "assumption") {
-            const assumption = await getAssumptionById(chunk.sourceId);
+            const assumption = await getAssumptionById(input.tenantId, chunk.sourceId);
             if (assumption) {
               kind = `assumption · ${assumption.validityStatus}`;
             }

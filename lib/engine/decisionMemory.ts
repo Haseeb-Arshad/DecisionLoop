@@ -1,5 +1,5 @@
 import { embedTexts } from "@/lib/ai/embeddings";
-import { insertMemoryChunk } from "@/lib/repo/memoryChunks";
+import { deleteMemoryChunksForDecision, insertMemoryChunk } from "@/lib/repo/memoryChunks";
 import { recordMemoryEvent } from "@/lib/repo/memoryEvents";
 import type { DecisionWithDetails, MemorySourceType } from "@/lib/types";
 
@@ -16,7 +16,11 @@ import type { DecisionWithDetails, MemorySourceType } from "@/lib/types";
  */
 export async function indexDecisionMemory(
   decision: DecisionWithDetails,
-  opts: { agentRunId?: string | null; actorUserId?: string | null } = {},
+  opts: {
+    agentRunId?: string | null;
+    actorUserId?: string | null;
+    dedupeKey?: string | null;
+  } = {},
 ): Promise<{ chunksWritten: number }> {
   const chosen = decision.options.find((o) => o.isChosen);
 
@@ -73,6 +77,12 @@ export async function indexDecisionMemory(
 
   const { embeddings, model } = await embedTexts(texts);
 
+  // A retry after a network timeout must replace the prior partial index rather
+  // than append duplicate decision/assumption chunks. This delete is scoped by
+  // tenant and decision; document evidence has decision_id NULL and is not
+  // touched.
+  await deleteMemoryChunksForDecision(decision.tenantId, decision.id);
+
   await Promise.all(
     embeddings.map((embedding, i) =>
       insertMemoryChunk({
@@ -106,6 +116,7 @@ export async function indexDecisionMemory(
       chosenOption: chosen?.name ?? null,
       assumptionCount: decision.assumptions.length,
     },
+    dedupeKey: opts.dedupeKey ? `${opts.dedupeKey}:decision-committed` : null,
   });
 
   for (const assumption of decision.assumptions) {
@@ -121,6 +132,7 @@ export async function indexDecisionMemory(
       actorUserId: opts.actorUserId ?? null,
       summary: assumption.statement,
       metadata: { normalized: assumption.normalizedStatement, importance: assumption.importance },
+      dedupeKey: opts.dedupeKey ? `${opts.dedupeKey}:assumption:${assumption.id}` : null,
     });
   }
 

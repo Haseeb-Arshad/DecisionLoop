@@ -24,7 +24,7 @@ export async function GET(
     if (!decision) return jsonError("Decision not found.", 404);
 
     const [conflicts, traces, evidence, timeline, outcomes] = await Promise.all([
-      listConflictEventsForDecision(id),
+      listConflictEventsForDecision(auth.tenantId, id),
       listMemoryTraces(auth.tenantId, { decisionId: id, limit: 25 }),
       listEvidenceForDecision(auth.tenantId, id),
       listMemoryEventsForDecision(auth.tenantId, id),

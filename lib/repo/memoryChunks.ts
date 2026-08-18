@@ -49,6 +49,43 @@ export async function insertMemoryChunk(input: {
   authorityScore?: number;
   metadata?: Record<string, unknown> | null;
 }): Promise<MemoryChunk> {
+  let sourceProjectId: string | null = null;
+  if (input.sourceType === "decision") {
+    const [decision] = await sql`
+      SELECT id, project_id
+      FROM decisions
+      WHERE id = ${input.sourceId} AND tenant_id = ${input.tenantId}
+    `;
+    if (!decision) throw new Error("Decision memory source not found in this workspace.");
+    if (input.decisionId !== input.sourceId) {
+      throw new Error("Decision memory chunk must reference its decision source.");
+    }
+    sourceProjectId = (decision.project_id as string | null) ?? null;
+  } else if (input.sourceType === "assumption") {
+    const [assumption] = await sql`
+      SELECT a.id, a.decision_id, d.project_id
+      FROM assumptions a
+      JOIN decisions d ON d.id = a.decision_id
+      WHERE a.id = ${input.sourceId} AND d.tenant_id = ${input.tenantId}
+    `;
+    if (!assumption) throw new Error("Assumption memory source not found in this workspace.");
+    if (input.decisionId !== assumption.decision_id) {
+      throw new Error("Assumption memory chunk must reference its parent decision.");
+    }
+    sourceProjectId = (assumption.project_id as string | null) ?? null;
+  } else {
+    const [document] = await sql`
+      SELECT id, project_id
+      FROM documents
+      WHERE id = ${input.sourceId} AND tenant_id = ${input.tenantId}
+    `;
+    if (!document) throw new Error("Document memory source not found in this workspace.");
+    sourceProjectId = (document.project_id as string | null) ?? null;
+  }
+  if (sourceProjectId !== (input.projectId ?? null)) {
+    throw new Error("Memory chunk project does not match its source.");
+  }
+
   const vectorLiteral = toVectorLiteral(input.embedding);
   const [row] = await sql`
     INSERT INTO memory_chunks (
@@ -159,11 +196,24 @@ export async function searchMemoryChunks(
 }
 
 export async function deleteMemoryChunksForSource(
+  tenantId: string,
   sourceType: MemorySourceType,
   sourceId: string,
 ): Promise<void> {
   await sql`
-    DELETE FROM memory_chunks WHERE source_type = ${sourceType} AND source_id = ${sourceId}
+    DELETE FROM memory_chunks
+    WHERE tenant_id = ${tenantId} AND source_type = ${sourceType} AND source_id = ${sourceId}
+  `;
+}
+
+export async function deleteMemoryChunksForDecision(
+  tenantId: string,
+  decisionId: string,
+): Promise<void> {
+  await sql`
+    DELETE FROM memory_chunks
+    WHERE tenant_id = ${tenantId} AND decision_id = ${decisionId}
+      AND source_type IN ('decision', 'assumption')
   `;
 }
 

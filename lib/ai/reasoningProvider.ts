@@ -30,8 +30,8 @@ export interface DecisionExtractionResult {
     statement: string;
     assumptionType: AssumptionType;
     metric: string;
-    operator: AssumptionOperator;
-    value: number;
+    operator?: AssumptionOperator;
+    value?: number;
     unit: string;
     importance: number;
     confidence: number;

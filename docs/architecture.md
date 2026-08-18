@@ -106,18 +106,19 @@ guessing wrong at build time.
 ## 7. Auth & tenancy
 
 - Signup creates a `tenant` + first `user`. Session cookie carries a signed `{userId, tenantId}`.
-- Every repository function takes `tenantId` as its first argument and every `WHERE` clause is
-  scoped by it — enforced by a lint-style code convention plus tests, not just by discipline.
+- Tenant-owned repository reads and writes take `tenantId` and scope their `WHERE` clauses by it;
+  child-row helpers resolve ownership through the tenant-scoped parent — enforced by code
+  conventions and integration tests, not just by discipline.
 - Passwords hashed with bcrypt (cost 12). No plaintext secret ever touches a table.
 
 ## 8. Deployment target
 
 AWS Amplify Hosting, connected to `github.com/Haseeb-Arshad/DecisionLoop`, `main` branch.
-`amplify.yml` runs `npm ci && npm run build`. Environment variables (CockroachDB connection
-string, S3 bucket/region, Bedrock model IDs, CockroachDB MCP service key, session secret) are
-set in the Amplify console, never committed. A `Dockerfile` is kept in the repo as a portable
-fallback (App Runner / ECS / any container host) since it requires no extra setup beyond what
-Amplify already needs.
+`amplify.yml` runs `npm ci`, linting, resumable migrations, and the production build. Environment
+variables (CockroachDB connection string, S3 bucket/region, Bedrock model IDs, CockroachDB MCP
+service key and cluster scope, session secret) are set in the Amplify console, never committed.
+A `Dockerfile` is kept in the repo as a portable fallback (App Runner / ECS / any container
+host) since it requires no extra setup beyond what Amplify already needs.
 
 ## 8b. Companion documents
 
@@ -169,8 +170,10 @@ None of these block scaffolding, schema, or UI work — they're needed starting 
   override if your account has a different model enabled.
 - `BEDROCK_EMBEDDING_MODEL_ID` — defaults to Amazon Titan Text Embeddings V2 (optional at dev time;
   falls back to a deterministic local hash embedding when `AWS_REGION` is unset).
-- `COCKROACHDB_MCP_SERVICE_KEY` — service-account API key for CockroachDB's Managed MCP Server,
-  used only by the Memory Inspector's independent-verification call.
+- `COCKROACHDB_MCP_SERVICE_KEY` and `COCKROACHDB_MCP_CLUSTER_ID` — service-account API key and
+  explicit cluster scope for CockroachDB's Managed MCP Server, used only by the Memory
+  Inspector's independent-verification call. `COCKROACHDB_MCP_DATABASE` is optional and falls
+  back to the database named by `DATABASE_URL`.
 - `SESSION_SECRET` — random 32+ byte string for signing auth cookies.
 
 All of these are read from environment variables only, documented in `.env.example`, and never

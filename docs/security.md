@@ -38,14 +38,21 @@ See §8.
 Every table carries `tenant_id` (or descends from something that does). Enforcement is at
 three levels:
 
-1. **Repository layer.** Every function in `lib/repo/*` takes `tenantId` and puts it in the
-   `WHERE` clause. `getDecisionById(tenantA, decisionFromB)` returns `null`, not the row.
+1. **Repository layer.** Tenant-owned reads and writes in `lib/repo/*` take `tenantId` and put
+   it in the `WHERE` clause. `getDecisionById(tenantA, decisionFromB)` returns `null`, not the
+   row; internal child-row helpers additionally resolve ownership through their parent.
 2. **Vector search.** Tenant scoping is **in the SQL**, not applied to results afterwards.
    This matters: a post-filter still lets another tenant's rows compete for the top-k slots
    and shift what you get back. See
    [`lib/repo/memoryChunks.ts`](../lib/repo/memoryChunks.ts).
 3. **API layer.** Every route calls `requireAuth()` and passes `auth.tenantId` — never a
    tenant id from the request body.
+4. **Cross-resource validation.** Decision projects, supporting documents, evidence rows,
+   conflict rows, and Ask context are checked against the authenticated tenant and, where
+   applicable, the same project before they are written or read.
+5. **Replay safety.** Decision commits accept an `Idempotency-Key` and bind it to a request
+   fingerprint. Memory indexing exposes a retry path and records `PENDING`, `INDEXED`, or
+   `FAILED` state instead of silently losing a committed decision.
 
 Tested in [`tests/integration/tenantIsolation.test.ts`](../tests/integration/tenantIsolation.test.ts),
 which stores deliberately near-identical decisions in two tenants so similarity alone would
@@ -118,7 +125,8 @@ for human review. It cannot rewrite the record. Tested in
 
 - **Allowlist, not blocklist.** Uploads accept `application/pdf`, `text/plain`,
   `text/markdown` only, rejected at the API boundary.
-- **Size cap** 25 MB, enforced before a presigned URL is issued.
+- **Size cap** 25 MB, enforced before a presigned URL is issued and checked again while the
+  object is streamed from S3 before ingestion.
 - **S3 keys are server-generated** (`tenants/<tenantId>/documents/<uuid>-<sanitized>`). A
   client-supplied key is never trusted; filenames are sanitized to `[a-zA-Z0-9._-]` and
   length-bounded.
@@ -137,6 +145,8 @@ for human review. It cannot rewrite the record. Tested in
 - No secret is exposed to the browser. There are no `NEXT_PUBLIC_*` variables in this app.
 - The MCP analyst exposes a **fixed catalogue of tenant-scoped questions**, not free-form SQL.
   A free-form endpoint over a shared MCP credential would be a cross-tenant read primitive.
+- MCP requests require an explicit cluster scope (`COCKROACHDB_MCP_CLUSTER_ID`) and derive the
+  database from `DATABASE_URL` unless an explicit `COCKROACHDB_MCP_DATABASE` is configured.
 - On AWS, prefer an **IAM role** over static keys — both `lib/aws/s3.ts` and
   `lib/ai/bedrock.ts` fall through to the default AWS credential provider chain.
 
@@ -156,7 +166,7 @@ for human review. It cannot rewrite the record. Tested in
 
 | Question | Answer |
 |---|---|
-| Can another tenant's memory leak? | Not through any tested path — scoping is in the SQL and covered by an integration test. RLS would harden it further. |
+| Can another tenant's memory leak? | The application paths scope queries and cross-resource writes by tenant, with integration coverage that must be run against a real `DATABASE_URL`. RLS would harden it further. |
 | Can malicious document instructions hijack the agent? | No mutating tool exists on the document path. The boundary and fencing are additional layers, not the only ones. |
 | Can low-quality evidence invalidate an important assumption? | No — capped at `CHALLENGED` by the authority rule. |
 | Can duplicate documents create duplicate conflicts? | No — content-hash dedup on ingestion, plus a per-(assumption, document) conflict check. |

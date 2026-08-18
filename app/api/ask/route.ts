@@ -4,6 +4,8 @@ import { handleApiError } from "@/lib/api/handler";
 import { requireAuth } from "@/lib/auth/currentUser";
 import { sessionIdFor } from "@/lib/engine/agentRun";
 import { askDecisionLoop } from "@/lib/engine/askDecisionLoop";
+import { getDecisionById } from "@/lib/repo/decisions";
+import { getProjectById } from "@/lib/repo/projects";
 
 const AskSchema = z.object({
   question: z.string().min(3).max(1000),
@@ -22,6 +24,21 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth();
     const body = AskSchema.parse(await req.json());
+
+    if (body.projectId) {
+      const project = await getProjectById(auth.tenantId, body.projectId);
+      if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });
+    }
+    if (body.decisionId) {
+      const decision = await getDecisionById(auth.tenantId, body.decisionId);
+      if (!decision) return NextResponse.json({ error: "Decision not found." }, { status: 404 });
+      if (body.projectId && decision.projectId !== body.projectId) {
+        return NextResponse.json(
+          { error: "Decision does not belong to the requested project." },
+          { status: 400 },
+        );
+      }
+    }
 
     const result = await askDecisionLoop({
       tenantId: auth.tenantId,

@@ -144,7 +144,7 @@ Return to the decision.
 |---|---|
 | Ingestion is slow | Keep talking through the at-risk card layout; it lands within ~60s |
 | No conflict detected | Check `npm run verify:memory` — usually the local embedding fallback is in use because `AWS_REGION` is unset |
-| MCP panel shows "unavailable" | Expected without `COCKROACHDB_MCP_SERVICE_KEY`. Say so plainly and show the internal trace — it's the same data |
+| MCP panel shows "unavailable" | Expected without both `COCKROACHDB_MCP_SERVICE_KEY` and `COCKROACHDB_MCP_CLUSTER_ID`. Say so plainly and show the internal trace — it's the same data |
 | Bedrock throttling | Re-run; mention Bedrock on-demand rate limits rather than pretending it didn't happen |
 
 ## Questions to expect

@@ -1,5 +1,7 @@
 import type { DocumentSourceType } from "@/lib/types";
 
+export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
 /**
  * Shared shape for an upload initiated from the UI. Lives in its own module
  * because both the mutation hook (lib/queries.ts) and the upload components
