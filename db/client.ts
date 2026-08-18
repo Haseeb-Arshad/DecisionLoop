@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { getCockroachSslOptions } from "@/db/ssl";
 
 /**
  * Shared CockroachDB connection pool for the whole app.
@@ -28,6 +29,7 @@ function createClient() {
     );
   }
   return postgres(url, {
+    ssl: getCockroachSslOptions(),
     max: 10,
     idle_timeout: 20,
     connect_timeout: 10,

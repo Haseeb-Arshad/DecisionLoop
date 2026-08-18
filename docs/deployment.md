@@ -45,6 +45,13 @@ aws bedrock list-foundation-models --region us-east-1 --query "modelSummaries[?c
    parameter — keep both.
 3. Set it as `DATABASE_URL`.
 
+The official CockroachDB connection also requires the cluster CA certificate.
+On Windows, use the Cloud Console's **Download CA Cert** command; the app
+automatically reads `%APPDATA%\\postgresql\\root.crt`. In a hosted environment,
+set `DATABASE_SSL_CA` to the PEM certificate as a secret (preserving line
+breaks as `\\n`) or mount the certificate and set `DATABASE_SSL_ROOT_CERT` to its
+path. Never commit `root.crt` or put it in `.env.example`.
+
 **Vector index:** `db/migrations/0002_vector_index.optional.sql` creates a C-SPANN vector
 index and requires CockroachDB v25.2+. The migration runner treats it as optional: if the
 cluster doesn't support `CREATE VECTOR INDEX`, it logs a warning, marks it applied, and the

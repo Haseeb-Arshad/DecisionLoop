@@ -27,6 +27,7 @@ import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import postgres from "postgres";
+import { getCockroachSslOptions } from "@/db/ssl";
 
 const MIGRATIONS_DIR = path.join(process.cwd(), "db", "migrations");
 
@@ -108,7 +109,11 @@ async function main() {
     );
   }
 
-  const sql = postgres(url, { max: 1, onnotice: () => {} });
+  const sql = postgres(url, {
+    max: 1,
+    ssl: getCockroachSslOptions(),
+    onnotice: () => {},
+  });
 
   await sql`
     CREATE TABLE IF NOT EXISTS schema_migrations (
