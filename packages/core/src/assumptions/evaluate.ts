@@ -50,11 +50,18 @@ export interface EvaluateOptions {
   /** Domain-pack aliases: normalized alias → normalized canonical key. */
   predicateAliases?: Record<string, string>;
   subjectAliases?: Record<string, string>;
+  /** Domain-pack canonicalization, e.g. `npm:redis` → `package:npm:redis`. */
+  canonicalSubject?: (normalized: string) => string;
 }
 
-function canonical(key: string | null, aliases?: Record<string, string>): string | null {
+function canonical(
+  key: string | null,
+  aliases?: Record<string, string>,
+  fn?: (normalized: string) => string,
+): string | null {
   if (!key) return null;
-  return aliases?.[key] ?? key;
+  const aliased = aliases?.[key] ?? key;
+  return fn ? fn(aliased) : aliased;
 }
 
 function notApplicable(reason: string): DeterministicEvaluation {
@@ -86,8 +93,8 @@ export function evaluateAssumption(
   // subject (every 1.x numeric assumption) is matched on predicate alone —
   // retrieval has already tied the fact to this assumption's decision, and
   // the explanation says so rather than hiding it.
-  const aSubj = canonical(normalizeKey(assumption.subject), opts.subjectAliases);
-  const fSubj = canonical(normalizeKey(fact.subject), opts.subjectAliases);
+  const aSubj = canonical(normalizeKey(assumption.subject), opts.subjectAliases, opts.canonicalSubject);
+  const fSubj = canonical(normalizeKey(fact.subject), opts.subjectAliases, opts.canonicalSubject);
   if (aSubj && fSubj && aSubj !== fSubj) {
     return notApplicable(`Different subjects (${aSubj} vs ${fSubj}).`);
   }
