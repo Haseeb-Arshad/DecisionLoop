@@ -2,7 +2,7 @@
   "name": "decisionloop",
   "version": "0.1.0",
   "private": true,
-  "description": "DecisionLoop — assumption-aware decision memory. Remembers why a decision was made, notices when new evidence invalidates it, and proves it with a Memory Inspector backed by CockroachDB.",
+  "description": "DecisionLoop \u2014 assumption-aware decision memory. Remembers why a decision was made, notices when new evidence invalidates it, and proves it with a Memory Inspector backed by CockroachDB.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -17,7 +17,9 @@
     "test:watch": "vitest",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "decisionloop": "tsx packages/cli/src/bin.ts",
+    "dl": "tsx packages/cli/src/bin.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1107.0",
