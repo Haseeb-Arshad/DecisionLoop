@@ -30,6 +30,14 @@ const baseAssumption: Assumption = {
   challengedAt: null,
   invalidatedAt: null,
   createdAt: new Date().toISOString(),
+  subject: null,
+  predicate: "annual_price",
+  valueType: "NUMBER",
+  operatorV2: "<",
+  expected: 25000,
+  verificationPolicy: "DETERMINISTIC_FIRST",
+  provenance: null,
+  lastEvaluatedAt: null,
 };
 
 function fact(overrides: Partial<ExtractedFact> = {}): ExtractedFact {

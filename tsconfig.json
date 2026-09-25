@@ -28,6 +28,33 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@decisionloop/*": [
+        "./packages/*/src"
+      ],
+      "@decisionloop/core/*": [
+        "./packages/core/src/*"
+      ],
+      "@decisionloop/storage-sql/*": [
+        "./packages/storage-sql/src/*"
+      ],
+      "@decisionloop/providers/*": [
+        "./packages/providers/src/*"
+      ],
+      "@decisionloop/runtime/*": [
+        "./packages/runtime/src/*"
+      ],
+      "@decisionloop/mcp/*": [
+        "./packages/mcp/src/*"
+      ],
+      "@decisionloop/sdk/*": [
+        "./packages/sdk/src/*"
+      ],
+      "@decisionloop/cli/*": [
+        "./packages/cli/src/*"
+      ],
+      "@decisionloop/github/*": [
+        "./packages/github/src/*"
       ]
     }
   },
@@ -39,6 +66,7 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".scratch"
   ]
 }

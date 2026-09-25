@@ -6,17 +6,21 @@ const rootDir = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   resolve: {
-    alias: {
-      "@": path.resolve(rootDir, "."),
-    },
+    // Mirrors tsconfig.json `paths`. Order matters: the subpath alias must be
+    // tried before the bare package alias.
+    alias: [
+      { find: /^@decisionloop\/([^/]+)\/(.*)$/, replacement: path.resolve(rootDir, "packages/$1/src/$2") },
+      { find: /^@decisionloop\/([^/]+)$/, replacement: path.resolve(rootDir, "packages/$1/src") },
+      { find: "@", replacement: path.resolve(rootDir, ".") },
+    ],
   },
   test: {
     environment: "node",
-    // Unit tests run anywhere with no infrastructure. Integration tests
-    // require a real CockroachDB and skip themselves without DATABASE_URL
-    // (see tests/integration/*). E2E lives under tests/e2e and runs with
-    // Playwright, not vitest — see docs/deployment.md.
-    include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"],
+    // Unit tests run anywhere with no infrastructure. Integration tests run
+    // against an embedded PGlite database by default, or against a real
+    // CockroachDB/PostgreSQL when DATABASE_URL is set (see tests/setup).
+    // E2E lives under tests/e2e and runs with Playwright, not vitest.
+    include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts", "packages/*/test/**/*.test.ts"],
     // Integration tests share a database; running their files in parallel
     // would interleave tenant setup and teardown.
     fileParallelism: false,
