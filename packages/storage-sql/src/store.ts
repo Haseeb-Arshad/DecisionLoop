@@ -595,7 +595,8 @@ export class SqlDecisionStore implements DecisionStore {
         authority, confidence, occurred_at, content, content_hash, facts, resources,
         provenance, actor, supersedes_evidence_id
       ) VALUES (
-        ${input.tenantId}, ${input.projectId}, ${input.eventId}, ${input.documentId ?? null},
+        ${input.tenantId}, ${input.projectId}, ${input.eventId},
+        (SELECT id FROM documents WHERE id = ${input.documentId ?? null} AND tenant_id = ${input.tenantId}),
         ${input.kind}, ${input.source}, ${input.sourceRef}, ${input.subject},
         ${input.authority}, ${input.confidence}, ${new Date(input.occurredAt)}, ${input.content},
         ${input.contentHash}, ${j(input.facts)}::jsonb, ${j(input.resources)}::jsonb,
@@ -629,11 +630,16 @@ export class SqlDecisionStore implements DecisionStore {
   async linkEvidenceToDecision(input: Parameters<DecisionStore["linkEvidenceToDecision"]>[0]) {
     await this.q`
       INSERT INTO decision_evidence (
-        tenant_id, decision_id, assumption_id, evidence_item_id, evidence_type, relevance, excerpt
+        tenant_id, decision_id, assumption_id, evidence_item_id, document_id, evidence_type, relevance, excerpt
       )
-      SELECT ${input.tenantId}, d.id, ${input.assumptionId}, ${input.evidenceItemId},
+      SELECT ${input.tenantId}, d.id, ${input.assumptionId}, e.id, e.document_id,
              ${input.evidenceType}, ${input.relevance}, ${input.excerpt}
-      FROM decisions d WHERE d.id = ${input.decisionId} AND d.tenant_id = ${input.tenantId}
+      FROM decisions d
+      JOIN evidence_items e ON e.id = ${input.evidenceItemId} AND e.tenant_id = d.tenant_id
+      WHERE d.id = ${input.decisionId} AND d.tenant_id = ${input.tenantId}
+      -- One link per (decision, document, type); later evidence from the same
+      -- document is already represented.
+      ON CONFLICT (tenant_id, decision_id, document_id, evidence_type) DO NOTHING
     `;
   }
 
@@ -676,11 +682,13 @@ export class SqlDecisionStore implements DecisionStore {
   async insertConflict(input: NewConflictRecord) {
     const inserted = await this.q`
       INSERT INTO conflict_events (
-        tenant_id, decision_id, assumption_id, evidence_item_id, event_id, evaluation_id,
+        tenant_id, decision_id, assumption_id, evidence_item_id, document_id, event_id, evaluation_id,
         agent_run_id, fact_statement, explanation, conflict_type, relation, confidence,
         old_value, new_value, source_quote, detection_method, memory_trace_id
       )
-      SELECT ${input.tenantId}, d.id, ${input.assumptionId}, ${input.evidenceItemId}, ${input.eventId},
+      SELECT ${input.tenantId}, d.id, ${input.assumptionId}, ${input.evidenceItemId},
+             (SELECT document_id FROM evidence_items WHERE id = ${input.evidenceItemId} AND tenant_id = ${input.tenantId}),
+             ${input.eventId},
              ${input.evaluationId}, ${input.agentRunId}, ${input.factStatement}, ${input.explanation},
              ${input.conflictType}, ${input.relation}, ${input.confidence}, ${input.oldValue},
              ${input.newValue}, ${input.sourceQuote}, ${input.detectionMethod}, ${input.memoryTraceId ?? null}

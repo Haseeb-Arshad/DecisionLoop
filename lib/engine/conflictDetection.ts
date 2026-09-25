@@ -40,6 +40,10 @@ export interface ConflictDetectionSummary {
 }
 
 /**
+ * @deprecated since 2.0 — uploads are evaluated by the trigger engine
+ * (lib/engine/documentIngestion.ts#evaluateDocumentAsEvidence). Kept for the
+ * 1.x integration test and scripts; remove once they migrate.
+ *
  * The core "automatic assumption invalidation" loop (decision.md §20–§21).
  *
  * Given a document that was just ingested, this function is deliberately

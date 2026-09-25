@@ -288,6 +288,9 @@ export class TriggerEngine {
       tenantId,
       projectId: null,
       eventId: event.id,
+      // Set only by the server's own document pipeline; the store re-checks
+      // that the document belongs to this workspace.
+      documentId: typeof event.payload.documentId === "string" ? event.payload.documentId : null,
       kind: event.evidenceKind,
       source: event.source,
       sourceRef: (event.provenance.url as string | null) ?? event.externalId,
