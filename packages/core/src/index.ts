@@ -19,3 +19,4 @@ export * from "./ports/providers";
 export * from "./domain-packs/pack";
 export * from "./domain-packs/engineering";
 export * from "./services/index";
+export * from "./operations";

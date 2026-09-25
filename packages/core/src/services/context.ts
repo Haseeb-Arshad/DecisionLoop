@@ -60,6 +60,10 @@ export interface ContextResponse {
 export class ContextService {
   constructor(private readonly deps: ServiceDeps) {}
 
+  getConstraints(actor: Actor, input: { resources: Array<string | ResourceRef>; repository?: string | null }) {
+    return findConstraints(this.deps, actor, input);
+  }
+
   async getContext(actor: Actor, input: ContextRequestInput): Promise<ContextResponse> {
     requireScope(actor, "read");
     const req = contextRequestSchema.parse(input);
@@ -230,6 +234,54 @@ export class ContextService {
     );
     return { contextRequestId: runId, ...result };
   }
+}
+
+export interface ConstraintMatch {
+  constraintId: string;
+  statement: string;
+  severity: string;
+  rule: unknown;
+  decision: { id: string; externalRef: string | null; title: string; status: DecisionStatus };
+  matchedBy: string;
+}
+
+/**
+ * Active constraints for the files, services or packages an agent is about
+ * to touch (`decisionloop_get_constraints`). Structural only: a constraint
+ * applies because its decision governs one of these resources.
+ */
+export async function findConstraints(
+  deps: ServiceDeps,
+  actor: Actor,
+  input: { resources: Array<string | ResourceRef>; repository?: string | null },
+): Promise<ConstraintMatch[]> {
+  requireScope(actor, "read");
+  const requested = input.resources.map((r) => parseResource(r, input.repository ?? null));
+  if (requested.length === 0) return [];
+  const recorded = await deps.store.listResourcesForMatching(actor.tenantId, { statuses: RETURNABLE });
+  const byDecision = new Map<string, ResourceRef[]>();
+  for (const r of recorded) {
+    const list = byDecision.get(r.decisionId) ?? [];
+    list.push({ type: r.resourceType, key: r.resourceKey, repository: r.repository });
+    byDecision.set(r.decisionId, list);
+  }
+  const matched = new Map<string, string>();
+  for (const [id, refs] of byDecision) {
+    const m = bestResourceMatch(refs.filter((r) => r.type !== "repository"), requested);
+    if (m.score >= MIN_STRUCTURAL) matched.set(id, `${m.recorded!.key} ↔ ${m.requested!.key}`);
+  }
+  if (matched.size === 0) return [];
+  const decisions = await deps.store.listDecisions(actor.tenantId, { ids: Array.from(matched.keys()), statuses: RETURNABLE });
+  return decisions.flatMap((d) =>
+    (d.constraints ?? []).map((c) => ({
+      constraintId: c.id,
+      statement: c.statement,
+      severity: c.severity,
+      rule: c.rule,
+      decision: { id: d.id, externalRef: d.externalRef, title: d.title, status: d.status },
+      matchedBy: matched.get(d.id)!,
+    })),
+  );
 }
 
 function toContextDecision(
