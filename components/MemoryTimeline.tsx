@@ -23,6 +23,15 @@ const EVENT_META: Record<
   DECISION_SUPERSEDED: { label: "Decision superseded", dot: "bg-ink-400", emphasis: true },
   CONFLICT_DISMISSED: { label: "Conflict dismissed", dot: "bg-ink-400" },
   CONFLICT_ACCEPTED: { label: "New evidence accepted", dot: "bg-risk-400" },
+  DECISION_PROPOSED: { label: "Decision proposed", dot: "bg-ink-400" },
+  DECISION_REJECTED: { label: "Proposal rejected", dot: "bg-ink-400" },
+  ASSUMPTION_SUPPORTED: { label: "Evidence supports assumption", dot: "bg-signal-500" },
+  ASSUMPTION_PROPOSED: { label: "Assumption proposed", dot: "bg-ink-400" },
+  CONSTRAINT_VIOLATION_SUSPECTED: { label: "Possible constraint violation", dot: "bg-amber-500", emphasis: true },
+  APPROVAL_REQUESTED: { label: "Human approval requested", dot: "bg-amber-400" },
+  APPROVAL_RESOLVED: { label: "Approval resolved", dot: "bg-ink-500" },
+  CONTEXT_PROVIDED: { label: "Provided to an agent as context", dot: "bg-signal-500" },
+  OUTCOME_RECORDED: { label: "Outcome recorded", dot: "bg-ink-500" },
 };
 
 function formatWhen(iso: string): string {

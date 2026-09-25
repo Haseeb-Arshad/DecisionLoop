@@ -11,7 +11,7 @@
  */
 import "dotenv/config";
 import { sql } from "@/db/client";
-import { embedText, getEmbeddingProvider } from "@/lib/ai/embeddings";
+import { embedText, getEmbeddingProvider, isSemanticEmbeddingProvider } from "@/lib/ai/embeddings";
 import { retrieveMemory } from "@/lib/engine/retrieval";
 import { getObservabilityMetrics } from "@/lib/repo/agentRuns";
 import { listDecisions } from "@/lib/repo/decisions";
@@ -84,13 +84,13 @@ async function main() {
 
   // 4. Which embedding provider is actually in use.
   const provider = getEmbeddingProvider();
-  const usingRealEmbeddings = provider.modelName !== "local-hash-fallback-v1";
+  const usingRealEmbeddings = isSemanticEmbeddingProvider(provider);
   record(
     "Embedding provider",
     usingRealEmbeddings,
     usingRealEmbeddings
       ? `${provider.modelName} (Bedrock)`
-      : "local-hash-fallback — NO semantic meaning; retrieval will not work correctly. Set AWS_REGION and enable Bedrock model access.",
+      : `${provider.modelName} — lexical only (shared words, not meaning). Set AWS_REGION (Bedrock) or OPENAI_API_KEY for semantic retrieval.`,
   );
 
   const tenants = (await sql`

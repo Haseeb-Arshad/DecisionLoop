@@ -87,9 +87,21 @@ export type MemoryEventType =
   | "DECISION_REOPENED"
   | "DECISION_SUPERSEDED"
   | "CONFLICT_DISMISSED"
-  | "CONFLICT_ACCEPTED";
+  | "CONFLICT_ACCEPTED"
+  // 2.0
+  | "DECISION_PROPOSED"
+  | "DECISION_REJECTED"
+  | "ASSUMPTION_SUPPORTED"
+  | "ASSUMPTION_PROPOSED"
+  | "CONSTRAINT_VIOLATION_SUSPECTED"
+  | "APPROVAL_REQUESTED"
+  | "APPROVAL_RESOLVED"
+  | "CONTEXT_PROVIDED"
+  | "OUTCOME_RECORDED";
 
 export type MemoryEntityType =
+  | "approval"
+  | "evidence"
   | "decision"
   | "assumption"
   | "document"

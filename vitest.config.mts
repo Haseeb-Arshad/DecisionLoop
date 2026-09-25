@@ -25,6 +25,12 @@ export default defineConfig({
     // would interleave tenant setup and teardown.
     fileParallelism: false,
     globalSetup: ["tests/setup/globalDb.ts"],
+    // Hermetic by default: no test may call a hosted model because a key
+    // happens to be in the developer's environment.
+    env: {
+      DECISIONLOOP_EMBEDDING_PROVIDER: "lexical",
+      DECISIONLOOP_REASONING_PROVIDER: "none",
+    },
     testTimeout: 30_000,
   },
 });

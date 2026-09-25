@@ -1,4 +1,4 @@
-import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
+import { invokeBedrockStructured } from "@decisionloop/providers/bedrock";
 import type { ZodType } from "zod";
 import { UNTRUSTED_CONTENT_BOUNDARY, wrapUntrustedContent } from "@/lib/ai/promptSafety";
 import {
@@ -46,34 +46,9 @@ const BEDROCK_REASONING_MODEL_ID =
  * sending entire documents to the model. */
 const MAX_DOCUMENT_CHARS = 24_000;
 
-let client: BedrockRuntimeClient | null = null;
-
-function getClient(): BedrockRuntimeClient {
-  if (client) return client;
-  const region = process.env.AWS_REGION;
-  if (!region) {
-    throw new Error("AWS_REGION is not set. See .env.example.");
-  }
-  client = new BedrockRuntimeClient({ region });
-  return client;
-}
-
-export class BedrockRefusalError extends Error {
-  constructor(public readonly stopDetails: unknown) {
-    super("Bedrock declined this request");
-    this.name = "BedrockRefusalError";
-  }
-}
-
-export class StructuredOutputError extends Error {
-  constructor(
-    message: string,
-    public readonly rawText: string,
-  ) {
-    super(message);
-    this.name = "StructuredOutputError";
-  }
-}
+// Transport, retry-on-invalid-output and refusal handling are shared with
+// the 2.0 provider (packages/providers/src/bedrock.ts).
+export { BedrockRefusalError, StructuredOutputError } from "@decisionloop/providers/bedrock";
 
 interface StructuredCallOptions<T> {
   system: string;
@@ -86,77 +61,13 @@ interface StructuredCallOptions<T> {
   maxAttempts?: number;
 }
 
-interface AnthropicOnBedrockResponse {
-  stop_reason?: string;
-  stop_details?: unknown;
-  content: Array<{ type: string; text?: string }>;
-  usage?: Record<string, unknown>;
-}
-
-async function callBedrockStructured<T>(opts: StructuredCallOptions<T>): Promise<T> {
-  const maxAttempts = opts.maxAttempts ?? 2;
-  let lastError: Error | null = null;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const body = {
-      anthropic_version: "bedrock-2023-05-31",
-      max_tokens: opts.maxTokens ?? 8192,
-      system:
-        attempt === 1
-          ? opts.system
-          : `${opts.system}\n\nYour previous response did not conform to the required JSON schema. ` +
-            `Return only valid JSON matching the schema exactly.`,
-      output_config: {
-        effort: opts.effort ?? "medium",
-        format: { type: "json_schema", schema: opts.schema },
-      },
-      messages: [{ role: "user", content: opts.prompt }],
-    };
-
-    const command = new InvokeModelCommand({
-      modelId: BEDROCK_REASONING_MODEL_ID,
-      contentType: "application/json",
-      accept: "application/json",
-      body: JSON.stringify(body),
-    });
-
-    const response = await getClient().send(command);
-    const raw = JSON.parse(
-      new TextDecoder().decode(response.body),
-    ) as AnthropicOnBedrockResponse;
-
-    // A refusal is a policy decision, not a malformed response — retrying
-    // the identical prompt would just burn tokens to be refused again.
-    if (raw.stop_reason === "refusal") {
-      throw new BedrockRefusalError(raw.stop_details);
-    }
-
-    const textBlock = raw.content.find((b) => b.type === "text" && b.text);
-    if (!textBlock?.text) {
-      lastError = new StructuredOutputError(
-        `Bedrock response had no text block (stop_reason: ${raw.stop_reason}).`,
-        "",
-      );
-      continue;
-    }
-
-    try {
-      const parsed = JSON.parse(textBlock.text) as unknown;
-      return opts.validator.parse(parsed);
-    } catch (err) {
-      lastError = new StructuredOutputError(
-        `Structured output failed validation on attempt ${attempt}/${maxAttempts}: ` +
-          `${err instanceof Error ? err.message : String(err)}`,
-        textBlock.text,
-      );
-      log.warn(
-        { attempt, maxAttempts, err, preview: textBlock.text.slice(0, 400) },
-        "invalid structured output from Bedrock, retrying",
-      );
-    }
-  }
-
-  throw lastError ?? new StructuredOutputError("Bedrock structured call failed.", "");
+function callBedrockStructured<T>(opts: StructuredCallOptions<T>): Promise<T> {
+  return invokeBedrockStructured({
+    ...opts,
+    modelId: BEDROCK_REASONING_MODEL_ID,
+    onInvalidOutput: ({ attempt, maxAttempts, error, preview }) =>
+      log.warn({ attempt, maxAttempts, err: error, preview }, "invalid structured output from Bedrock, retrying"),
+  });
 }
 
 // The deterministic conflict shortcut moved to lib/ai/deterministic.ts and
