@@ -51,3 +51,5 @@ next-env.d.ts
 /tmp
 
 .scratch/
+
+evals/reports/

@@ -111,10 +111,10 @@ export async function createDecision(
     for (const opt of input.options) {
       const [row] = await tx`
         INSERT INTO decision_options (
-          decision_id, name, description, is_chosen, rejection_reason
+          decision_id, name, description, is_chosen, rejection_reason, created_at
         ) VALUES (
           ${decision.id}, ${opt.name}, ${opt.description ?? null},
-          ${opt.isChosen}, ${opt.rejectionReason ?? null}
+          ${opt.isChosen}, ${opt.rejectionReason ?? null}, clock_timestamp()
         )
         RETURNING *
       `;
@@ -126,12 +126,14 @@ export async function createDecision(
       const [row] = await tx`
         INSERT INTO assumptions (
           decision_id, statement, normalized_statement, assumption_type,
-          metric, operator, value, unit, importance, confidence, authority_score
+          metric, operator, value, unit, importance, confidence, authority_score, created_at
         ) VALUES (
           ${decision.id}, ${a.statement}, ${normalizeAssumption(a)},
           ${a.assumptionType ?? "QUANTITATIVE"}, ${a.metric ?? null},
           ${a.operator ?? null}, ${a.value ?? null}, ${a.unit ?? null},
-          ${a.importance ?? 0.6}, ${a.confidence ?? 0.7}, ${a.authorityScore ?? 0.7}
+          ${a.importance ?? 0.6}, ${a.confidence ?? 0.7}, ${a.authorityScore ?? 0.7},
+          -- Statement time keeps the given order within one transaction.
+          clock_timestamp()
         )
         RETURNING *
       `;

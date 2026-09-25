@@ -19,7 +19,8 @@
     "test:integration": "vitest run tests/integration",
     "test:e2e": "playwright test",
     "decisionloop": "tsx packages/cli/src/bin.ts",
-    "dl": "tsx packages/cli/src/bin.ts"
+    "dl": "tsx packages/cli/src/bin.ts",
+    "eval": "tsx evals/run.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1107.0",

@@ -214,8 +214,8 @@ export class SqlDecisionStore implements DecisionStore {
 
       for (const opt of input.options) {
         await tx`
-          INSERT INTO decision_options (decision_id, name, description, is_chosen, rejection_reason)
-          VALUES (${decision.id}, ${opt.name}, ${opt.description}, ${opt.isChosen}, ${opt.rejectionReason})
+          INSERT INTO decision_options (decision_id, name, description, is_chosen, rejection_reason, created_at)
+          VALUES (${decision.id}, ${opt.name}, ${opt.description}, ${opt.isChosen}, ${opt.rejectionReason}, clock_timestamp())
         `;
       }
       for (const spec of input.assumptions) {
@@ -223,15 +223,15 @@ export class SqlDecisionStore implements DecisionStore {
       }
       for (const r of input.resources) {
         await tx`
-          INSERT INTO decision_resources (tenant_id, decision_id, resource_type, resource_key, repository)
-          VALUES (${input.tenantId}, ${decision.id}, ${r.type}, ${r.key}, ${r.repository ?? null})
+          INSERT INTO decision_resources (tenant_id, decision_id, resource_type, resource_key, repository, created_at)
+          VALUES (${input.tenantId}, ${decision.id}, ${r.type}, ${r.key}, ${r.repository ?? null}, clock_timestamp())
           ON CONFLICT (decision_id, resource_type, resource_key, relationship) DO NOTHING
         `;
       }
       for (const c of input.constraints) {
         await tx`
-          INSERT INTO decision_constraints (tenant_id, decision_id, statement, rule, severity)
-          VALUES (${input.tenantId}, ${decision.id}, ${c.statement}, ${j(c.rule)}::jsonb, ${c.severity})
+          INSERT INTO decision_constraints (tenant_id, decision_id, statement, rule, severity, created_at)
+          VALUES (${input.tenantId}, ${decision.id}, ${c.statement}, ${j(c.rule)}::jsonb, ${c.severity}, clock_timestamp())
         `;
       }
 
@@ -250,7 +250,7 @@ export class SqlDecisionStore implements DecisionStore {
         decision_id, statement, normalized_statement, assumption_type,
         metric, operator, value, unit, importance, confidence, authority_score,
         valid_from, valid_until, subject, predicate, value_type, expected,
-        verification_policy, provenance
+        verification_policy, provenance, created_at
       ) VALUES (
         ${decisionId}, ${spec.statement},
         ${canonicalForm({ ...spec, subject, predicate })},
@@ -262,7 +262,10 @@ export class SqlDecisionStore implements DecisionStore {
         ${spec.validUntil ? new Date(spec.validUntil) : null},
         ${subject}, ${predicate}, ${spec.valueType},
         ${j(spec.expected ?? null)}::jsonb, ${spec.verificationPolicy},
-        ${j(spec.provenance ?? null)}::jsonb
+        ${j(spec.provenance ?? null)}::jsonb,
+        -- Statement time, not transaction start: rows written together keep
+        -- the order they were given in.
+        clock_timestamp()
       )
       RETURNING *
     `;
