@@ -67,3 +67,29 @@ describe("migration files", () => {
     expect(hardening).toContain("decision_evidence_document_type_idx");
   });
 });
+
+describe("dialect handling", () => {
+  it("keeps CockroachDB-only and PostgreSQL-only files on their dialect", async () => {
+    const { appliesToDialect } = await import("@decisionloop/storage-sql/migrate");
+    expect(appliesToDialect("0002_vector_index.optional.sql", "postgres")).toBe(false);
+    expect(appliesToDialect("0002_vector_index.optional.sql", "cockroach")).toBe(true);
+    expect(appliesToDialect("0006_pgvector_index.postgres.optional.sql", "cockroach")).toBe(false);
+    expect(appliesToDialect("0005_reasoning_infrastructure.sql", "postgres")).toBe(true);
+  });
+
+  it("rewrites the historical STRING type only for PostgreSQL", async () => {
+    const { adaptStatement } = await import("@decisionloop/storage-sql/migrate");
+    expect(adaptStatement("name STRING NOT NULL", "postgres")).toBe("name TEXT NOT NULL");
+    expect(adaptStatement("name STRING NOT NULL", "cockroach")).toBe("name STRING NOT NULL");
+  });
+
+  it("new migrations are written in portable SQL", () => {
+    const dir = path.join(process.cwd(), "db", "migrations");
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith(".sql"));
+    const newer = files.filter((f) => f >= "0005");
+    for (const file of newer) {
+      const contents = fs.readFileSync(path.join(dir, file), "utf8");
+      expect(splitSqlStatements(contents).join("\n"), file).not.toMatch(/\bSTRING\b/);
+    }
+  });
+});

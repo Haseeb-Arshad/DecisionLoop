@@ -54,8 +54,9 @@ export async function askDecisionLoop(input: {
         signals: {
           focusDecisionId: input.focusDecisionId ?? null,
           focusProjectId: input.projectId ?? null,
+          // Origin sessions come from each memory row (origin_session_id);
+          // unknown origin is never counted as cross-session.
           sessionId: input.sessionId,
-          originSessionByChunkId: {},
         },
         selectTopK: 6,
         minFinalScore: 0.3,

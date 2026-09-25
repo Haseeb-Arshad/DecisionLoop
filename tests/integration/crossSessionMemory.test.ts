@@ -156,12 +156,23 @@ describeIfDb("cross-session persistent memory", () => {
     const retrieval = await retrieveMemory(
       tenantId,
       "SignalForge annual price is now $42,000",
-      { sourceType: "assumption", limit: 5 },
+      { sourceType: "assumption", limit: 5, signals: { sessionId: "session-B" } },
     );
 
     expect(retrieval.candidates.length).toBeGreaterThan(0);
     const found = retrieval.candidates.find((c) => c.decisionId === decisionId);
     expect(found, "the committed assumption should be retrievable from a new session").toBeDefined();
+    // Cross-session recall is proven from the origin recorded on the memory
+    // row, not assumed. (Before 2.0 this was structurally always false.)
+    expect(found!.originSessionId).toBe("session-A");
+    expect(found!.crossSession).toBe(true);
+
+    const sameSession = await retrieveMemory(tenantId, "SignalForge annual price", {
+      sourceType: "assumption",
+      limit: 5,
+      signals: { sessionId: "session-A" },
+    });
+    expect(sameSession.candidates.find((c) => c.decisionId === decisionId)!.crossSession).toBe(false);
   });
 
   it("session B: new evidence moves the decision to AT_RISK", async () => {

@@ -20,7 +20,7 @@ import type {
   MemoryAnswerInput,
   ReasoningProvider,
 } from "@/lib/ai/reasoningProvider";
-import type { AssumptionOperator, ExtractedFact } from "@/lib/types";
+import type { ExtractedFact } from "@/lib/types";
 
 const log = childLogger({ module: "bedrock" });
 
@@ -159,68 +159,9 @@ async function callBedrockStructured<T>(opts: StructuredCallOptions<T>): Promise
   throw lastError ?? new StructuredOutputError("Bedrock structured call failed.", "");
 }
 
-// ── Deterministic conflict shortcut (decision.md §21) ───────────────────────
-// "price < 25000" vs "price = 42000" should not require an LLM to decide
-// whether it conflicts. Applied only when the new fact states a concrete
-// value ('=') for the same metric and a compatible unit as the stored
-// assumption; anything less clean (different metric, unstructured claims,
-// an inequality-shaped fact) falls through to the model judgment below.
-
-function normalize(s: string): string {
-  return s.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
-}
-
-function satisfies(value: number, operator: AssumptionOperator, threshold: number): boolean {
-  switch (operator) {
-    case "<":
-      return value < threshold;
-    case "<=":
-      return value <= threshold;
-    case ">":
-      return value > threshold;
-    case ">=":
-      return value >= threshold;
-    case "=":
-      return value === threshold;
-  }
-}
-
-export function tryDeterministicConflictCheck(
-  input: ConflictAnalysisInput,
-): ConflictJudgment | null {
-  const { fact, assumption, otherOptionNames } = input;
-  if (!assumption.metric || !assumption.operator || assumption.value === null) return null;
-  if (fact.operator !== "=") return null;
-  if (normalize(fact.metric) !== normalize(assumption.metric)) return null;
-  if (assumption.unit && fact.unit && normalize(assumption.unit) !== normalize(fact.unit)) {
-    return null;
-  }
-
-  const holds = satisfies(fact.value, assumption.operator, assumption.value);
-  const constraint = `${assumption.metric} ${assumption.operator} ${assumption.value}${
-    assumption.unit ? ` ${assumption.unit}` : ""
-  }`;
-  const observed = `${fact.subject} ${fact.metric} is now ${fact.value}${fact.unit ? ` ${fact.unit}` : ""}`;
-  const oldValue = `${assumption.operator} ${assumption.value}${assumption.unit ? ` ${assumption.unit}` : ""}`;
-  const newValue = `${fact.value}${fact.unit ? ` ${fact.unit}` : ""}`;
-
-  return {
-    // Arithmetic on two structured values is not a judgment call, so this
-    // path reports full confidence — the uncertainty in the pipeline lives
-    // in extraction (did we read the number correctly?), which is recorded
-    // separately on the fact itself.
-    relation: holds ? "SUPPORTS" : "CONTRADICTS",
-    conflictType: "VALUE_CHANGED",
-    confidence: 1,
-    explanation: holds
-      ? `${observed}, which still satisfies "${constraint}". Checked deterministically — no model call was needed for this structured comparison.`
-      : `${observed}, which violates the stored constraint "${constraint}" behind "${assumption.statement}". Checked deterministically — no model call was needed for this structured comparison.`,
-    oldValue,
-    newValue,
-    sourceQuote: fact.sourceQuote || fact.statement,
-    suggestedOptionName: !holds && otherOptionNames.length === 1 ? otherOptionNames[0]! : "",
-  };
-}
+// The deterministic conflict shortcut moved to lib/ai/deterministic.ts and
+// now runs in the engine before any provider is consulted.
+export { tryDeterministicConflictCheck } from "@/lib/ai/deterministic";
 
 // ── Provider ────────────────────────────────────────────────────────────────
 
@@ -270,9 +211,6 @@ export class BedrockReasoningProvider implements ReasoningProvider {
   }
 
   async analyzeConflict(input: ConflictAnalysisInput): Promise<ConflictJudgment> {
-    const deterministic = tryDeterministicConflictCheck(input);
-    if (deterministic) return deterministic;
-
     const { fact, assumption, decisionTitle, otherOptionNames } = input;
     const prompt = [
       `Decision: "${decisionTitle}"`,
@@ -311,7 +249,7 @@ export class BedrockReasoningProvider implements ReasoningProvider {
       validator: conflictJudgmentValidator,
       effort: "high",
     });
-    return result as ConflictJudgment;
+    return { ...(result as ConflictJudgment), method: "SEMANTIC" };
   }
 
   async answerWithMemory(input: MemoryAnswerInput): Promise<MemoryAnswer> {

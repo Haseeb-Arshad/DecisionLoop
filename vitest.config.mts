@@ -24,6 +24,7 @@ export default defineConfig({
     // Integration tests share a database; running their files in parallel
     // would interleave tenant setup and teardown.
     fileParallelism: false,
+    globalSetup: ["tests/setup/globalDb.ts"],
     testTimeout: 30_000,
   },
 });

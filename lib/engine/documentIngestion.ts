@@ -199,6 +199,7 @@ export async function ingestDocument(
               importance: 0.5,
               authorityScore: document.authorityScore,
               metadata: { filename: document.filename, sourceType: document.sourceType },
+              originSessionId: opts.sessionId,
             }),
           ),
         );

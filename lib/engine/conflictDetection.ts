@@ -112,7 +112,12 @@ export async function runConflictDetectionForDocument(
         limit: CANDIDATES_PER_FACT,
         sourceType: "assumption",
         excludeSourceId: document.id,
-        signals: { focusProjectId: document.projectId },
+        signals: {
+          focusProjectId: document.projectId,
+          // Lets the scorer mark recalls of memory written in another
+          // session — from the origin recorded on each memory row.
+          sessionId: ctx?.run.sessionId ?? null,
+        },
         selectTopK: MAX_JUDGED_PER_FACT,
         minFinalScore: MIN_SCORE_TO_JUDGE,
       },
@@ -279,9 +284,7 @@ async function judgeCandidate(input: {
     assumptionAuthority: assumption.authorityScore,
   });
 
-  const method = judgment.confidence === 1 && judgment.conflictType === "VALUE_CHANGED"
-    ? "DETERMINISTIC"
-    : "SEMANTIC";
+  const method = judgment.method ?? "SEMANTIC";
 
   const baseLog =
     `${scorePrefix} "${assumption.statement}" vs "${fact.statement}" → ` +

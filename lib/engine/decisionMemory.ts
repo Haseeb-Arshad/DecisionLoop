@@ -97,6 +97,7 @@ export async function indexDecisionMemory(
         importance: metas[i]!.importance,
         authorityScore: metas[i]!.authorityScore,
         chunkIndex: i,
+        originSessionId: decision.createdInSession,
       }),
     ),
   );
