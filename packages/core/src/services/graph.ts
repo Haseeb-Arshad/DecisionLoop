@@ -159,8 +159,18 @@ export class SessionService {
           intent: r.request,
           resources: (r.details?.resources as unknown[]) ?? [],
           decisions: ((r.details?.decisionIds as string[]) ?? []).map((id) => {
-            const d = byId.get(id);
-            return { id, title: d?.title ?? "(unavailable)", status: d?.status ?? null, externalRef: d?.externalRef ?? null };
+            const snapshot = (r.details?.provided as Array<{ id: string; title: string; status: string; externalRef: string | null }> | undefined)?.find(
+              (p) => p.id === id,
+            );
+            const current = byId.get(id);
+            return {
+              id,
+              title: snapshot?.title ?? current?.title ?? "(unavailable)",
+              // Status when the context was served; current status alongside.
+              status: snapshot?.status ?? current?.status ?? null,
+              statusNow: current?.status ?? null,
+              externalRef: snapshot?.externalRef ?? current?.externalRef ?? null,
+            };
           }),
           constraintCount: (r.details?.constraintCount as number) ?? 0,
           tokenEstimate: (r.details?.tokenEstimate as number) ?? null,

@@ -8,7 +8,15 @@ import type { BlastRadius } from "./services/graph";
 import type { DecisionLoop } from "./services/index";
 import type { ResourceRef } from "./resources/resources";
 import type { ConflictEvent, Decision, DecisionStatus, DecisionWithDetails } from "./types/domain";
-import type { Actor, AgentSession, ApprovalRequest, ApprovalStatus } from "./types/records";
+import type {
+  Actor,
+  AgentSession,
+  ApprovalRequest,
+  ApprovalStatus,
+  AssumptionEvaluation,
+  ConstraintFinding,
+  EvidenceItem,
+} from "./types/records";
 
 /**
  * The operations every integration surface exposes. Implemented twice with
@@ -34,6 +42,9 @@ export interface DecisionLoopOperations {
   supersedeDecision(id: string, supersededBy: string, note?: string | null): Promise<Decision>;
   addEvidence(input: EvidenceSubmissionInput): Promise<{ eventId: string; created: boolean; jobId: string | null; status: string }>;
   getEvent(id: string): Promise<StoredEvent>;
+  listEvents(limit?: number): Promise<StoredEvent[]>;
+  /** An event with everything it caused: evidence, per-assumption evaluations, constraint findings. */
+  getEventDetail(id: string): Promise<{ event: StoredEvent; evidence: EvidenceItem[]; evaluations: AssumptionEvaluation[]; findings: ConstraintFinding[] }>;
   recordOutcome(input: { decisionId: string; summary: string; sentiment?: "POSITIVE" | "NEUTRAL" | "NEGATIVE" }): Promise<{ id: string }>;
   proposeAssumption(input: { decisionId: string; assumption: unknown; reason?: string | null }): Promise<{ approvalId: string | null; assumptionId: string | null }>;
   acceptConflict(id: string, note?: string | null): Promise<DecisionWithDetails | null>;
@@ -97,6 +108,21 @@ export function bindOperations(loop: DecisionLoop, initialActor: Actor): Decisio
       const e = await loop.store.getEvent(actor.tenantId, id);
       if (!e) throw new NotFoundError("Event");
       return e;
+    },
+    async listEvents(limit = 50) {
+      requireScope(actor, "read");
+      return loop.store.listEvents(actor.tenantId, { limit });
+    },
+    async getEventDetail(id) {
+      requireScope(actor, "read");
+      const event = await loop.store.getEvent(actor.tenantId, id);
+      if (!event) throw new NotFoundError("Event");
+      const [evidence, evaluations, findings] = await Promise.all([
+        loop.store.listEvidence(actor.tenantId, { eventId: id }),
+        loop.store.listEvaluations(actor.tenantId, { eventId: id }),
+        loop.store.listConstraintFindings(actor.tenantId, { eventId: id }),
+      ]);
+      return { event, evidence, evaluations, findings };
     },
     recordOutcome: (input) => loop.decisions.recordOutcome(actor, input),
     async proposeAssumption(input) {

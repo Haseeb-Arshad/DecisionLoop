@@ -113,6 +113,8 @@ export class DecisionLoop {
     supersedeDecision: (id, supersededBy, note) => this.request("POST", `/decisions/${id}/supersede`, { supersededBy, note }),
     addEvidence: (input) => this.request("POST", "/evidence", input),
     getEvent: (id) => this.request("GET", `/events/${id}`),
+    listEvents: (limit = 50) => this.request("GET", `/events?limit=${limit}`),
+    getEventDetail: (id) => this.request("GET", `/events/${id}/detail`),
     recordOutcome: (input) => this.request("POST", `/decisions/${input.decisionId}/outcomes`, input),
     proposeAssumption: (input) => this.request("POST", `/decisions/${input.decisionId}/assumptions`, input),
     acceptConflict: (id, note) => this.request("POST", `/conflicts/${id}/accept`, { note }),

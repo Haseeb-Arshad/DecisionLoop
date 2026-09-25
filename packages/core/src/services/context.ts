@@ -222,6 +222,16 @@ export class ContextService {
           intent: req.intent,
           resources: req.resources,
           decisionIds: decisions.map((d) => d.id),
+          // Point-in-time snapshot: what the agent was told, not what is true
+          // later (the Agent Run Inspector must not rewrite history).
+          provided: decisions.map((d) => ({
+            id: d.id,
+            title: d.title,
+            externalRef: d.externalRef,
+            status: d.status,
+            openConflicts: d.openConflicts.length,
+            constraints: d.constraints.map((c) => c.statement),
+          })),
           constraintCount: decisions.reduce((n, d) => n + d.constraints.length, 0),
           tokenEstimate: estimateTokens(summary),
           memoryTraceId: trace.id,

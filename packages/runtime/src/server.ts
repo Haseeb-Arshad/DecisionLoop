@@ -23,7 +23,19 @@ export interface ServerHandle {
 
 export async function startServer(
   runtime: Runtime,
-  opts: { port?: number; host?: string; worker?: boolean; extraRoutes?: ExtraRoute[]; workerHandlers?: Parameters<Runtime["loop"]["createWorker"]>[1] } = {},
+  opts: {
+    port?: number;
+    host?: string;
+    worker?: boolean;
+    extraRoutes?: ExtraRoute[];
+    workerHandlers?: Parameters<Runtime["loop"]["createWorker"]>[1];
+    /**
+     * Also serve the Next.js control plane from this process. It shares this
+     * process's single database connection (db/client.ts reads the global
+     * pool), which is what makes the web UI safe on the embedded database.
+     */
+    web?: { dir: string; dev?: boolean };
+  } = {},
 ): Promise<ServerHandle> {
   const handler = createApiHandler({
     loop: runtime.loop,
@@ -35,7 +47,28 @@ export async function startServer(
     extraRoutes: opts.extraRoutes,
   });
 
+  type NodeHandler = (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
+  let nextHandle: NodeHandler | null = null;
+  if (opts.web) {
+    (globalThis as { __decisionloop_sql__?: unknown }).__decisionloop_sql__ = runtime.sql;
+    process.env.DATABASE_URL ??= runtime.databaseUrl;
+    // Next resolves its build directories against the working directory, so
+    // a custom server must run from the app root. Every path this process
+    // needs (database, config) was resolved before this point.
+    process.chdir(opts.web.dir);
+    const { default: next } = await import("next");
+    const app = next({ dev: opts.web.dev ?? false, dir: opts.web.dir });
+    await app.prepare();
+    nextHandle = app.getRequestHandler() as unknown as NodeHandler;
+  }
   const server = http.createServer(async (req, res) => {
+    // With the web app mounted, every route goes through Next: its /api/v1
+    // and /mcp handlers are the same @decisionloop/api handler, but also
+    // accept the signed-in person's session cookie.
+    if (nextHandle) {
+      await nextHandle(req, res);
+      return;
+    }
     try {
       const host = req.headers.host ?? "127.0.0.1";
       const url = new URL(req.url ?? "/", `http://${host}`);

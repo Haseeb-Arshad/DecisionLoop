@@ -129,8 +129,10 @@ describe("MCP over streamable HTTP", () => {
     const sessions = await human.operations.listSessions();
     const s = sessions.find((x) => x.externalSessionId === "sess-mcp-1")!;
     expect(s.agent).toBe("claude-code");
-    const inspected = (await human.operations.inspectSession(s.id)) as { contextRequests: Array<{ decisions: Array<{ externalRef: string }> }> };
+    const inspected = (await human.operations.inspectSession(s.id)) as { contextRequests: Array<{ decisions: Array<{ externalRef: string; status: string }> }> };
     expect(inspected.contextRequests[0]!.decisions[0]!.externalRef).toBe("ADR-018");
+    // Point in time: the status the agent was shown.
+    expect(inspected.contextRequests[0]!.decisions[0]!.status).toBe("AT_RISK");
   });
 
   it("tool errors are reported as MCP errors, not transport failures", async () => {

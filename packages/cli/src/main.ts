@@ -1,5 +1,7 @@
+import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { DomainRegistry } from "@decisionloop/core/domain-packs/pack";
@@ -18,11 +20,12 @@ Usage: decisionloop <command> [options]
 
 Setup
   init [--name <workspace>] [--port 4318]   Create a local workspace, database and API keys
-  serve [--port 4318] [--host 127.0.0.1]    Run API + MCP + worker (embedded DB if no DATABASE_URL)
+  serve [--port 4318] [--web] [--dev]       Run API + MCP + worker (+ web control plane with --web)
   worker                                    Run only the job worker (needs DATABASE_URL)
   login --url <url> --key <key>             Save credentials for a hosted/remote DecisionLoop
   doctor                                    Check server, credentials, database and MCP
   key create --name <n> [--scopes read,propose] [--type agent|user|integration]
+  user create --email <e> [--name <n>]      Web sign-in for this workspace (password from DECISIONLOOP_USER_PASSWORD)
   mcp                                       MCP server over stdio (for Claude Code, Codex, Cursor …)
 
 Everyday
@@ -119,8 +122,18 @@ async function cmdInit(args: string[], out: Out) {
 }
 
 async function cmdServe(args: string[]) {
-  const { values } = parseArgs({ args, options: { port: { type: "string" }, host: { type: "string" }, "no-worker": { type: "boolean" } } });
+  const { values } = parseArgs({
+    args,
+    options: {
+      port: { type: "string" },
+      host: { type: "string" },
+      "no-worker": { type: "boolean" },
+      web: { type: "boolean" },
+      dev: { type: "boolean" },
+    },
+  });
   const cfg = loadConfig();
+  if (values.web) process.env.SESSION_SECRET ??= localSessionSecret();
   const runtime = await loadRuntime({ embedded: true });
   const { startServer } = await import("@decisionloop/runtime/server");
   const extraRoutes = await githubRoutes(runtime);
@@ -130,9 +143,10 @@ async function cmdServe(args: string[]) {
     worker: !values["no-worker"],
     extraRoutes: extraRoutes.routes,
     workerHandlers: extraRoutes.handlers,
+    web: values.web ? { dir: process.env.DECISIONLOOP_WEB_DIR ?? webDir(), dev: Boolean(values.dev) } : undefined,
   });
   process.stderr.write(
-    `DecisionLoop listening on ${server.url}\n  API  ${server.url}/api/v1\n  MCP  ${server.url}/mcp\n  database: ${runtime.embedded ? "embedded (.decisionloop/pgdata)" : "DATABASE_URL"}\n  worker: ${values["no-worker"] ? "off" : "on"}\n`,
+    `DecisionLoop listening on ${server.url}\n${values.web ? `  Web  ${server.url}/dashboard\n` : ""}  API  ${server.url}/api/v1\n  MCP  ${server.url}/mcp\n  database: ${runtime.embedded ? "embedded (.decisionloop/pgdata)" : "DATABASE_URL"}\n  worker: ${values["no-worker"] ? "off" : "on"}\n`,
   );
   const shutdown = async () => {
     await server.close();
@@ -141,6 +155,22 @@ async function cmdServe(args: string[]) {
   };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
+}
+
+/** The Next.js app ships in the DecisionLoop repository root, three levels above this file. */
+function webDir(): string {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+}
+
+/** A per-installation cookie-signing secret for local mode, created once. */
+function localSessionSecret(): string {
+  const file = path.join(projectDir(), "credentials.json");
+  const creds = fs.existsSync(file) ? (JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, string>) : {};
+  if (!creds.sessionSecret) {
+    creds.sessionSecret = randomBytes(32).toString("base64");
+    writeJson(file, creds, true);
+  }
+  return creds.sessionSecret;
 }
 
 async function githubRoutes(runtime: Awaited<ReturnType<typeof loadRuntime>>) {
@@ -226,6 +256,34 @@ async function cmdKey(args: string[], out: Out) {
   try {
     const { key, record } = await issueApiKey(runtime.loop.store, { tenantId, name: values.name, scopes, actorType: type });
     print(out, { id: record.id, key, scopes, type }, () => `Created ${type} key "${values.name}" (${scopes.join(", ")}). Shown once:\n${key}`);
+  } finally {
+    await runtime.stop();
+  }
+}
+
+/**
+ * Creates a person who can sign in to the web control plane of this local
+ * workspace. The password comes from DECISIONLOOP_USER_PASSWORD (never a
+ * command-line argument, which would land in shell history).
+ */
+async function cmdUser(args: string[], out: Out) {
+  const [sub, ...rest] = args;
+  if (sub !== "create") fail("usage: DECISIONLOOP_USER_PASSWORD=… decisionloop user create --email <e> [--name <n>]");
+  const { values } = parseArgs({ args: rest, options: { email: { type: "string" }, name: { type: "string" }, workspace: { type: "string" } } });
+  const password = process.env.DECISIONLOOP_USER_PASSWORD;
+  const tenantId = values.workspace ?? loadConfig().project?.workspaceId;
+  if (!values.email || !tenantId) fail("user create needs --email and a workspace (run init first).");
+  if (!password || password.length < 8) fail("set DECISIONLOOP_USER_PASSWORD (8+ characters) in the environment.");
+  const bcrypt = await import("bcryptjs");
+  const hash = await bcrypt.default.hash(password, 12);
+  const runtime = await loadRuntime({ embedded: true });
+  try {
+    const [row] = await runtime.sql`
+      INSERT INTO users (tenant_id, email, password_hash, name, role)
+      VALUES (${tenantId}, ${values.email.toLowerCase()}, ${hash}, ${values.name ?? values.email.split("@")[0]!}, 'owner')
+      RETURNING id
+    `;
+    print(out, { id: row!.id, email: values.email }, () => `Created user ${values.email}; sign in at /login.`);
   } finally {
     await runtime.stop();
   }
@@ -451,6 +509,8 @@ export async function main(argv: string[]): Promise<void> {
         return await cmdDoctor(out);
       case "key":
         return await cmdKey(rest, out);
+      case "user":
+        return await cmdUser(rest, out);
       case "mcp":
         return await cmdMcp();
       case "context":
