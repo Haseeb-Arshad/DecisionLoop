@@ -882,12 +882,15 @@ export class SqlDecisionStore implements DecisionStore {
     await this.q`
       INSERT INTO memory_events (
         tenant_id, project_id, entity_type, entity_id, decision_id, event_type, agent_run_id,
-        actor_type, actor_user_id, summary, metadata, dedupe_key
+        actor_type, actor_user_id, summary, metadata, dedupe_key, created_at
       ) VALUES (
         ${input.tenantId}, ${input.projectId ?? null}, ${input.entityType}, ${input.entityId},
         ${input.decisionId ?? null}, ${input.eventType}, ${input.agentRunId ?? null}, ${input.actorType},
         ${input.actorUserId ?? null}, ${input.summary ?? null}, ${j(input.metadata ?? null)}::jsonb,
-        ${input.dedupeKey ?? null}
+        ${input.dedupeKey ?? null},
+        -- now() is the transaction start on both engines; events written in
+        -- one transaction need their real order for the timeline.
+        clock_timestamp()
       )
       ON CONFLICT (tenant_id, dedupe_key) DO NOTHING
     `;
@@ -896,7 +899,7 @@ export class SqlDecisionStore implements DecisionStore {
   async listMemoryEvents(tenantId: string, decisionId: string) {
     const rows = await this.q`
       SELECT * FROM memory_events WHERE tenant_id = ${tenantId} AND decision_id = ${decisionId}
-      ORDER BY created_at ASC
+      ORDER BY created_at ASC, id ASC
     `;
     return rows.map(mapMemoryEvent);
   }

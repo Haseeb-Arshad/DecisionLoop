@@ -145,7 +145,13 @@ export class ApprovalService {
 
   async list(actor: Actor, opts: { status?: ApprovalStatus; limit?: number } = {}) {
     requireScope(actor, "read");
-    const approvals = await this.deps.store.listApprovals(actor.tenantId, { status: opts.status ?? "PENDING", limit: opts.limit });
+    // "Open" = still needs a person: pending, or waiting for more evidence.
+    const approvals = opts.status
+      ? await this.deps.store.listApprovals(actor.tenantId, { status: opts.status, limit: opts.limit })
+      : [
+          ...(await this.deps.store.listApprovals(actor.tenantId, { status: "PENDING", limit: opts.limit })),
+          ...(await this.deps.store.listApprovals(actor.tenantId, { status: "NEEDS_EVIDENCE", limit: opts.limit })),
+        ];
     const ids = Array.from(
       new Set(approvals.flatMap((a) => [a.decisionId, ...a.relatedDecisionIds]).filter((x): x is string => Boolean(x))),
     );

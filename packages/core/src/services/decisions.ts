@@ -220,7 +220,7 @@ export class DecisionService {
           decisionId: r.decisionId,
           eventType: "APPROVAL_REQUESTED",
           actorType: actorTypeForEvents(actor),
-          summary: `A proposal (${decision.title}) ${r.reasons.join("; ")}.`,
+          summary: `A proposal (${decision.title}) ${r.reasons.join("; ").replace(/\.+$/, "")}.`,
           metadata: { proposalId: decision.id },
         });
       }

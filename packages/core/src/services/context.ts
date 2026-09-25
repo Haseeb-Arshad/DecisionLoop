@@ -313,7 +313,10 @@ function toContextDecision(
       detectedAt: c.detectedAt,
     })),
     resources: (d.resources ?? []).filter((r) => r.resourceType !== "repository").map((r) => r.resourceKey),
-    decidedBy: d.decidedByType === "USER" ? "human" : (d.decidedByLabel ?? d.decidedByType.toLowerCase()),
+    decidedBy:
+      d.decidedByType === "USER"
+        ? "a person"
+        : `${d.decidedByLabel ?? d.decidedByType.toLowerCase()} (proposed${d.reviewedAt ? ", approved by a person" : ""})`,
     decidedAt: (d.validFrom ?? d.createdAt).slice(0, 10),
     sources: d.sourceRefs.map((s) => ({ type: s.type, ref: s.ref })),
     supersedes,

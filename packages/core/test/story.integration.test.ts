@@ -168,6 +168,8 @@ describe("production evidence contradicts an assumption", () => {
     const h = await env.loop.decisions.history(ws.human, "ADR-018");
     const types = h.timeline.map((e) => e.eventType);
     expect(types).toEqual(expect.arrayContaining(["DECISION_COMMITTED", "CONTEXT_PROVIDED", "ASSUMPTION_INVALIDATED", "DECISION_AT_RISK"]));
+    // Cause before effect, even though both were written in one transaction.
+    expect(types.indexOf("ASSUMPTION_INVALIDATED")).toBeLessThan(types.indexOf("DECISION_AT_RISK"));
     expect(h.evidence[0]?.facts[0]?.predicate).toBe("immediate_revocation_required");
     expect(h.evidence[0]?.contentHash).toMatch(/^[0-9a-f]{64}$/);
     const explanation = (await env.loop.decisions.explain(ws.human, adrId)).explanation;
@@ -253,7 +255,7 @@ describe("constraints on code changes (advisory)", () => {
     const result = (await env.loop.store.getEvent(ws.id, event.id))!.result as { constraintFindings: Array<{ decisionId: string; explanation: string }> };
     expect(result.constraintFindings).toHaveLength(1);
     expect(result.constraintFindings[0]!.decisionId).toBe(adrId);
-    expect(result.constraintFindings[0]!.explanation).toMatch(/redis was removed/);
+    expect(result.constraintFindings[0]!.explanation).toMatch(/redis was removed from the npm dependencies/);
   });
 
   it("K: a change that only touches unrelated code raises nothing", async () => {

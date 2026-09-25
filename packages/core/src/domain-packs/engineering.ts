@@ -95,7 +95,7 @@ function extractEngineering(event: InboundEvent): { facts: Fact[]; resources: Re
           predicate: "dependency_present",
           valueType: "BOOLEAN",
           value: d.change === "added",
-          statement: `${d.name} was ${d.change} as a ${d.ecosystem} dependency${repository ? ` of ${repository}` : ""}`,
+          statement: `${d.name} was ${d.change === "added" ? "added to" : "removed from"} the ${d.ecosystem} dependencies${repository ? ` of ${repository}` : ""}`,
           quote: `${d.change === "added" ? "+" : "-"} ${d.name}${d.to ? `@${d.to}` : d.from ? `@${d.from}` : ""}`,
           location: where,
           extractor: "engineering/dependency-diff",
