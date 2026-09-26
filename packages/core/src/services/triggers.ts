@@ -8,7 +8,7 @@ import { inboundEventSchema, type EmittedEvent, type InboundEventInput, type Sto
 import { resolveEvaluationOutcome, type EvaluationOutcome } from "../lifecycle/outcome";
 import { mergePolicies } from "../policy/policy";
 import { ReasoningUnavailableError } from "../ports/providers";
-import { bestResourceMatch, parseResource, type ResourceRef } from "../resources/resources";
+import { matchDecisionsByResources, parseResource, type ResourceRef } from "../resources/resources";
 import { scoreCandidates } from "../retrieval/scoring";
 import type { Assumption, DecisionStatus, DecisionWithDetails, EvidenceRelation, ScoredMemoryCandidate } from "../types/domain";
 import type { Actor, EvaluationMethod, EvidenceItem } from "../types/records";
@@ -159,7 +159,18 @@ export class TriggerEngine {
     if (!event) throw new NotFoundError("Event");
     if (event.status === "PROCESSED" && event.result) return event.result as unknown as TriggerResult;
 
-    await store.updateEventStatus(tenantId, eventId, "PROCESSING", { incrementAttempts: true });
+    // Exactly one processor evaluates an event. The upload path processes
+    // inline while the queued job may run concurrently; the loser waits for
+    // the winner's stored result instead of evaluating twice.
+    if (!(await store.claimEvent(tenantId, eventId))) {
+      for (let i = 0; i < 120; i++) {
+        await new Promise((r) => setTimeout(r, 250));
+        const current = await store.getEvent(tenantId, eventId);
+        if (current?.status === "PROCESSED" && current.result) return current.result as unknown as TriggerResult;
+        if (current?.status === "FAILED" || current?.status === "RECEIVED") break;
+      }
+      throw new Error(`Event ${eventId} is being processed by another worker.`);
+    }
     try {
       const { result } = await withRun(
         store,
@@ -224,17 +235,7 @@ export class TriggerEngine {
     const resourceMatched = new Map<string, number>();
     if (resources.length > 0) {
       const recorded = await store.listResourcesForMatching(tenantId, { statuses: LIVE });
-      const byDecision = new Map<string, ResourceRef[]>();
-      for (const r of recorded) {
-        const list = byDecision.get(r.decisionId) ?? [];
-        list.push({ type: r.resourceType, key: r.resourceKey, repository: r.repository });
-        byDecision.set(r.decisionId, list);
-      }
-      for (const [id, refs] of byDecision) {
-        // A shared repository alone is too weak to call a decision affected.
-        const match = bestResourceMatch(refs.filter((r) => r.type !== "repository"), resources);
-        if (match.score >= MIN_RESOURCE_MATCH) resourceMatched.set(id, match.score);
-      }
+      for (const [id, m] of matchDecisionsByResources(recorded, resources, MIN_RESOURCE_MATCH)) resourceMatched.set(id, m.score);
     }
 
     // ── 3. Semantic retrieval over assumptions (no decision id given) ──────
@@ -283,7 +284,11 @@ export class TriggerEngine {
 
     // ── 5. Immutable evidence item ─────────────────────────────────────────
     const content = event.text ?? facts.map((f) => f.statement).join("\n");
-    const contentHash = crypto.createHash("sha256").update(`${content}\n${JSON.stringify(facts)}`).digest("hex");
+    // Evidence identity is content *plus the event that carried it*: the same
+    // PR text arriving as "opened" (authority 0.5) and later "merged" (0.8), or
+    // the same metric reported again after a dismissal, are distinct evidence.
+    // Replays of one event are already collapsed by the inbox idempotency key.
+    const contentHash = crypto.createHash("sha256").update(`${event.id}\n${content}\n${JSON.stringify(facts)}`).digest("hex");
     const { evidence, created: evidenceCreated } = await store.insertEvidence({
       tenantId,
       projectId: null,
@@ -526,7 +531,14 @@ export class TriggerEngine {
         : { method: "SKIPPED", relation: "IRRELEVANT", confidence: 0, explanation: `Same predicate but not comparable: ${reasons[0] ?? "declined"}`, fact: samePredicate };
     }
 
-    const eligible = cand.via !== "semantic" || cand.score >= MIN_SCORE_FOR_MODEL;
+    // A model is only worth asking when code cannot decide and the pairing is
+    // plausible: qualitative assumptions found by resource, or strong semantic
+    // matches. A structured assumption whose predicate the evidence never
+    // mentions has nothing for a model to judge.
+    const eligible =
+      cand.via === "predicate" ||
+      (cand.via === "resource" && a.valueType === "TEXT") ||
+      (cand.via === "semantic" && cand.score >= MIN_SCORE_FOR_MODEL);
     if (!eligible || (!event.text && facts.length === 0)) return null;
     if (!takeSemanticBudget()) {
       return { method: "SKIPPED", relation: "UNCERTAIN", confidence: 0, explanation: "Semantic judgment budget for this event exhausted.", fact: null };

@@ -155,6 +155,12 @@ export interface DecisionStore {
   insertEvent(tenantId: string, event: InboundEvent): Promise<{ event: StoredEvent; created: boolean }>;
   getEvent(tenantId: string, id: string): Promise<StoredEvent | null>;
   listEvents(tenantId: string, opts?: { limit?: number; status?: string }): Promise<StoredEvent[]>;
+  /**
+   * Atomically takes the right to process an event: true if this caller now
+   * owns it (RECEIVED/FAILED, or PROCESSING but abandoned), false if another
+   * processor holds a fresh claim or it is already processed.
+   */
+  claimEvent(tenantId: string, id: string): Promise<boolean>;
   updateEventStatus(
     tenantId: string,
     id: string,

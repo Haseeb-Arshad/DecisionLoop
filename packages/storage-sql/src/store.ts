@@ -380,7 +380,8 @@ export class SqlDecisionStore implements DecisionStore {
       WHERE r.tenant_id = ${tenantId}
         AND d.status IN ${this.q(statuses)}
         ${opts.types?.length ? this.q`AND r.resource_type IN ${this.q(opts.types)}` : this.q``}
-      LIMIT ${opts.limit ?? 5000}
+      ORDER BY r.decision_id, r.created_at
+      ${opts.limit ? this.q`LIMIT ${opts.limit}` : this.q``}
     `;
     return rows.map(mapResource);
   }
@@ -585,6 +586,17 @@ export class SqlDecisionStore implements DecisionStore {
       ORDER BY received_at DESC LIMIT ${opts.limit ?? 50}
     `;
     return rows.map(mapEvent);
+  }
+
+  async claimEvent(tenantId: string, id: string) {
+    const takeoverBefore = new Date(Date.now() - 10 * 60_000);
+    const rows = await this.q`
+      UPDATE event_inbox SET status = 'PROCESSING', attempts = attempts + 1, processing_started_at = now()
+      WHERE id = ${id} AND tenant_id = ${tenantId}
+        AND (status IN ('RECEIVED', 'FAILED') OR (status = 'PROCESSING' AND (processing_started_at IS NULL OR processing_started_at < ${takeoverBefore})))
+      RETURNING id
+    `;
+    return rows.length > 0;
   }
 
   async updateEventStatus(
@@ -1066,7 +1078,15 @@ export class SqlDecisionStore implements DecisionStore {
   async claimJobs(workerId: string, limit: number, opts: { kinds?: string[]; lockTimeoutMs?: number } = {}) {
     // A RUNNING job whose lock is older than the timeout belongs to a worker
     // that died; it becomes claimable again (its attempt still counts).
-    const staleBefore = new Date(Date.now() - (opts.lockTimeoutMs ?? 5 * 60_000));
+    const staleBefore = new Date(Date.now() - (opts.lockTimeoutMs ?? 30 * 60_000));
+    // A job that keeps killing its worker must not be reclaimed forever: once
+    // its attempts are used up it goes to the dead-letter state.
+    await this.q`
+      UPDATE jobs SET status = 'DEAD', locked_by = NULL, locked_at = NULL, updated_at = now(),
+        last_error = COALESCE(last_error, 'Worker lock expired after the final attempt; the worker likely crashed.')
+      WHERE status = 'RUNNING' AND locked_at < ${staleBefore} AND attempts >= max_attempts
+        ${opts.kinds?.length ? this.q`AND kind IN ${this.q(opts.kinds)}` : this.q``}
+    `;
     const rows = await this.q`
       UPDATE jobs SET status = 'RUNNING', locked_by = ${workerId}, locked_at = now(),
         attempts = attempts + 1, updated_at = now()

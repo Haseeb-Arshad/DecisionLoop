@@ -139,10 +139,24 @@ describe("GitHub webhook → worker → advisory comment", () => {
     // An open PR is a proposal, not a fact: nothing in memory changed.
     const d = await env.loop.store.getDecisionByExternalRef(tenantId, "ADR-018");
     expect(d?.status).toBe("ACTIVE");
-    // The synchronize delivery carried identical evidence (same diff), so it
-    // was recognised as a duplicate and not re-evaluated: still one finding.
+    // Each delivery is its own event with its own evidence and finding, and
+    // the edited comment still carries the finding.
+    expect(gh.comments[0]!.body).toContain("redis was removed from the npm dependencies");
     const findings = await env.loop.store.listConstraintFindings(tenantId);
-    expect(findings).toHaveLength(1);
+    expect(findings).toHaveLength(2);
+  });
+
+  it("a merge that follows the open PR is evaluated as its own, higher-authority evidence", async () => {
+    const ext = githubServerExtensions(env.loop, { GITHUB_WEBHOOK_SECRET: SECRET }, { client: gh.client });
+    const worker = env.loop.createWorker({ workerId: "gh-merge" }, ext.handlers);
+    await ext.routes[0]!(delivery("delivery-C", "closed", true), new URL(`http://localhost${WEBHOOK_PATH}`));
+    await drainJobs(worker);
+    const events = await env.loop.store.listEvents(tenantId, { limit: 20 });
+    const merged = events.find((e) => e.type === "pull_request.merged")!;
+    const evidence = await env.loop.store.listEvidence(tenantId, { eventId: merged.id });
+    expect(evidence).toHaveLength(1);
+    expect(evidence[0]!.authority).toBe(0.8);
+    expect((merged.result as { duplicateOfEvidenceId: string | null }).duplicateOfEvidenceId).toBeNull();
   });
 
   it("ignores repositories not bound to a workspace", async () => {

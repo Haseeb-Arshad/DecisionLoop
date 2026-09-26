@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { ZodError } from "zod";
 import { DecisionLoopError, ApprovalRequiredError } from "@decisionloop/core/errors";
@@ -54,8 +55,11 @@ export function errorResponse(err: unknown): Response {
   if (err instanceof HttpError) return jsonResponse({ error: err.message, code: err.code }, err.status);
   // Illegal lifecycle transitions are client errors, not server faults.
   if (err instanceof Error && err.name === "IllegalStatusTransitionError") return jsonResponse({ error: err.message, code: "conflict" }, 409);
-  const message = err instanceof Error ? err.message : String(err);
-  return jsonResponse({ error: message.slice(0, 500), code: "internal" }, 500);
+  // Internal errors (SQL, constraint and table names, stack details) are logged
+  // server-side; callers get a generic message and a correlation id.
+  const errorId = crypto.randomUUID();
+  console.error(`[decisionloop] internal error ${errorId}:`, err);
+  return jsonResponse({ error: "Internal server error.", code: "internal", errorId }, 500);
 }
 
 export class HttpError extends Error {

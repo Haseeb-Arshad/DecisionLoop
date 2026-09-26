@@ -153,7 +153,9 @@ export function githubServerExtensions(loop: DecisionLoop, env: Env = process.en
 
     let commented = false;
     const type = eventTypeOf(p.event, p.payload);
-    if (pr && client && p.advisory && type !== "pull_request.merged") {
+    // A result that reused earlier evidence carries no findings of its own;
+    // rendering it would overwrite the existing comment with an emptier one.
+    if (pr && client && p.advisory && type !== "pull_request.merged" && !result.duplicateOfEvidenceId) {
       const actor: Actor = { tenantId: p.tenantId, type: "integration", userId: null, label: "github", scopes: ["read"], sessionId: `github:${repo}#${pr.number}` };
       const context = await loop.context.getContext(actor, {
         intent: `PR #${pr.number}: ${pr.title ?? ""}`.slice(0, 2000),

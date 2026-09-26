@@ -16,7 +16,7 @@ import {
   requireScope,
 } from "../errors";
 import type { NewDecisionRecord } from "../ports/store";
-import { bestResourceMatch, parseResource, type ResourceRef } from "../resources/resources";
+import { matchDecisionsByResources, parseResource, type ResourceRef } from "../resources/resources";
 import { scoreCandidates } from "../retrieval/scoring";
 import type { DecisionStatus, DecisionWithDetails } from "../types/domain";
 import type { Actor, ApprovalRequest } from "../types/records";
@@ -115,15 +115,8 @@ export class DecisionService {
     const requested = draft.resources.map((r) => parseResource(r, draft.repository ?? null));
     if (requested.length > 0) {
       const recorded = await this.store.listResourcesForMatching(tenantId, { statuses: LIVE });
-      const byDecision = new Map<string, ResourceRef[]>();
-      for (const r of recorded) {
-        const list = byDecision.get(r.decisionId) ?? [];
-        list.push({ type: r.resourceType, key: r.resourceKey, repository: r.repository });
-        byDecision.set(r.decisionId, list);
-      }
-      for (const [id, refs] of byDecision) {
-        const match = bestResourceMatch(refs, requested);
-        if (match.score >= 0.7) add(id, `affects the same ${match.recorded!.type} (${match.recorded!.key})`);
+      for (const [id, m] of matchDecisionsByResources(recorded, requested)) {
+        add(id, `affects the same ${m.recorded.type} (${m.recorded.key})`);
       }
     }
 

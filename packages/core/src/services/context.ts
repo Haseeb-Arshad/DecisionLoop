@@ -1,6 +1,6 @@
 import { contextRequestSchema, type ContextRequestInput } from "../contracts";
 import { requireScope } from "../errors";
-import { bestResourceMatch, parseResource, type ResourceRef } from "../resources/resources";
+import { matchDecisionsByResources, parseResource, resourceMatchScore, type ResourceRef } from "../resources/resources";
 import { scoreCandidates } from "../retrieval/scoring";
 import type { ConflictEvent, DecisionStatus, DecisionWithDetails, ScoredMemoryCandidate } from "../types/domain";
 import type { Actor } from "../types/records";
@@ -91,24 +91,16 @@ export class ContextService {
           const recorded = await store.listResourcesForMatching(actor.tenantId, {
             statuses: [...RETURNABLE, "SUPERSEDED"],
           });
-          const byDecision = new Map<string, ResourceRef[]>();
-          for (const r of recorded) {
-            const list = byDecision.get(r.decisionId) ?? [];
-            list.push({ type: r.resourceType, key: r.resourceKey, repository: r.repository });
-            byDecision.set(r.decisionId, list);
+          for (const [id, m] of matchDecisionsByResources(recorded, nonRepo, MIN_STRUCTURAL)) {
+            structural.set(id, { score: m.score, reason: `${m.recorded.type} ${m.recorded.key} ↔ ${m.requested.key}` });
           }
-          for (const [id, refs] of byDecision) {
-            const m = bestResourceMatch(
-              refs.filter((r) => r.type !== "repository"),
-              nonRepo,
-            );
-            const repoOnly = bestResourceMatch(refs, requested.filter((r) => r.type === "repository"));
-            if (m.score >= MIN_STRUCTURAL) {
-              structural.set(id, { score: m.score, reason: `${m.recorded!.type} ${m.recorded!.key} ↔ ${m.requested!.key}` });
-            } else if (repoOnly.score > 0) {
-              // Same repository but no overlapping component: weak signal only.
-              structural.set(id, { score: 0.3, reason: `same repository ${repoOnly.requested!.key}` });
-            }
+          // Same repository but no overlapping component: weak signal only.
+          const repoRequested = requested.filter((r) => r.type === "repository");
+          for (const r of recorded) {
+            if (structural.has(r.decisionId)) continue;
+            const rec: ResourceRef = { type: r.resourceType, key: r.resourceKey, repository: r.repository };
+            const hit = repoRequested.find((q) => resourceMatchScore(rec, q) > 0);
+            if (hit) structural.set(r.decisionId, { score: 0.3, reason: `same repository ${hit.key}` });
           }
         }
 
@@ -163,7 +155,7 @@ export class ContextService {
         }
 
         const live = [...loaded, ...replacements]
-          .filter((d) => RETURNABLE.includes(d.status))
+          .filter((d) => RETURNABLE.includes(d.status) || (req.includeSuperseded && d.status === "SUPERSEDED"))
           .sort((a, b) => {
             // At-risk decisions surface first at equal relevance: an agent
             // most needs to know that the reasoning it inherits is in doubt.
@@ -269,16 +261,9 @@ export async function findConstraints(
   const requested = input.resources.map((r) => parseResource(r, input.repository ?? null));
   if (requested.length === 0) return [];
   const recorded = await deps.store.listResourcesForMatching(actor.tenantId, { statuses: RETURNABLE });
-  const byDecision = new Map<string, ResourceRef[]>();
-  for (const r of recorded) {
-    const list = byDecision.get(r.decisionId) ?? [];
-    list.push({ type: r.resourceType, key: r.resourceKey, repository: r.repository });
-    byDecision.set(r.decisionId, list);
-  }
   const matched = new Map<string, string>();
-  for (const [id, refs] of byDecision) {
-    const m = bestResourceMatch(refs.filter((r) => r.type !== "repository"), requested);
-    if (m.score >= MIN_STRUCTURAL) matched.set(id, `${m.recorded!.key} ↔ ${m.requested!.key}`);
+  for (const [id, m] of matchDecisionsByResources(recorded, requested, MIN_STRUCTURAL)) {
+    matched.set(id, `${m.recorded.key} ↔ ${m.requested.key}`);
   }
   if (matched.size === 0) return [];
   const decisions = await deps.store.listDecisions(actor.tenantId, { ids: Array.from(matched.keys()), statuses: RETURNABLE });

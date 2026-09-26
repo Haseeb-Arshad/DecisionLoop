@@ -143,6 +143,32 @@ export function resourceMatchScore(recorded: ResourceRef, requested: ResourceRef
   return 0;
 }
 
+/**
+ * Which decisions govern any of the requested resources? Groups recorded
+ * resource rows by decision and keeps those whose best match reaches
+ * `minScore`. Repository rows are ignored: sharing a repository alone is too
+ * weak to call a decision affected.
+ */
+export function matchDecisionsByResources(
+  rows: Array<{ decisionId: string; resourceType: string; resourceKey: string; repository: string | null }>,
+  requested: ResourceRef[],
+  minScore = 0.7,
+): Map<string, { score: number; recorded: ResourceRef; requested: ResourceRef }> {
+  const byDecision = new Map<string, ResourceRef[]>();
+  for (const r of rows) {
+    if (r.resourceType === "repository") continue;
+    const list = byDecision.get(r.decisionId) ?? [];
+    list.push({ type: r.resourceType, key: r.resourceKey, repository: r.repository });
+    byDecision.set(r.decisionId, list);
+  }
+  const out = new Map<string, { score: number; recorded: ResourceRef; requested: ResourceRef }>();
+  for (const [id, refs] of byDecision) {
+    const m = bestResourceMatch(refs, requested);
+    if (m.score >= minScore) out.set(id, { score: m.score, recorded: m.recorded!, requested: m.requested! });
+  }
+  return out;
+}
+
 export function bestResourceMatch(
   recorded: ResourceRef[],
   requested: ResourceRef[],

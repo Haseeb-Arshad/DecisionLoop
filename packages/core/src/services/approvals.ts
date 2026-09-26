@@ -65,7 +65,12 @@ export class ConflictService {
 
       const others = await tx.listConflicts(actor.tenantId, { decisionId: conflict.decisionId, unresolvedOnly: true });
       const stillOnAssumption = others.some((c) => c.assumptionId === conflict.assumptionId);
-      if (!stillOnAssumption) {
+      // A person may already have confirmed this assumption invalid via another
+      // conflict; dismissing a later one must not undo that decision.
+      const alreadyAccepted = (await tx.listConflicts(actor.tenantId, { decisionId: conflict.decisionId })).some(
+        (c) => c.assumptionId === conflict.assumptionId && c.resolution === "ACCEPTED",
+      );
+      if (!stillOnAssumption && !alreadyAccepted) {
         await tx.setAssumptionValidity(actor.tenantId, conflict.assumptionId, "VALID");
       }
       const decision = await tx.getDecision(actor.tenantId, conflict.decisionId);
