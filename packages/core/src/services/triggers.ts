@@ -315,13 +315,19 @@ export class TriggerEngine {
     }
 
     // ── 6. Candidate assumptions: predicate, resource, semantic ────────────
-    const predicateHits = await store.findAssumptionsByPredicates(
-      tenantId,
-      facts.map((f) => {
-        const k = normalizeKey(f.predicate)!;
-        return evalOptions.predicateAliases?.[k] ?? k;
-      }),
-    );
+    // Look up every spelling in each predicate's alias class: an assumption
+    // stored as `annual_price` must be found by an `annual_cost` fact and
+    // vice versa. Evaluation then compares canonical forms.
+    const aliases = evalOptions.predicateAliases ?? {};
+    const predicateKeys = new Set<string>();
+    for (const f of facts) {
+      const k = normalizeKey(f.predicate)!;
+      const canonical = aliases[k] ?? k;
+      predicateKeys.add(k);
+      predicateKeys.add(canonical);
+      for (const [alias, target] of Object.entries(aliases)) if (target === canonical) predicateKeys.add(alias);
+    }
+    const predicateHits = await store.findAssumptionsByPredicates(tenantId, Array.from(predicateKeys));
     const neededDecisions = new Set<string>([
       ...predicateHits.map((a) => a.decisionId),
       ...resourceMatched.keys(),

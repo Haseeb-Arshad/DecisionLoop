@@ -1,6 +1,7 @@
 import { DomainRegistry } from "../domain-packs/pack";
 import { engineeringPack } from "../domain-packs/engineering";
-import { DEFAULT_POLICIES } from "../policy/policy";
+import { financePack, procurementPack, productPack } from "../domain-packs/business";
+import { DEFAULT_POLICIES, mergePolicies } from "../policy/policy";
 import type { EmbeddingProvider, ReasoningProvider } from "../ports/providers";
 import type { DecisionStore } from "../ports/store";
 import { ApprovalService, ConflictService } from "./approvals";
@@ -33,12 +34,13 @@ export function createDecisionLoop(input: {
   domains?: DomainRegistry;
   logger?: Logger;
 }) {
+  const domains = input.domains ?? new DomainRegistry([engineeringPack, procurementPack, productPack, financePack]);
   const deps: ServiceDeps = {
     store: input.store,
     embeddings: input.embeddings,
     reasoning: input.reasoning,
-    domains: input.domains ?? new DomainRegistry([engineeringPack]),
-    defaultPolicies: DEFAULT_POLICIES,
+    domains,
+    defaultPolicies: mergePolicies(DEFAULT_POLICIES, domains.policyTemplates()),
     logger: input.logger,
   };
   const decisions = new DecisionService(deps);

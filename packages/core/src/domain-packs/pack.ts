@@ -42,6 +42,11 @@ export interface DomainPack {
 export class DomainRegistry {
   constructor(readonly packs: DomainPack[]) {}
 
+  /** Policy templates shipped by packs, applied after the core defaults. */
+  policyTemplates(): PolicyRule[] {
+    return this.packs.flatMap((p) => p.policyTemplates ?? []);
+  }
+
   get(id: string): DomainPack | undefined {
     return this.packs.find((p) => p.id === id);
   }
