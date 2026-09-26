@@ -1,6 +1,12 @@
 # DecisionLoop — Architecture & Implementation Decisions
 
-> Living document. Updated as the build progresses. Last updated: 2026-08-11.
+> **1.x architecture.** DecisionLoop 2.0 keeps these decisions but moves business logic into a headless
+> core with an MCP server, HTTP API, SDK, CLI, trigger engine and durable worker — see
+> [v2/00-audit-and-plan.md](v2/00-audit-and-plan.md) and the [README](../README.md). Sections below on
+> CockroachDB, Bedrock, tenancy and the Memory Inspector remain accurate; "conflict detection runs
+> synchronously" (§10) no longer does.
+>
+> Living document. Last updated for 1.x: 2026-08-11.
 
 ## 1. What DecisionLoop is (and isn't)
 

@@ -386,3 +386,31 @@ Each phase leaves the existing app runnable and ends with tests green and a comm
 | 8 | Control plane: Approvals, Triggers, Agents, Blast radius | build + render check |
 | 9 | Eval suite A–K, alpha acceptance test (spec §40) | `npm run eval` |
 | 10 | README/docs rewrite, Docker Compose, developer preview packaging | clone-to-result walkthrough |
+
+---
+
+## 15. Progress (updated as phases land)
+
+| Phase | Status | Evidence |
+|---|---|---|
+| 1 Core extraction | Done | `packages/core`; boundary test |
+| 2 Storage, migrations, providers | Done | migration 0005/0006; `SqlDecisionStore`; embedded PGlite; integration tests run by default |
+| 3 Events, trigger engine, worker | Done | `services/triggers.ts`, `services/worker.ts`; story test |
+| 4 MCP, API, SDK | Done | `packages/mcp`, `packages/api`, `packages/sdk`; HTTP + MCP client tests |
+| 5 CLI | Done | `packages/cli`; exercised end to end in a scratch repository |
+| 6 GitHub integration | Done (fake GitHub API) | `packages/github`; not yet run against a live App |
+| 7 Agent hooks | Done (Claude Code reference) | `packages/cli/src/hooks.ts`; exercised with real hook payload shapes |
+| 8 Control plane | Done (approvals, triggers, agents) | verified in the browser against a live server |
+| 9 Evaluation | Done | `evals/`; gate test; alpha acceptance test (all 20 criteria) |
+| 10 Documentation / preview packaging | Docs done; npm publishing pending | README, `docs/v2/*`, `integrations/*`, `docker-compose.yml` |
+| Dogfooding | Not started | [dogfood.md](dogfood.md) |
+
+Deviations from this plan, with reasons:
+- One `storage-sql` package with dialects instead of separate Cockroach/Postgres packages (§5).
+- Packages consumed from source via tsconfig paths plus `bin/decisionloop.mjs`; built npm packages come
+  with the developer preview.
+- Embedded mode is single-connection (pglite-socket interleaves extended-protocol cycles across
+  connections), so `serve --web` hosts the control plane in-process; multi-process deployments use
+  PostgreSQL or CockroachDB.
+- `EXPIRED` validity not added (§8). Expiry sweeps (`valid_until` → CHALLENGED) are designed but not yet
+  scheduled.

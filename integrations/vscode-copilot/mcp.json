@@ -1,0 +1,20 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "decisionloop-agent-key",
+      "description": "DecisionLoop agent API key (read + propose)",
+      "password": true
+    }
+  ],
+  "servers": {
+    "decisionloop": {
+      "type": "http",
+      "url": "http://127.0.0.1:4318/mcp",
+      "headers": {
+        "Authorization": "Bearer ${input:decisionloop-agent-key}",
+        "X-DecisionLoop-Agent": "copilot"
+      }
+    }
+  }
+}

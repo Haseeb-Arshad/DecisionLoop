@@ -1,0 +1,23 @@
+# PostgreSQL + pgvector for self-hosting DecisionLoop without CockroachDB.
+#   docker compose up -d
+#   DATABASE_URL=postgres://decisionloop:decisionloop@127.0.0.1:5432/decisionloop?sslmode=disable \
+#     decisionloop serve --web
+# Migrations run automatically on `serve`/`init` (or `npm run db:migrate`).
+# Local development credentials only; change them for anything shared.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: decisionloop
+      POSTGRES_PASSWORD: decisionloop
+      POSTGRES_DB: decisionloop
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - decisionloop-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U decisionloop"]
+      interval: 5s
+      retries: 10
+volumes:
+  decisionloop-pg:

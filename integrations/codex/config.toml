@@ -1,0 +1,14 @@
+# ~/.codex/config.toml (or .codex/config.toml in the repository)
+# Remote MCP over HTTP: the agent holds a DecisionLoop agent key, never
+# database credentials. Export DECISIONLOOP_AGENT_KEY before starting Codex.
+[mcp_servers.decisionloop]
+url = "http://127.0.0.1:4318/mcp"
+bearer_token_env_var = "DECISIONLOOP_AGENT_KEY"
+http_headers = { "X-DecisionLoop-Agent" = "codex" }
+
+# Alternative: stdio (runs `decisionloop mcp`, which calls the HTTP API).
+# [mcp_servers.decisionloop]
+# command = "decisionloop"
+# args = ["mcp"]
+# [mcp_servers.decisionloop.env]
+# DECISIONLOOP_AGENT = "codex"
