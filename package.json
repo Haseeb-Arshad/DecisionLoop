@@ -18,8 +18,8 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "playwright test",
-    "decisionloop": "tsx packages/cli/src/bin.ts",
-    "dl": "tsx packages/cli/src/bin.ts",
+    "decisionloop": "node bin/decisionloop.mjs",
+    "dl": "node bin/decisionloop.mjs",
     "eval": "tsx evals/run.ts"
   },
   "dependencies": {
@@ -63,5 +63,8 @@
   },
   "engines": {
     "node": ">=20.9"
+  },
+  "bin": {
+    "decisionloop": "bin/decisionloop.mjs"
   }
 }

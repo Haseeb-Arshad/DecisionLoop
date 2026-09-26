@@ -546,6 +546,9 @@ export async function main(argv: string[]): Promise<void> {
     if (err instanceof DecisionLoopApiError) {
       fail(err.code === "approval_required" ? err.message : `${err.code}: ${err.message}`, err.code === "approval_required" ? 0 : 1);
     }
+    if (err instanceof TypeError && /fetch failed/i.test(err.message)) {
+      fail(`cannot reach DecisionLoop at ${loadConfig().url}. Start it with \`decisionloop serve\` (or check DECISIONLOOP_URL).`);
+    }
     fail(err instanceof Error ? err.message : String(err));
   }
 }
