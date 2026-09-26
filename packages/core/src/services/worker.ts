@@ -23,6 +23,8 @@ export interface WorkerOptions {
   maxBackoffMs?: number;
   lockTimeoutMs?: number;
   logger?: Logger;
+  /** Recurring work run from the poll loop (e.g. enqueueing the hourly expiry sweep). */
+  periodic?: Array<{ everyMs: number; run: () => Promise<void> }>;
 }
 
 export function backoffDelay(attempt: number, baseMs = 2_000, maxMs = 10 * 60_000, random = Math.random): number {
@@ -85,7 +87,13 @@ export class Worker {
   /** Runs until `stop()` or the signal aborts. */
   async start(signal?: AbortSignal): Promise<void> {
     const poll = this.opts.pollIntervalMs ?? 1_000;
+    const lastRun = new Map<number, number>();
     while (!this.stopped && !signal?.aborted) {
+      for (const [i, task] of (this.opts.periodic ?? []).entries()) {
+        if (Date.now() - (lastRun.get(i) ?? 0) < task.everyMs) continue;
+        lastRun.set(i, Date.now());
+        await task.run().catch((err) => this.log.warn({ err: err instanceof Error ? err.message : String(err) }, "periodic task failed"));
+      }
       let processed = 0;
       try {
         processed = await this.runOnce();

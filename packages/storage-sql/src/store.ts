@@ -437,6 +437,19 @@ export class SqlDecisionStore implements DecisionStore {
     if (rows.length === 0) throw new Error(`Assumption ${id} not found in this workspace.`);
   }
 
+  async listExpiredAssumptions(now: Date, limit: number) {
+    const rows = await this.q`
+      SELECT a.*, d.tenant_id AS decision_tenant_id FROM assumptions a
+      JOIN decisions d ON d.id = a.decision_id
+      WHERE a.valid_until IS NOT NULL AND a.valid_until < ${now}
+        AND a.validity_status IN ('VALID', 'UNCERTAIN')
+        AND d.status IN ${this.q(LIVE_DECISION_STATUSES)}
+      ORDER BY a.valid_until
+      LIMIT ${limit}
+    `;
+    return rows.map((row) => ({ tenantId: row.decision_tenant_id as string, assumption: mapAssumption(row) }));
+  }
+
   async touchAssumptionEvaluated(tenantId: string, ids: string[]) {
     if (ids.length === 0) return;
     await this.q`

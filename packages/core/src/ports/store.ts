@@ -122,6 +122,12 @@ export interface DecisionStore {
     opts?: { evidenceItemId?: string | null },
   ): Promise<void>;
   touchAssumptionEvaluated(tenantId: string, ids: string[]): Promise<void>;
+  /**
+   * Live assumptions on live decisions whose `valid_until` has passed and
+   * that are still VALID/UNCERTAIN. Cross-tenant by design: only the system
+   * expiry sweep calls it, and it processes each row within its own tenant.
+   */
+  listExpiredAssumptions(now: Date, limit: number): Promise<Array<{ tenantId: string; assumption: Assumption }>>;
 
   // ── Memory surface (vector + hybrid retrieval) ───────────────────────────
   replaceDecisionMemory(
