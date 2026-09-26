@@ -352,6 +352,10 @@ export interface DecisionStore {
   getJob(id: string): Promise<Job | null>;
   listJobs(opts: { tenantId?: string | null; status?: Job["status"]; limit?: number }): Promise<Job[]>;
 
+  // ── Health ───────────────────────────────────────────────────────────────
+  /** Real counts for the control-plane overview; nothing estimated. */
+  getOverview(tenantId: string, since: Date): Promise<WorkspaceOverview>;
+
   // ── Configuration ────────────────────────────────────────────────────────
   listWorkspacePolicies(tenantId: string): Promise<PolicyRule[]>;
   findRepositoryBinding(provider: string, repository: string): Promise<RepositoryBinding | null>;
@@ -363,6 +367,19 @@ export interface DecisionStore {
     installationId?: string | null;
     advisoryMode?: boolean;
   }): Promise<RepositoryBinding>;
+}
+
+export interface WorkspaceOverview {
+  decisions: Record<string, number>;
+  assumptions: Record<string, number>;
+  pendingApprovals: number;
+  openConflicts: number;
+  openFindings: number;
+  eventsSince: number;
+  failedEvents: number;
+  deadJobs: number;
+  contextRequestsSince: number;
+  recentRecalls: Array<{ runId: string; at: string; request: string | null; agentSessionId: string | null; decisions: Array<{ id: string; title: string; externalRef: string | null; status: string }> }>;
 }
 
 export interface NewDecisionRecord {

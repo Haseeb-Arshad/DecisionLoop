@@ -101,6 +101,7 @@ type Handler = (ops: DecisionLoopOperations, params: string[], body: unknown, ur
 
 const routes: Array<[string, RegExp, Handler]> = [
   ["GET", /^\/me$/, (ops) => ops.whoami()],
+  ["GET", /^\/overview$/, (ops) => ops.getOverview()],
   ["POST", /^\/context$/, (ops, _p, body) => ops.getContext(body as never)],
   ["POST", /^\/decisions\/search$/, (ops, _p, body) => ops.searchDecisions(body as never)],
   ["POST", /^\/decisions$/, (ops, _p, body, url) =>

@@ -1118,6 +1118,56 @@ export class SqlDecisionStore implements DecisionStore {
     return rows.map(mapJob);
   }
 
+  // ── Health ───────────────────────────────────────────────────────────────
+
+  async getOverview(tenantId: string, since: Date) {
+    const [decisionRows, assumptionRows, counts, recalls] = await Promise.all([
+      this.q`SELECT status, count(*) AS n FROM decisions WHERE tenant_id = ${tenantId} GROUP BY status`,
+      this.q`
+        SELECT a.validity_status AS status, count(*) AS n FROM assumptions a
+        JOIN decisions d ON d.id = a.decision_id
+        WHERE d.tenant_id = ${tenantId} AND d.status IN ${this.q(LIVE_DECISION_STATUSES)}
+        GROUP BY a.validity_status
+      `,
+      this.q`
+        SELECT
+          (SELECT count(*) FROM approval_requests WHERE tenant_id = ${tenantId} AND status IN ('PENDING', 'NEEDS_EVIDENCE')) AS pending_approvals,
+          (SELECT count(*) FROM conflict_events WHERE tenant_id = ${tenantId} AND resolution IS NULL) AS open_conflicts,
+          (SELECT count(*) FROM constraint_findings WHERE tenant_id = ${tenantId} AND status = 'OPEN') AS open_findings,
+          (SELECT count(*) FROM event_inbox WHERE tenant_id = ${tenantId} AND received_at >= ${since}) AS events_since,
+          (SELECT count(*) FROM event_inbox WHERE tenant_id = ${tenantId} AND status = 'FAILED') AS failed_events,
+          (SELECT count(*) FROM jobs WHERE tenant_id = ${tenantId} AND status = 'DEAD') AS dead_jobs,
+          (SELECT count(*) FROM agent_runs WHERE tenant_id = ${tenantId} AND intent = 'CONTEXT_REQUEST' AND started_at >= ${since}) AS context_since
+      `,
+      this.q`
+        SELECT id, started_at, request, agent_session_id, details FROM agent_runs
+        WHERE tenant_id = ${tenantId} AND intent = 'CONTEXT_REQUEST' AND status = 'SUCCEEDED'
+        ORDER BY started_at DESC LIMIT 5
+      `,
+    ]);
+    const c = counts[0]!;
+    const toMap = (rows: readonly Record<string, unknown>[]) =>
+      Object.fromEntries(rows.map((r) => [String(r.status), Number(r.n)]));
+    return {
+      decisions: toMap(decisionRows),
+      assumptions: toMap(assumptionRows),
+      pendingApprovals: Number(c.pending_approvals),
+      openConflicts: Number(c.open_conflicts),
+      openFindings: Number(c.open_findings),
+      eventsSince: Number(c.events_since),
+      failedEvents: Number(c.failed_events),
+      deadJobs: Number(c.dead_jobs),
+      contextRequestsSince: Number(c.context_since),
+      recentRecalls: recalls.map((r) => ({
+        runId: r.id as string,
+        at: new Date(r.started_at as Date).toISOString(),
+        request: (r.request as string | null) ?? null,
+        agentSessionId: (r.agent_session_id as string | null) ?? null,
+        decisions: (json<{ provided?: Array<{ id: string; title: string; externalRef: string | null; status: string }> }>(r.details, {}).provided ?? []).slice(0, 3),
+      })),
+    };
+  }
+
   // ── Configuration ────────────────────────────────────────────────────────
 
   async listWorkspacePolicies(tenantId: string): Promise<PolicyRule[]> {

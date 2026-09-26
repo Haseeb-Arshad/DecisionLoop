@@ -427,6 +427,18 @@ export class DecisionService {
       await tx.insertDependencies(actor.tenantId, newId, [
         { targetType: "DECISION", targetId: oldId, relationship: "SUPERSEDES", importance: 1 },
       ]);
+      // Nothing is left to decide about a replaced decision: its open
+      // conflicts resolve as SUPERSEDED and pending reviews close, so the
+      // approval queue only holds questions that still matter.
+      const by = { userId: actor.userId, label: actor.label, note: `Decision superseded by ${replacement.externalRef ?? replacement.title}.` };
+      for (const c of await tx.listConflicts(actor.tenantId, { decisionId: oldId, unresolvedOnly: true })) {
+        await tx.resolveConflict(actor.tenantId, c.id, "SUPERSEDED", by);
+      }
+      for (const status of ["PENDING", "NEEDS_EVIDENCE"] as const) {
+        for (const a of await tx.listApprovals(actor.tenantId, { status, decisionId: oldId })) {
+          await tx.resolveApproval(actor.tenantId, a.id, "SUPERSEDED_OLD", by);
+        }
+      }
       await tx.recordMemoryEvent({
         tenantId: actor.tenantId,
         projectId: old.projectId,

@@ -217,12 +217,20 @@ export default function DecisionDetailPage() {
         <p className="text-xs text-ink-500">
           {traces.length} memory trace{traces.length === 1 ? "" : "s"} recorded for this decision.
         </p>
-        <Link
-          href={`/inspector?decisionId=${decision.id}`}
-          className="text-xs text-signal-400 hover:text-signal-300"
-        >
-          Open in Memory Inspector →
-        </Link>
+        <div className="flex gap-4">
+          <Link
+            href={`/decisions/${decision.id}/impact`}
+            className="text-xs text-signal-400 hover:text-signal-300"
+          >
+            Blast radius →
+          </Link>
+          <Link
+            href={`/inspector?decisionId=${decision.id}`}
+            className="text-xs text-signal-400 hover:text-signal-300"
+          >
+            Open in Memory Inspector →
+          </Link>
+        </div>
       </div>
     </div>
   );

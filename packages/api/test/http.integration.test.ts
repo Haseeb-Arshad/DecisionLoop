@@ -143,3 +143,13 @@ describe("MCP over streamable HTTP", () => {
     await client.close();
   });
 });
+
+describe("overview", () => {
+  it("reports real counts for the control plane", async () => {
+    const o = await new DecisionLoop({ baseUrl: server.url, apiKey: humanKey }).operations.getOverview();
+    expect(o.decisions.ACTIVE ?? 0).toBeGreaterThanOrEqual(0);
+    expect(o.assumptions.CHALLENGED).toBeGreaterThanOrEqual(1);
+    expect(o.contextRequestsSince).toBeGreaterThanOrEqual(1);
+    expect(o.recentRecalls[0]?.decisions[0]?.externalRef).toBe("ADR-018");
+  });
+});

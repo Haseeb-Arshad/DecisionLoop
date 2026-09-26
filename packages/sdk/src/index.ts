@@ -137,6 +137,7 @@ export class DecisionLoop {
     endSession: (input) => this.request("POST", `/sessions/${input.agentSessionId}/end`, { outcome: input.outcome }),
     inspectSession: (id) => this.request("GET", `/sessions/${id}`),
     listSessions: () => this.request("GET", "/sessions"),
+    getOverview: () => this.request("GET", "/overview"),
   };
 
   // ── Ergonomic namespaces ─────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import type { DecisionService, RelatedDecision } from "./services/decisions";
 import type { BlastRadius } from "./services/graph";
 import type { DecisionLoop } from "./services/index";
 import type { ResourceRef } from "./resources/resources";
+import type { WorkspaceOverview } from "./ports/store";
 import type { ConflictEvent, Decision, DecisionStatus, DecisionWithDetails } from "./types/domain";
 import type {
   Actor,
@@ -56,6 +57,7 @@ export interface DecisionLoopOperations {
   endSession(input: { agentSessionId: string; outcome?: string | null }): Promise<void>;
   inspectSession(agentSessionId: string): Promise<unknown>;
   listSessions(): Promise<AgentSession[]>;
+  getOverview(): Promise<WorkspaceOverview>;
 }
 
 export function bindOperations(loop: DecisionLoop, initialActor: Actor): DecisionLoopOperations {
@@ -141,6 +143,10 @@ export function bindOperations(loop: DecisionLoop, initialActor: Actor): Decisio
     endSession: (input) => loop.sessions.end(actor, input.agentSessionId, input.outcome ?? null),
     inspectSession: (id) => loop.sessions.inspect(actor, id),
     listSessions: () => loop.sessions.list(actor),
+    async getOverview() {
+      requireScope(actor, "read");
+      return loop.store.getOverview(actor.tenantId, new Date(Date.now() - 86_400_000));
+    },
   };
 }
 

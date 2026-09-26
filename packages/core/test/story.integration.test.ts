@@ -346,6 +346,26 @@ describe("supersession and blast radius", () => {
     expect((await env.loop.store.getDecision(ws.id, old.id))?.assumptions.every((a) => a.validityStatus === "SUPERSEDED")).toBe(true);
   });
 
+  it("superseding a decision closes its open conflicts and reviews", async () => {
+    const d = await env.loop.decisions.create(ws.human, {
+      title: "Nightly batch exports",
+      chosenOption: { name: "Cron job" },
+      importance: 0.9,
+      assumptions: [{ statement: "Exports stay under 1 GB", subject: "service:exports", predicate: "export_size_gb", valueType: "NUMBER", operator: "<", expected: 1 }],
+    });
+    await env.loop.evidence.submit(ws.human, {
+      statement: "Exports are now 7 GB",
+      facts: [{ subject: "service:exports", predicate: "export_size_gb", valueType: "NUMBER", value: 7, statement: "7 GB" }],
+    });
+    await env.drain();
+    expect((await env.loop.store.listApprovals(ws.id, { status: "PENDING", decisionId: d.id })).length).toBe(1);
+    const next = await env.loop.decisions.create(ws.human, { title: "Streaming exports", chosenOption: { name: "CDC stream" } });
+    await env.loop.decisions.supersede(ws.human, d.id, next.id);
+    expect(await env.loop.store.listApprovals(ws.id, { status: "PENDING", decisionId: d.id })).toEqual([]);
+    expect(await env.loop.store.listConflicts(ws.id, { decisionId: d.id, unresolvedOnly: true })).toEqual([]);
+    expect((await env.loop.store.listConflicts(ws.id, { decisionId: d.id }))[0]?.resolution).toBe("SUPERSEDED");
+  });
+
   it("blast radius follows recorded dependencies only", async () => {
     const cache = await env.loop.decisions.create(ws.human, {
       title: "Cache session lookups in-process",
