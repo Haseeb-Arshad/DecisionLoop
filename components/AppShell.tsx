@@ -6,13 +6,16 @@ import { useLogout } from "@/lib/queries";
 import type { Tenant, User } from "@/lib/types";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/projects", label: "Projects" },
+  { href: "/dashboard", label: "Overview" },
   { href: "/decisions", label: "Decisions" },
   { href: "/at-risk", label: "At risk" },
+  { href: "/approvals", label: "Approvals" },
   { href: "/documents", label: "Evidence" },
+  { href: "/triggers", label: "Triggers" },
+  { href: "/agents", label: "Agents" },
+  { href: "/inspector", label: "Inspector" },
   { href: "/ask", label: "Ask" },
-  { href: "/inspector", label: "Memory Inspector" },
+  { href: "/projects", label: "Projects" },
   { href: "/system", label: "System" },
 ];
 

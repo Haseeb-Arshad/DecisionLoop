@@ -1,5 +1,5 @@
-import postgres from "postgres";
-import { getCockroachSslOptions } from "@/db/ssl";
+import type postgres from "postgres";
+import { createSql } from "@decisionloop/storage-sql/connection";
 
 /**
  * Shared CockroachDB connection pool for the whole app.
@@ -28,17 +28,9 @@ function createClient() {
         "CockroachDB Cloud connection string (see docs/architecture.md §10).",
     );
   }
-  return postgres(url, {
-    ssl: getCockroachSslOptions(),
-    max: 10,
-    idle_timeout: 20,
-    connect_timeout: 10,
-    prepare: false, // CockroachDB Serverless connection pooling doesn't play well with prepared statements.
-    onnotice: () => {
-      // CockroachDB emits a lot of informational NOTICEs (e.g. on IF NOT
-      // EXISTS races) — don't spam server logs with them.
-    },
-  });
+  // TLS, pool size and CockroachDB/embedded differences are handled by the
+  // shared connection factory (packages/storage-sql/src/connection.ts).
+  return createSql(url, { applicationName: "decisionloop-web" });
 }
 
 function getOrCreateClient(): ReturnType<typeof postgres> {

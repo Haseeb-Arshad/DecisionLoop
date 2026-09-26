@@ -174,3 +174,37 @@ for human review. It cannot rewrite the record. Tested in
 | Can the system explain every high-impact alert? | Yes — every conflict has a `memory_trace` with SQL, scores, and reasoning, plus linked evidence with page attribution. |
 | Can an AI parsing error corrupt business history? | No — structured outputs are Zod-validated with a safe retry; a malformed response fails the request rather than writing garbage. |
 | Can an old decision be reconstructed from its event trail? | Yes — `memory_events` is append-only and nothing is deleted on contradiction or supersession. |
+
+## 2.0 additions
+
+The 1.x controls above still hold. DecisionLoop 2.0 adds machine clients and external events, so:
+
+- **API keys** (`dl_<prefix>_<secret>`) are shown once and stored only as SHA-256 hashes, scoped
+  (`read` < `propose` < `write` < `admin`), typed (`user`, `agent`, `integration`) and revocable.
+  Malformed keys are rejected before any database lookup. Requests are rate-limited per credential.
+- **Only people make memory authoritative.** Committing decisions, resolving approvals, accepting or
+  dismissing conflicts and superseding decisions require a `user` credential with `write` scope, however
+  many scopes an agent key has. Agents and integrations propose.
+- **MCP tools are filtered by credential**: an agent key never sees the sensitive tools, and read-only tools
+  carry `readOnlyHint`. Agents reach DecisionLoop over HTTP (directly or via `decisionloop mcp`) and never
+  hold database credentials.
+- **Evidence authority is set by the receiving surface**, never by the payload. Agent-supplied evidence is
+  capped at 0.5 — it can challenge an assumption but not invalidate it. Workspace policies can only make
+  outcomes more conservative.
+- **Every external source is untrusted evidence**: PR titles/bodies, issue comments, documents and agent
+  text are passed to models inside the untrusted-content boundary and cannot reach any code path that
+  commits, approves or deletes. Tested in `tests/integration/alphaAcceptance.test.ts` (criterion 19).
+- **Webhooks** are HMAC-verified on the raw body (constant-time) before parsing, deduplicated by delivery
+  id, and only enqueue work; unbound repositories are ignored.
+- **Idempotency** everywhere external input arrives: events (source + external id), evidence (content
+  hash), conflicts (assumption + evidence), jobs (dedupe key), approvals (dedupe key).
+- **Transactional provenance**: an assumption's state change, its conflict, the decision's status change,
+  the review request and the memory events commit in one transaction with the evaluation record.
+- **Tenant scoping** is in every SQL statement of the 2.0 store, including child rows reached through a
+  tenant-checked join; document links derived from evidence are re-checked against the tenant.
+- **Local mode** binds to `127.0.0.1`; credentials live in a gitignored `.decisionloop/` with owner-only
+  permissions where the OS supports them. No hosted API is ever selected from an ambient
+  `OPENAI_API_KEY`.
+
+Not yet: database-level row security, secret encryption at rest beyond the database's own, key rotation
+tooling, SSRF controls for future URL-fetching connectors (none fetch arbitrary URLs today).

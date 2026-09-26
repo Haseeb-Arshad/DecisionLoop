@@ -2,7 +2,9 @@ import crypto from "node:crypto";
 import { embedTexts } from "@/lib/ai/embeddings";
 import { MAX_UPLOAD_BYTES } from "@/lib/api/uploadTypes";
 import { withAgentRun } from "@/lib/engine/agentRun";
-import { runConflictDetectionForDocument } from "@/lib/engine/conflictDetection";
+import { getDecisionLoop } from "@/lib/decisionloopInstance";
+import { detectInjectionAttempt } from "@decisionloop/core/safety/promptSafety";
+import { recordAuditEvent } from "@/lib/repo/auditEvents";
 import { getObjectBuffer } from "@/lib/aws/s3";
 import { childLogger } from "@/lib/logger";
 import {
@@ -92,6 +94,66 @@ export function hashContent(text: string): string {
   return crypto.createHash("sha256").update(text).digest("hex");
 }
 
+/**
+ * A processed document is one kind of evidence event: it goes through the
+ * same trigger engine as GitHub changes, agent reports and human statements
+ * — numeric and qualitative facts, deterministic evaluation first,
+ * workspace policies, and transactional provenance (docs/v2 §4.2) — instead
+ * of the 1.x document-only conflict pass.
+ *
+ * The event is queued durably first (so a failure here is retried by the
+ * worker), then evaluated inline so the upload response can still report
+ * what the document changed. Processing is idempotent: the worker finds the
+ * event already processed and does nothing.
+ */
+export async function evaluateDocumentAsEvidence(
+  document: DocumentRecord,
+  text: string,
+  opts: { userId: string | null },
+): Promise<ConflictDetectionSummary> {
+  const injection = detectInjectionAttempt(text);
+  if (injection.suspected) {
+    log.warn(
+      { documentId: document.id, patterns: injection.matchedPatterns },
+      "possible prompt-injection content in uploaded document; processing as data only",
+    );
+    await recordAuditEvent({
+      tenantId: document.tenantId,
+      actorLabel: "system",
+      action: "document.injection_suspected",
+      entityType: "document",
+      entityId: document.id,
+      metadata: { patterns: injection.matchedPatterns, excerpts: injection.excerpts.slice(0, 3) },
+    });
+  }
+
+  const loop = getDecisionLoop();
+  const { event } = await loop.evidence.ingest(document.tenantId, {
+    source: "document",
+    externalId: document.contentHash ?? document.id,
+    type: "document.uploaded",
+    occurredAt: new Date().toISOString(),
+    actor: { type: opts.userId ? "user" : "system", id: opts.userId, label: document.filename },
+    evidenceKind: document.sourceType === "CONTRACT" || document.sourceType === "VENDOR_OFFICIAL" ? "OFFICIAL_SOURCE" : "DOCUMENT",
+    text: text.slice(0, 50_000),
+    payload: { documentId: document.id, filename: document.filename, sourceType: document.sourceType },
+    provenance: { receivedVia: "upload", authority: document.authorityScore },
+  });
+  const result = await loop.triggers.process(document.tenantId, event.id);
+
+  return {
+    documentId: document.id,
+    factsExtracted: result.facts.length,
+    candidatesConsidered: result.candidatesConsidered,
+    conflictsFound: result.conflictIds.length,
+    assumptionsInvalidated: result.evaluations.filter((e) => e.nextValidity === "INVALIDATED").length,
+    assumptionsChallenged: result.evaluations.filter((e) => e.nextValidity === "CHALLENGED").length,
+    decisionsMarkedAtRisk: result.decisionsAtRisk,
+    injectionSuspected: injection.suspected,
+    injectionPatterns: injection.matchedPatterns,
+  };
+}
+
 export interface IngestionResult {
   document: DocumentRecord;
   chunksIndexed: number;
@@ -102,14 +164,14 @@ export interface IngestionResult {
 
 /**
  * Full pipeline for a newly-uploaded document (§20): fetch from S3 →
- * extract text → hash → chunk + embed into memory_chunks → run
- * assumption-conflict detection. Wrapped in an agent run so timings,
+ * extract text → hash → chunk + embed into memory_chunks → evaluate as an
+ * evidence event through the trigger engine. Wrapped in an agent run so timings,
  * retrieval counts and conflict counts are recorded rather than only
  * logged.
  *
- * Runs synchronously in the request that confirms the upload — acceptable
- * at demo document sizes and volume; a production build would move this to
- * a queue (see docs/architecture.md §"Known limitations").
+ * Text extraction and indexing run in the request that confirms the
+ * upload; evaluation is queued durably and also run inline (see
+ * evaluateDocumentAsEvidence).
  */
 export async function ingestDocument(
   document: DocumentRecord,
@@ -199,6 +261,7 @@ export async function ingestDocument(
               importance: 0.5,
               authorityScore: document.authorityScore,
               metadata: { filename: document.filename, sourceType: document.sourceType },
+              originSessionId: opts.sessionId,
             }),
           ),
         );
@@ -231,7 +294,10 @@ export async function ingestDocument(
           contentHash,
         };
 
-        const conflictSummary = await runConflictDetectionForDocument(processed, ctx);
+        const conflictSummary = await evaluateDocumentAsEvidence(processed, text, {
+          userId: opts.userId ?? null,
+        });
+        ctx.recordConflicts(conflictSummary.conflictsFound);
 
         log.info(
           { chunks: chunks.length, ...conflictSummary },

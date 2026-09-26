@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { DecisionStatusBadge } from "@/components/StatusBadge";
+import { DecisionHealth } from "@/components/DecisionHealth";
 import { StatCard } from "@/components/StatCard";
 import { useDecisions, useObservability } from "@/lib/queries";
 
@@ -32,6 +33,8 @@ export default function DashboardPage() {
           {metrics?.activeDecisions === 1 ? "" : "s"}.
         </p>
       </div>
+
+      <DecisionHealth />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -138,7 +141,7 @@ export default function DashboardPage() {
         </div>
 
         <div>
-          <h2 className="mb-3 text-sm font-semibold text-ink-100">Decision health</h2>
+          <h2 className="mb-3 text-sm font-semibold text-ink-100">Memory system</h2>
           <div className="card space-y-3 p-4">
             <HealthRow
               label="Conflicts detected"

@@ -1,5 +1,8 @@
 import { sql } from "@/db/client";
 import { assertTransition } from "@/lib/domain/decisionStatus";
+// Row mapping is shared with the 2.0 SqlDecisionStore: one translation from
+// SQL rows to domain objects.
+import { mapAssumption, mapDecision, mapOption } from "@decisionloop/storage-sql/mappers";
 import type {
   Assumption,
   AssumptionOperator,
@@ -11,66 +14,6 @@ import type {
   DecisionWithDetails,
   MemoryIndexStatus,
 } from "@/lib/types";
-
-function mapDecision(row: Record<string, unknown>): Decision {
-  return {
-    id: row.id as string,
-    tenantId: row.tenant_id as string,
-    projectId: (row.project_id as string) ?? null,
-    title: row.title as string,
-    problemStatement: (row.problem_statement as string) ?? null,
-    reasoning: (row.reasoning as string) ?? null,
-    status: row.status as DecisionStatus,
-    memoryIndexStatus: (row.memory_index_status as MemoryIndexStatus) ?? "PENDING",
-    memoryIndexError: (row.memory_index_error as string) ?? null,
-    confidence: Number(row.confidence ?? 0.7),
-    importance: Number(row.importance ?? 0.6),
-    riskExplanation: (row.risk_explanation as string) ?? null,
-    supersededByDecisionId: (row.superseded_by_decision_id as string) ?? null,
-    reopenedAt: row.reopened_at ? (row.reopened_at as Date).toISOString() : null,
-    closedAt: row.closed_at ? (row.closed_at as Date).toISOString() : null,
-    createdBy: (row.created_by as string) ?? null,
-    createdInSession: (row.created_in_session as string) ?? null,
-    createdAt: (row.created_at as Date).toISOString(),
-    updatedAt: (row.updated_at as Date).toISOString(),
-  };
-}
-
-function mapOption(row: Record<string, unknown>): DecisionOption {
-  return {
-    id: row.id as string,
-    decisionId: row.decision_id as string,
-    name: row.name as string,
-    description: (row.description as string) ?? null,
-    isChosen: row.is_chosen as boolean,
-    rejectionReason: (row.rejection_reason as string) ?? null,
-    createdAt: (row.created_at as Date).toISOString(),
-  };
-}
-
-function mapAssumption(row: Record<string, unknown>): Assumption {
-  return {
-    id: row.id as string,
-    decisionId: row.decision_id as string,
-    statement: row.statement as string,
-    normalizedStatement: (row.normalized_statement as string) ?? null,
-    assumptionType: (row.assumption_type as AssumptionType) ?? "QUANTITATIVE",
-    metric: (row.metric as string) ?? null,
-    operator: (row.operator as AssumptionOperator) ?? null,
-    value: row.value === null ? null : Number(row.value),
-    unit: (row.unit as string) ?? null,
-    validityStatus: row.validity_status as AssumptionValidity,
-    importance: Number(row.importance ?? 0.6),
-    confidence: Number(row.confidence ?? 0.7),
-    authorityScore: Number(row.authority_score ?? 0.7),
-    validFrom: (row.valid_from as Date).toISOString(),
-    validUntil: row.valid_until ? (row.valid_until as Date).toISOString() : null,
-    invalidatedByEvidenceId: (row.invalidated_by_evidence_id as string) ?? null,
-    challengedAt: row.challenged_at ? (row.challenged_at as Date).toISOString() : null,
-    invalidatedAt: row.invalidated_at ? (row.invalidated_at as Date).toISOString() : null,
-    createdAt: (row.created_at as Date).toISOString(),
-  };
-}
 
 /**
  * Canonical machine-comparable form of an assumption, e.g.
@@ -168,10 +111,10 @@ export async function createDecision(
     for (const opt of input.options) {
       const [row] = await tx`
         INSERT INTO decision_options (
-          decision_id, name, description, is_chosen, rejection_reason
+          decision_id, name, description, is_chosen, rejection_reason, created_at
         ) VALUES (
           ${decision.id}, ${opt.name}, ${opt.description ?? null},
-          ${opt.isChosen}, ${opt.rejectionReason ?? null}
+          ${opt.isChosen}, ${opt.rejectionReason ?? null}, clock_timestamp()
         )
         RETURNING *
       `;
@@ -183,12 +126,14 @@ export async function createDecision(
       const [row] = await tx`
         INSERT INTO assumptions (
           decision_id, statement, normalized_statement, assumption_type,
-          metric, operator, value, unit, importance, confidence, authority_score
+          metric, operator, value, unit, importance, confidence, authority_score, created_at
         ) VALUES (
           ${decision.id}, ${a.statement}, ${normalizeAssumption(a)},
           ${a.assumptionType ?? "QUANTITATIVE"}, ${a.metric ?? null},
           ${a.operator ?? null}, ${a.value ?? null}, ${a.unit ?? null},
-          ${a.importance ?? 0.6}, ${a.confidence ?? 0.7}, ${a.authorityScore ?? 0.7}
+          ${a.importance ?? 0.6}, ${a.confidence ?? 0.7}, ${a.authorityScore ?? 0.7},
+          -- Statement time keeps the given order within one transaction.
+          clock_timestamp()
         )
         RETURNING *
       `;

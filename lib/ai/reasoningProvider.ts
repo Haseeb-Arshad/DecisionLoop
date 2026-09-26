@@ -63,6 +63,11 @@ export interface ConflictJudgment {
   newValue: string;
   sourceQuote: string;
   suggestedOptionName: string;
+  /**
+   * How the judgment was reached. Reported by the code that produced it —
+   * never inferred from the confidence value (docs/v2 §4.6).
+   */
+  method?: "DETERMINISTIC" | "SEMANTIC";
 }
 
 export interface MemoryAnswerInput {

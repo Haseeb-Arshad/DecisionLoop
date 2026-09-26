@@ -1,0 +1,8 @@
+{
+  "name": "@decisionloop/storage-sql",
+  "version": "0.2.0-alpha.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "description": "See docs/v2/00-audit-and-plan.md §5. Consumed from source via tsconfig paths until the developer preview publishes built packages."
+}

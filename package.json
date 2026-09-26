@@ -2,7 +2,7 @@
   "name": "decisionloop",
   "version": "0.1.0",
   "private": true,
-  "description": "DecisionLoop — assumption-aware decision memory. Remembers why a decision was made, notices when new evidence invalidates it, and proves it with a Memory Inspector backed by CockroachDB.",
+  "description": "DecisionLoop \u2014 assumption-aware decision memory. Remembers why a decision was made, notices when new evidence invalidates it, and proves it with a Memory Inspector backed by CockroachDB.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -17,7 +17,10 @@
     "test:watch": "vitest",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "decisionloop": "node bin/decisionloop.mjs",
+    "dl": "node bin/decisionloop.mjs",
+    "eval": "tsx evals/run.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1107.0",
@@ -38,6 +41,9 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite-pgvector": "^0.0.9",
+    "@electric-sql/pglite-socket": "^0.2.11",
     "@playwright/test": "^1.62.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.10.2",
@@ -57,5 +63,8 @@
   },
   "engines": {
     "node": ">=20.9"
+  },
+  "bin": {
+    "decisionloop": "bin/decisionloop.mjs"
   }
 }

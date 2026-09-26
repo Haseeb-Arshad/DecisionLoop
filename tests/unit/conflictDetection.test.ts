@@ -30,6 +30,14 @@ const baseAssumption: Assumption = {
   challengedAt: null,
   invalidatedAt: null,
   createdAt: new Date().toISOString(),
+  subject: null,
+  predicate: "annual_price",
+  valueType: "NUMBER",
+  operatorV2: "<",
+  expected: 25000,
+  verificationPolicy: "DETERMINISTIC_FIRST",
+  provenance: null,
+  lastEvaluatedAt: null,
 };
 
 function fact(overrides: Partial<ExtractedFact> = {}): ExtractedFact {
@@ -135,7 +143,18 @@ describe("tryDeterministicConflictCheck", () => {
   it("falls through when the assumption has no structured constraint", () => {
     const result = tryDeterministicConflictCheck({
       fact: fact(),
-      assumption: { ...baseAssumption, metric: null, operator: null, value: null },
+      // What the row mapper produces for an assumption stored without a
+      // structured constraint: qualitative, nothing to compare.
+      assumption: {
+        ...baseAssumption,
+        metric: null,
+        operator: null,
+        value: null,
+        predicate: null,
+        valueType: "TEXT",
+        operatorV2: null,
+        expected: null,
+      },
       decisionTitle: "Analytics vendor",
       otherOptionNames: [],
     });

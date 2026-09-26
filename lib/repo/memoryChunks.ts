@@ -48,6 +48,11 @@ export async function insertMemoryChunk(input: {
   importance?: number;
   authorityScore?: number;
   metadata?: Record<string, unknown> | null;
+  /**
+   * Session that wrote this memory. Recorded so a later retrieval can prove
+   * (not assume) that it recalled something from a different session.
+   */
+  originSessionId?: string | null;
 }): Promise<MemoryChunk> {
   let sourceProjectId: string | null = null;
   if (input.sourceType === "decision") {
@@ -91,7 +96,7 @@ export async function insertMemoryChunk(input: {
     INSERT INTO memory_chunks (
       tenant_id, project_id, source_type, source_id, decision_id, content,
       embedding, embedding_model, page_number, chunk_index, content_hash,
-      importance, authority_score, metadata
+      importance, authority_score, metadata, origin_session_id
     ) VALUES (
       ${input.tenantId}, ${input.projectId ?? null}, ${input.sourceType},
       ${input.sourceId}, ${input.decisionId ?? null}, ${input.content},
@@ -99,7 +104,8 @@ export async function insertMemoryChunk(input: {
       ${input.pageNumber ?? null}, ${input.chunkIndex ?? null},
       ${input.contentHash ?? null}, ${input.importance ?? 0.5},
       ${input.authorityScore ?? 0.6},
-      ${input.metadata ? sql.json(toJsonValue(input.metadata)) : null}
+      ${input.metadata ? sql.json(toJsonValue(input.metadata)) : null},
+      ${input.originSessionId ?? null}
     )
     RETURNING *
   `;
@@ -144,7 +150,7 @@ export async function searchMemoryChunks(
 
   const rows = await sql`
     SELECT id, tenant_id, source_type, source_id, decision_id, content,
-           importance, authority_score, page_number, created_at,
+           importance, authority_score, page_number, created_at, origin_session_id,
            1 - (embedding <=> ${vectorLiteral}::VECTOR(512)) AS similarity
     FROM memory_chunks
     WHERE tenant_id = ${tenantId}
@@ -168,6 +174,7 @@ export async function searchMemoryChunks(
     authorityScore: Number(row.authority_score ?? 0.6),
     pageNumber: row.page_number === null ? null : Number(row.page_number),
     createdAt: (row.created_at as Date).toISOString(),
+    originSessionId: (row.origin_session_id as string | null) ?? null,
   }));
 
   // The exact query, with bind parameters named rather than inlined — this
@@ -175,7 +182,7 @@ export async function searchMemoryChunks(
   // shape that ran, not a prettified approximation.
   const renderedSql = [
     "SELECT id, source_type, source_id, decision_id, content,",
-    "       importance, authority_score, page_number, created_at,",
+    "       importance, authority_score, page_number, created_at, origin_session_id,",
     "       1 - (embedding <=> $1::VECTOR(512)) AS similarity",
     "FROM memory_chunks",
     "WHERE tenant_id = $2",
