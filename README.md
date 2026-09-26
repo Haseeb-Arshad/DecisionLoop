@@ -118,7 +118,7 @@ Connect your agent (Claude Code, Codex, Copilot, Cursor): **[docs/v2/agents.md](
 | MCP server | `POST /mcp` (streamable HTTP) or `decisionloop mcp` (stdio) | Tools filtered by credential: agents never see commit/accept/dismiss/supersede |
 | HTTP API | `/api/v1/*` | API keys (`Authorization: Bearer dl_…`) or the control-plane session |
 | TypeScript SDK | [`packages/sdk`](packages/sdk/src/index.ts) | `dl.context.get(…)`, `dl.decisions.propose(…)` |
-| CLI | `decisionloop …` | init, serve, doctor, context, check, decisions, show, explain, propose, evidence, approvals, hooks |
+| CLI | `decisionloop …` | init, serve, doctor, context, check, watch, decisions, show, explain, propose, evidence, approvals, hooks |
 | GitHub App | `POST /api/integrations/github/webhook` | Signed webhooks, advisory PR comments ([setup](docs/v2/github-app.md)) |
 | Control plane | `decisionloop serve --web` or `npm run dev` | Overview, decisions, at risk, approvals, triggers, agents, inspector |
 

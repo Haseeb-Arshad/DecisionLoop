@@ -403,6 +403,7 @@ Each phase leaves the existing app runnable and ends with tests green and a comm
 | 8 Control plane | Done (approvals, triggers, agents) | verified in the browser against a live server |
 | 9 Evaluation | Done | `evals/`; gate test; alpha acceptance test (all 20 criteria) |
 | 10 Documentation / preview packaging | Docs done; npm publishing pending | README, `docs/v2/*`, `integrations/*`, `docker-compose.yml` |
+| Follow-ups | Done | expiry sweep (hourly, deduplicated); procurement/product/finance packs (PoC, finance review policy); decision-health overview; blast-radius view; `decisionloop watch` |
 | Dogfooding | Not started | [dogfood.md](dogfood.md) |
 
 Deviations from this plan, with reasons:
@@ -412,5 +413,4 @@ Deviations from this plan, with reasons:
 - Embedded mode is single-connection (pglite-socket interleaves extended-protocol cycles across
   connections), so `serve --web` hosts the control plane in-process; multi-process deployments use
   PostgreSQL or CockroachDB.
-- `EXPIRED` validity not added (§8). Expiry sweeps (`valid_until` → CHALLENGED) are designed but not yet
-  scheduled.
+- `EXPIRED` validity not added (§8); expired assumptions become CHALLENGED via the hourly sweep.

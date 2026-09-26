@@ -31,6 +31,7 @@ Setup
 Everyday
   context [paths…] [--intent <text>]        What should shape work on these files? (default: changed files)
   check [--intent <text>] [--strict]        Check local changes against recorded constraints and decisions
+  watch [--interval 5]                      Re-check as you work; prints when governing decisions or findings change
   decisions [--at-risk]                     List decisions
   show <id|ref>                             A decision and its history
   explain <id|ref>                          Why a decision exists
@@ -330,18 +331,21 @@ async function cmdContext(args: string[], out: Out) {
   print(out, ctx, () => ctx.summary);
 }
 
-async function cmdCheck(args: string[], out: Out) {
-  const { values } = parseArgs({ args, options: { intent: { type: "string" }, strict: { type: "boolean" }, base: { type: "string" } } });
-  const base = values.base ?? "HEAD";
-  const files = changedFiles(process.cwd(), base);
+interface CheckResult {
+  files: string[];
+  dependencyChanges: DependencyChange[];
+  findings: Array<{ decision: { id: string; externalRef: string | null; title: string }; constraint: string; explanation: string; severity: string }>;
+  context: Awaited<ReturnType<DecisionLoop["context"]["get"]>> | null;
+}
+
+/** Local changes → engineering facts → recorded constraints and governing decisions. Read-only. */
+async function runCheck(opts: { base: string; intent?: string; logContext?: boolean }): Promise<CheckResult> {
+  const files = changedFiles(process.cwd(), opts.base);
   const repository = loadConfig().project?.repository ?? repositoryName();
-  if (files.length === 0) {
-    print(out, { files: [], findings: [] }, () => "No local changes to check.");
-    return;
-  }
+  if (files.length === 0) return { files, dependencyChanges: [], findings: [], context: null };
   const dependencyChanges: DependencyChange[] = files
     .filter((f) => path.basename(f) === "package.json")
-    .flatMap((f) => diffPackageJson(fileAtRevision(f, base), fs.existsSync(f) ? fs.readFileSync(f, "utf8") : null, f));
+    .flatMap((f) => diffPackageJson(fileAtRevision(f, opts.base), fs.existsSync(f) ? fs.readFileSync(f, "utf8") : null, f));
   const event = inboundEventSchema.parse({
     source: "local",
     externalId: "check",
@@ -354,8 +358,8 @@ async function cmdCheck(args: string[], out: Out) {
   const observed = engineeringPack.extract(event);
   const dl = client();
   const resourceInputs = observed.resources.filter((r) => r.type !== "repository");
-  const [ctx, constraints] = await Promise.all([
-    dl.context.get({ intent: values.intent ?? "Review local changes before committing", resources: resourceInputs, repository }),
+  const [context, constraints] = await Promise.all([
+    dl.context.get({ intent: opts.intent ?? "Review local changes before committing", resources: resourceInputs, repository }),
     dl.context.constraints(resourceInputs.length ? resourceInputs : files.map((f) => parseResource(f, repository)), repository),
   ]);
   const registry = new DomainRegistry([engineeringPack]);
@@ -366,17 +370,66 @@ async function cmdCheck(args: string[], out: Out) {
     );
     return check?.violated ? [{ decision: c.decision, constraint: c.statement, explanation: check.explanation, severity: c.severity }] : [];
   });
-  print(out, { files, dependencyChanges, findings, context: ctx }, () =>
-    [
-      `Checked ${files.length} changed file(s)${dependencyChanges.length ? ` and ${dependencyChanges.length} dependency change(s)` : ""}.`,
-      findings.length
-        ? findings.map((f) => `⚠ ${f.decision.externalRef ?? f.decision.title}: ${f.explanation}`).join("\n")
-        : "No recorded constraint is violated by these changes.",
-      "",
-      ctx.summary,
-    ].join("\n"),
-  );
-  if (values.strict && findings.length) process.exitCode = 2;
+  return { files, dependencyChanges, findings, context };
+}
+
+function renderCheck(r: CheckResult): string {
+  if (r.files.length === 0) return "No local changes to check.";
+  return [
+    `Checked ${r.files.length} changed file(s)${r.dependencyChanges.length ? ` and ${r.dependencyChanges.length} dependency change(s)` : ""}.`,
+    r.findings.length
+      ? r.findings.map((f) => `⚠ ${f.decision.externalRef ?? f.decision.title}: ${f.explanation}`).join("\n")
+      : "No recorded constraint is violated by these changes.",
+    "",
+    r.context?.summary ?? "",
+  ].join("\n");
+}
+
+async function cmdCheck(args: string[], out: Out) {
+  const { values } = parseArgs({ args, options: { intent: { type: "string" }, strict: { type: "boolean" }, base: { type: "string" } } });
+  const result = await runCheck({ base: values.base ?? "HEAD", intent: values.intent });
+  print(out, result, () => renderCheck(result));
+  if (values.strict && result.findings.length) process.exitCode = 2;
+}
+
+/**
+ * Local development monitoring (spec §14): re-checks the working tree when
+ * it changes and prints only when the governing decisions or findings
+ * change. Polls git (no file-system watcher dependency); never writes memory.
+ */
+async function cmdWatch(args: string[]) {
+  const { values } = parseArgs({ args, options: { interval: { type: "string" }, base: { type: "string" } } });
+  const everyMs = Math.max(1, Number(values.interval ?? 5)) * 1000;
+  const base = values.base ?? "HEAD";
+  let lastTree = "";
+  let lastReport = "";
+  process.stderr.write(`decisionloop watch: checking changes against ${base} every ${everyMs / 1000}s (Ctrl+C to stop)\n`);
+  for (;;) {
+    const files = changedFiles(process.cwd(), base);
+    const tree = files
+      .map((f) => {
+        try {
+          return `${f}:${fs.statSync(f).mtimeMs}`;
+        } catch {
+          return `${f}:deleted`;
+        }
+      })
+      .join("|");
+    if (tree !== lastTree) {
+      lastTree = tree;
+      try {
+        const r = await runCheck({ base, intent: "Local changes in progress" });
+        const report = JSON.stringify({ f: r.findings.map((f) => f.explanation), d: r.context?.decisions.map((d) => `${d.id}:${d.status}`) ?? [] });
+        if (report !== lastReport) {
+          lastReport = report;
+          process.stdout.write(`\n── ${new Date().toLocaleTimeString()} ─────────────────────────────\n${renderCheck(r)}\n`);
+        }
+      } catch (err) {
+        process.stderr.write(`decisionloop watch: ${err instanceof Error ? err.message : err}\n`);
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, everyMs));
+  }
 }
 
 async function cmdDecisions(args: string[], out: Out) {
@@ -517,6 +570,8 @@ export async function main(argv: string[]): Promise<void> {
         return await cmdContext(rest, out);
       case "check":
         return await cmdCheck(rest, out);
+      case "watch":
+        return await cmdWatch(rest);
       case "decisions":
         return await cmdDecisions(rest, out);
       case "show":
