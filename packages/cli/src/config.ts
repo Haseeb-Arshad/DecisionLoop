@@ -18,6 +18,8 @@ export interface ProjectConfig {
   workspaceId?: string;
   repository?: string | null;
   dataDir?: string;
+  /** Primary domain profile (set by `init --profile`). */
+  domain?: string;
 }
 
 export interface Credentials {

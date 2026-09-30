@@ -126,6 +126,8 @@ const routes: Array<[string, RegExp, Handler]> = [
   ["GET", /^\/decisions\/([^/]+)\/blast-radius$/, (ops, [id], _b, url) =>
     ops.blastRadius({ decisionId: id!, assumptionId: url.searchParams.get("assumptionId"), maxDepth: Number(url.searchParams.get("maxDepth") ?? 4) })],
   ["GET", /^\/at-risk$/, (ops, _p, _b, url) => ops.listAtRisk(Number(url.searchParams.get("limit") ?? 20))],
+  ["POST", /^\/actions\/check$/, (ops, _p, body) => ops.checkAction(body as never)],
+  ["POST", /^\/events$/, (ops, _p, body) => ops.submitEvent(body as never)],
   ["POST", /^\/constraints$/, (ops, _p, body) => ops.getConstraints(body as never)],
   ["GET", /^\/conflicts$/, (ops, _p, _b, url) =>
     ops.getConflicts({ decisionId: url.searchParams.get("decisionId"), includeResolved: url.searchParams.get("includeResolved") === "true" })],
@@ -191,7 +193,7 @@ export function createApiHandler(opts: ApiOptions): (req: Request) => Promise<Re
         const ops = await opsFor(req, actor);
         // Stateless streamable HTTP: a fresh server per request, scoped to
         // this credential's permissions.
-        const server = buildMcpServer(ops, { type: actor.type, scopes: actor.scopes });
+        const server = buildMcpServer(ops, { type: actor.type, scopes: actor.scopes }, { guidance: opts.loop.deps.domains.guidance() });
         const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
         await server.connect(transport);
         return await transport.handleRequest(req);

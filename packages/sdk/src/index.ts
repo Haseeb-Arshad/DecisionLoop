@@ -1,4 +1,4 @@
-import type { ContextRequestInput, DecisionDraftInput, EvidenceSubmissionInput } from "@decisionloop/core/contracts";
+import type { ActionCheckInput, ContextRequestInput, DecisionDraftInput, EvidenceSubmissionInput, SourceEventInput } from "@decisionloop/core/contracts";
 import type { DecisionLoopOperations } from "@decisionloop/core/operations";
 import type { ResourceRef } from "@decisionloop/core/resources/resources";
 import type { ApprovalStatus } from "@decisionloop/core/types/records";
@@ -99,6 +99,8 @@ export class DecisionLoop {
     getDecision: (id) => this.request("GET", `/decisions/${encodeURIComponent(id)}`),
     explainDecision: (id) => this.request("GET", `/decisions/${encodeURIComponent(id)}/explain`),
     getConstraints: (input) => this.request("POST", "/constraints", input),
+    checkAction: (input) => this.request("POST", "/actions/check", input),
+    submitEvent: (input) => this.request("POST", "/events", input),
     listAtRisk: (limit = 20) => this.request("GET", `/at-risk?limit=${limit}`),
     getConflicts: (input) =>
       this.request(
@@ -147,6 +149,16 @@ export class DecisionLoop {
     get: (input: ContextRequestInput) => this.operations.getContext(input),
     constraints: (resources: Array<string | ResourceRef>, repository?: string | null) =>
       this.operations.getConstraints({ resources, repository }),
+  };
+
+  /** Dry run before an action with side effects. Advisory; writes no evidence. */
+  readonly actions = {
+    check: (input: ActionCheckInput) => this.operations.checkAction(input),
+  };
+
+  /** Events from a source system. Needs an integration key bound to that source. */
+  readonly events = {
+    send: (input: SourceEventInput) => this.operations.submitEvent(input),
   };
 
   readonly decisions = {

@@ -1,0 +1,35 @@
+{
+  "id": "sales",
+  "label": "Sales and pricing",
+  "description": "Discount, pricing and deal-desk policies, checked against CRM and finance signals.",
+  "vocabulary": {
+    "decision": "pricing policy",
+    "assumption": "assumption",
+    "resource": "account, plan or price book",
+    "action": "quote a price, grant a discount or make a commitment to a customer"
+  },
+  "defaultResourceType": "account",
+  "resourceTypes": ["account", "plan", "price_book", "region", "segment", "competitor"],
+  "predicateAliases": {
+    "discount": "discount_pct",
+    "gross_margin": "gross_margin_pct",
+    "win_rate": "win_rate_pct",
+    "sales_cycle_days": "sales_cycle_length_days"
+  },
+  "authority": {
+    "finance:report.approved": 0.95,
+    "crm:forecast.snapshot": 0.7,
+    "crm:*": 0.6,
+    "competitive-intel:*": 0.4
+  },
+  "acceptMetrics": true,
+  "policies": [
+    {
+      "scope": "evaluation",
+      "name": "pricing_margin_review",
+      "description": "Any change to a margin or discount assumption goes to a person.",
+      "when": { "domain": ["sales"], "proposedValidity": ["CHALLENGED", "INVALIDATED"] },
+      "actions": ["require_human_review", "notify_dashboard"]
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { DomainRegistry } from "@decisionloop/core/domain-packs/pack";
 import { diffPackageJson, engineeringPack, type DependencyChange } from "@decisionloop/core/domain-packs/engineering";
 import { inboundEventSchema } from "@decisionloop/core/events/event";
+import { parseProfile } from "@decisionloop/core/domain-packs/profile";
 import { parseResource } from "@decisionloop/core/resources/resources";
 import type { Scope } from "@decisionloop/core/types/records";
 import { buildMcpServer } from "@decisionloop/mcp";
@@ -20,18 +21,24 @@ const HELP = `decisionloop — persistent reasoning for humans and agents
 Usage: decisionloop <command> [options]
 
 Setup
-  init [--name <workspace>] [--port 4318]   Create a local workspace, database and API keys
+  init [--name <workspace>] [--port 4318] [--profile <name|file>]
+                                            Create a local workspace, database and API keys; --profile sets the domain
+                                            agents are addressed in (a template such as support, or a profile JSON)
   serve [--port 4318] [--web] [--dev]       Run API + MCP + worker (+ web control plane with --web)
   worker                                    Run only the job worker (needs DATABASE_URL)
   login --url <url> --key <key>             Save credentials for a hosted/remote DecisionLoop
   doctor                                    Check server, credentials, database and MCP
-  key create --name <n> [--scopes read,propose] [--type agent|user|integration]
+  key create --name <n> [--scopes read,propose] [--type agent|user|integration] [--source <system>]
+                                            --source binds an integration key to one source system (erp, billing ...) for POST /api/v1/events
+  profiles [list | validate <file>]         Domain profiles available here / check a profile JSON
   user create --email <e> [--name <n>]      Web sign-in for this workspace (password from DECISIONLOOP_USER_PASSWORD)
   mcp                                       MCP server over stdio (for Claude Code, Codex, Cursor …)
 
 Everyday
   context [paths…] [--intent <text>]        What should shape work on these files? (default: changed files)
   check [--intent <text>] [--strict]        Check local changes against recorded constraints and decisions
+  act <what you intend> [--resource r]... [--fact <json>]...
+                                            Check an action with side effects (refund, purchase, message) against standing decisions
   watch [--interval 5]                      Re-check as you work; prints when governing decisions or findings change
   decisions [--at-risk]                     List decisions
   show <id|ref>                             A decision and its history
@@ -73,6 +80,7 @@ async function loadRuntime(opts: { embedded: boolean; migrate?: boolean }) {
   // Imported lazily: most commands only talk HTTP and must stay fast.
   const { createRuntime } = await import("@decisionloop/runtime");
   const cfg = loadConfig();
+  if (cfg.project?.domain && !process.env.DECISIONLOOP_PRIMARY_DOMAIN) process.env.DECISIONLOOP_PRIMARY_DOMAIN = cfg.project.domain;
   return createRuntime({
     allowEmbedded: opts.embedded,
     dataDir: cfg.project?.dataDir ? path.resolve(cfg.project.dataDir) : path.join(projectDir(), "pgdata"),
@@ -88,9 +96,12 @@ async function loadRuntime(opts: { embedded: boolean; migrate?: boolean }) {
 // ── Commands ────────────────────────────────────────────────────────────────
 
 async function cmdInit(args: string[], out: Out) {
-  const { values } = parseArgs({ args, options: { name: { type: "string" }, port: { type: "string" } }, allowPositionals: true });
+  const { values } = parseArgs({ args, options: { name: { type: "string" }, port: { type: "string" }, profile: { type: "string" } }, allowPositionals: true });
   const cfg = loadConfig();
   const repository = repositoryName();
+  // Install the profile first: the runtime below loads whatever is in .decisionloop/profiles.
+  const installed = values.profile ? installProfile(values.profile) : null;
+  if (installed) process.env.DECISIONLOOP_PRIMARY_DOMAIN = installed.id;
   const runtime = await loadRuntime({ embedded: true });
   const { issueApiKey } = await import("@decisionloop/runtime");
   try {
@@ -102,7 +113,13 @@ async function cmdInit(args: string[], out: Out) {
       await runtime.loop.store.upsertRepositoryBinding({ tenantId: workspace.id, provider: "github", repository }).catch(() => undefined);
     }
     const url = `http://127.0.0.1:${values.port ?? portOf(cfg.url)}`;
-    const project: ProjectConfig = { url, workspaceId: workspace.id, repository, ...(runtime.embedded ? { dataDir: path.join(".decisionloop", "pgdata") } : {}) };
+    const project: ProjectConfig = {
+      url,
+      workspaceId: workspace.id,
+      repository,
+      ...(installed ? { domain: installed.id } : cfg.project?.domain ? { domain: cfg.project.domain } : {}),
+      ...(runtime.embedded ? { dataDir: path.join(".decisionloop", "pgdata") } : {}),
+    };
     writeJson(path.join(projectDir(), "config.json"), project);
     writeJson(path.join(projectDir(), "credentials.json"), { apiKey: human.key, agentKey: agent.key }, true);
     const ignored = ensureGitignored();
@@ -112,6 +129,7 @@ async function cmdInit(args: string[], out: Out) {
         `API keys saved to .decisionloop/credentials.json${ignored ? " (added .decisionloop/ to .gitignore)" : ""}:`,
         `  local-admin  (you, full access)`,
         `  local-agents (read + propose; agents can never commit)`,
+        ...(installed ? [`Domain profile "${installed.id}" installed in .decisionloop/profiles; agents are addressed in its terms.`] : []),
         "",
         "Next:",
         "  decisionloop serve                 # API + MCP + worker",
@@ -122,6 +140,80 @@ async function cmdInit(args: string[], out: Out) {
   } finally {
     await runtime.stop();
   }
+}
+
+/** Profile templates ship in the repository's `profiles/` directory, next to the web app. */
+function templatesDir(): string {
+  return path.join(webDir(), "profiles");
+}
+
+function templateNames(): string[] {
+  return fs.existsSync(templatesDir()) ? fs.readdirSync(templatesDir()).filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, "")) : [];
+}
+
+/** Validates and copies a profile (a template name such as "support", or a path to a JSON file) into this project. */
+function installProfile(nameOrPath: string): { id: string; file: string } {
+  const candidate = nameOrPath.endsWith(".json") ? path.resolve(nameOrPath) : path.join(templatesDir(), `${nameOrPath}.json`);
+  if (!fs.existsSync(candidate)) {
+    fail(`no profile "${nameOrPath}". Templates: ${templateNames().join(", ") || "(none found)"}. Or pass a path to a profile JSON file.`);
+  }
+  let profile;
+  try {
+    profile = parseProfile(JSON.parse(fs.readFileSync(candidate, "utf8")));
+  } catch (err) {
+    fail(`${candidate} is not a valid profile: ${err instanceof Error ? err.message : err}`);
+  }
+  const file = path.join(projectDir(), "profiles", `${profile.id}.json`);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.copyFileSync(candidate, file);
+  return { id: profile.id, file };
+}
+
+async function cmdProfiles(args: string[], out: Out) {
+  const [sub = "list", file] = args;
+  if (sub === "validate") {
+    if (!file) fail("usage: decisionloop profiles validate <file.json>");
+    try {
+      const p = parseProfile(JSON.parse(fs.readFileSync(file, "utf8")));
+      print(out, { valid: true, id: p.id }, () => `${file}: valid profile "${p.id}" (${p.label}).`);
+    } catch (err) {
+      fail(`${file} is not a valid profile: ${err instanceof Error ? err.message : err}`);
+    }
+    return;
+  }
+  if (sub !== "list") fail("usage: decisionloop profiles [list | validate <file>]");
+  const { loadDomainRegistry } = await import("@decisionloop/runtime/profiles");
+  const cfg = loadConfig();
+  const registry = loadDomainRegistry({ ...process.env, DECISIONLOOP_PRIMARY_DOMAIN: process.env.DECISIONLOOP_PRIMARY_DOMAIN ?? cfg.project?.domain });
+  const primary = registry.primary()?.id;
+  const rows = registry.packs.map((p) => ({ id: p.id, label: p.label, primary: p.id === primary }));
+  const templates = templateNames();
+  print(out, { domains: rows, templates }, () =>
+    [
+      "Domains loaded here:",
+      ...rows.map((r) => `  ${r.id}${r.primary ? "  (primary)" : ""} - ${r.label}`),
+      "",
+      `Templates you can install with \`decisionloop init --profile <name>\`: ${templates.join(", ") || "(none found)"}`,
+    ].join("\n"),
+  );
+}
+
+/** Dry run before an action with side effects. */
+async function cmdAct(args: string[], out: Out) {
+  const { values, positionals } = parseArgs({
+    args,
+    options: { resource: { type: "string", multiple: true }, fact: { type: "string", multiple: true } },
+    allowPositionals: true,
+  });
+  const action = positionals.join(" ").trim();
+  if (!action) fail('usage: decisionloop act "issue a $350 refund" --resource policy:refunds --fact <json>');
+  const r = await client({ agent: true }).actions.check({
+    action,
+    resources: values.resource ?? [],
+    facts: (values.fact ?? []).map((f) => JSON.parse(f)),
+  });
+  print(out, r, () => `${r.verdict.toUpperCase()}\n${r.summary}`);
+  if (r.verdict === "stop") process.exitCode = 2;
 }
 
 async function cmdServe(args: string[]) {
@@ -246,17 +338,18 @@ async function cmdDoctor(out: Out) {
 async function cmdKey(args: string[], out: Out) {
   const [sub, ...rest] = args;
   if (sub !== "create") fail("usage: decisionloop key create --name <n> [--scopes read,propose] [--type agent|user|integration]");
-  const { values } = parseArgs({ args: rest, options: { name: { type: "string" }, scopes: { type: "string" }, type: { type: "string" }, workspace: { type: "string" } } });
+  const { values } = parseArgs({ args: rest, options: { name: { type: "string" }, scopes: { type: "string" }, type: { type: "string" }, workspace: { type: "string" }, source: { type: "string" } } });
   const cfg = loadConfig();
   const tenantId = values.workspace ?? cfg.project?.workspaceId;
   if (!tenantId || !values.name) fail("key create needs --name and a workspace (run init, or pass --workspace).");
   const scopes = (values.scopes ?? "read,propose").split(",").map((s) => s.trim()) as Scope[];
-  const type = (values.type ?? "agent") as "agent" | "user" | "integration";
+  const type = (values.source ? "integration" : (values.type ?? "agent")) as "agent" | "user" | "integration";
+  if (values.source && values.type && values.type !== "integration") fail("--source makes an integration key; drop --type or use --type integration.");
   const runtime = await loadRuntime({ embedded: true });
   const { issueApiKey } = await import("@decisionloop/runtime");
   try {
-    const { key, record } = await issueApiKey(runtime.loop.store, { tenantId, name: values.name, scopes, actorType: type });
-    print(out, { id: record.id, key, scopes, type }, () => `Created ${type} key "${values.name}" (${scopes.join(", ")}). Shown once:\n${key}`);
+    const { key, record } = await issueApiKey(runtime.loop.store, { tenantId, name: values.name, scopes, actorType: type, eventSource: values.source ?? null });
+    print(out, { id: record.id, key, scopes, type, source: record.eventSource }, () => `Created ${type} key "${values.name}" (${scopes.join(", ")})${record.eventSource ? ` bound to source "${record.eventSource}"` : ""}. Shown once:\n${key}`);
   } finally {
     await runtime.stop();
   }
@@ -308,7 +401,7 @@ async function cmdMcp() {
   } catch (err) {
     fail(`cannot reach DecisionLoop at ${cfg.url}: ${err instanceof Error ? err.message : err}. Is \`decisionloop serve\` running?`);
   }
-  const server = buildMcpServer(dl.operations, { type: who.type, scopes: who.scopes });
+  const server = buildMcpServer(dl.operations, { type: who.type, scopes: who.scopes }, { guidance: who.domain?.guidance });
   await server.connect(new StdioServerTransport());
   process.stderr.write(`decisionloop MCP (stdio) → ${cfg.url} as ${who.actor} (${who.type})\n`);
 }
@@ -595,6 +688,10 @@ export async function main(argv: string[]): Promise<void> {
         return await cmdUser(rest, out);
       case "mcp":
         return await cmdMcp();
+      case "profiles":
+        return await cmdProfiles(rest, out);
+      case "act":
+        return await cmdAct(rest, out);
       case "context":
         return await cmdContext(rest, out);
       case "check":

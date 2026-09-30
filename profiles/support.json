@@ -1,0 +1,50 @@
+{
+  "id": "support",
+  "label": "Customer support",
+  "description": "Refund, credit, escalation and service-level policies, checked against billing and helpdesk signals.",
+  "vocabulary": {
+    "decision": "support policy",
+    "assumption": "assumption",
+    "resource": "policy, customer segment or product",
+    "action": "issue a refund, credit, exception or escalation"
+  },
+  "defaultResourceType": "entity",
+  "resourceTypes": ["policy", "segment", "customer", "product", "plan", "region", "queue"],
+  "predicateAliases": {
+    "dispute_rate": "chargeback_rate_pct",
+    "chargeback_rate": "chargeback_rate_pct",
+    "refund_amount": "refund_amount_usd",
+    "first_response_minutes": "first_response_time_min",
+    "csat": "csat_score"
+  },
+  "authority": {
+    "billing:dispute.report": 0.9,
+    "billing:*": 0.85,
+    "helpdesk:metric.snapshot": 0.8,
+    "helpdesk:*": 0.6,
+    "survey:*": 0.6,
+    "social:*": 0.3
+  },
+  "acceptMetrics": true,
+  "records": [
+    {
+      "path": "dispute_report",
+      "subjectField": "segment",
+      "subjectPrefix": "segment",
+      "verb": "reported",
+      "facts": [
+        { "field": "chargebackRatePct", "predicate": "chargeback_rate_pct", "unit": "%", "label": "a chargeback rate of" },
+        { "field": "refundRatePct", "predicate": "refund_rate_pct", "unit": "%", "label": "a refund rate of" }
+      ]
+    }
+  ],
+  "policies": [
+    {
+      "scope": "evaluation",
+      "name": "support_policy_review",
+      "description": "Invalidating a support policy's assumption is reviewed by a person, whatever the source.",
+      "when": { "domain": ["support"], "proposedValidity": ["INVALIDATED"] },
+      "actions": ["require_human_review", "notify_dashboard"]
+    }
+  ]
+}

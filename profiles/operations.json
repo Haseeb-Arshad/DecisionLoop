@@ -1,0 +1,40 @@
+{
+  "id": "operations",
+  "label": "Operations",
+  "description": "Runbooks, supplier service levels and capacity plans, checked against monitoring and vendor signals.",
+  "vocabulary": {
+    "decision": "operating procedure",
+    "assumption": "assumption",
+    "resource": "site, process, supplier or asset",
+    "action": "change a schedule, reroute an order, shut down a line or switch a supplier"
+  },
+  "defaultResourceType": "process",
+  "resourceTypes": ["site", "process", "supplier", "asset", "route", "shift"],
+  "predicateAliases": {
+    "on_time_rate": "on_time_delivery_pct",
+    "otd": "on_time_delivery_pct",
+    "downtime": "downtime_hours",
+    "defect_rate": "defect_rate_pct"
+  },
+  "subjectPrefixAliases": { "vendor": "supplier" },
+  "authority": {
+    "monitoring:metric.snapshot": 0.85,
+    "monitoring:*": 0.75,
+    "supplier:notice": 0.85,
+    "supplier:*": 0.7,
+    "audit:report.approved": 0.95
+  },
+  "acceptMetrics": true,
+  "records": [
+    {
+      "path": "delivery",
+      "subjectField": "supplier",
+      "subjectPrefix": "supplier",
+      "verb": "delivered",
+      "facts": [
+        { "field": "onTimePct", "predicate": "on_time_delivery_pct", "unit": "%", "label": "an on-time rate of" },
+        { "field": "defectRatePct", "predicate": "defect_rate_pct", "unit": "%", "label": "a defect rate of" }
+      ]
+    }
+  ]
+}
