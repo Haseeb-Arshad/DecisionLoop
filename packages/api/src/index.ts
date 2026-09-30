@@ -26,6 +26,8 @@ export interface ApiOptions {
   mcpPath?: string;
   maxBodyBytes?: number;
   rateLimitPerMinute?: number;
+  /** Shared durable limiter for multi-process deployments. */
+  takeRateLimit?: (actor: Actor) => Promise<boolean>;
   /** Routes that authenticate themselves (e.g. signed webhooks). Tried first. */
   extraRoutes?: ExtraRoute[];
 }
@@ -118,6 +120,7 @@ const routes: Array<[string, RegExp, Handler]> = [
     if (!b?.supersededBy) throw new HttpError(400, "invalid", "supersededBy is required.");
     return ops.supersedeDecision(id!, b.supersededBy, b.note);
   }],
+  ["POST", /^\/decisions\/([^/]+)\/verification-checks$/, (ops, [id], body) => ops.configureVerificationCheck(id!, body as never)],
   ["POST", /^\/decisions\/([^/]+)\/outcomes$/, (ops, [id], body) => ops.recordOutcome({ ...(body as object), decisionId: id! } as never)],
   ["POST", /^\/decisions\/([^/]+)\/assumptions$/, (ops, [id], body) => ops.proposeAssumption({ ...(body as object), decisionId: id! } as never)],
   ["GET", /^\/decisions\/([^/]+)\/blast-radius$/, (ops, [id], _b, url) =>
@@ -149,7 +152,7 @@ export function createApiHandler(opts: ApiOptions): (req: Request) => Promise<Re
   async function actorFor(req: Request): Promise<Actor> {
     const actor = await opts.authenticate(req);
     if (!actor) throw new HttpError(401, "unauthenticated", "Provide a DecisionLoop API key: Authorization: Bearer dl_…");
-    if (!limiter.take(actor.apiKeyId ?? actor.userId ?? actor.label)) {
+    if (!(opts.takeRateLimit ? await opts.takeRateLimit(actor) : limiter.take(actor.apiKeyId ?? actor.userId ?? actor.label))) {
       throw new HttpError(429, "rate_limited", "Too many requests; slow down.");
     }
     return actor;

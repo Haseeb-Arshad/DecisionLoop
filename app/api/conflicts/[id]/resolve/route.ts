@@ -1,55 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { handleApiError, jsonError } from "@/lib/api/handler";
+import { handleApiError } from "@/lib/api/handler";
 import { requireAuth } from "@/lib/auth/currentUser";
-import {
-  ActionNotApplicableError,
-  acceptConflictEvidence,
-  dismissConflict,
-} from "@/lib/engine/decisionActions";
-import { IllegalStatusTransitionError } from "@/lib/domain/decisionStatus";
-
-const ResolveSchema = z.object({
-  resolution: z.enum(["dismiss", "accept"]),
-  note: z.string().max(500).optional(),
-});
-
-/**
- * "Dismiss Conflict" / "Accept New Evidence" from §22.
- *
- * Neither deletes anything: dismissing marks the conflict DISMISSED and
- * restores the assumption, accepting marks it ACCEPTED and confirms the
- * assumption invalid. Both keep the conflict row and record who decided,
- * so the history stays reconstructible (§3 Principle 3).
- */
+import { userActor } from "@/lib/auth/actor";
+import { getDecisionLoop } from "@/lib/decisionloopInstance";
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const auth = await requireAuth();
+    const actor = userActor(await requireAuth());
     const { id } = await params;
-    const body = ResolveSchema.parse(await req.json());
-
-    const decision =
-      body.resolution === "dismiss"
-        ? await dismissConflict({
-            tenantId: auth.tenantId,
-            conflictId: id,
-            userId: auth.user.id,
-            note: body.note ?? null,
-          })
-        : await acceptConflictEvidence({
-            tenantId: auth.tenantId,
-            conflictId: id,
-            userId: auth.user.id,
-            note: body.note ?? null,
-          });
-
+    const body = z
+      .object({
+        resolution: z.enum(["dismiss", "accept"]),
+        note: z.string().max(500).optional(),
+      })
+      .parse(await req.json());
+    const decision = await getDecisionLoop().conflicts[body.resolution](
+      actor,
+      id,
+      { note: body.note },
+    );
     return NextResponse.json({ decision });
-  } catch (err) {
-    if (err instanceof ActionNotApplicableError) return jsonError(err.message, 404);
-    if (err instanceof IllegalStatusTransitionError) return jsonError(err.message, 409);
-    return handleApiError(err);
+  } catch (error) {
+    return handleApiError(error);
   }
 }

@@ -14,6 +14,7 @@ import type {
   ApprovalRequest,
   AssumptionEvaluation,
   ConstraintFinding,
+  DecisionVerificationRun,
   DecisionDependency,
   EvidenceItem,
   Job,
@@ -191,6 +192,24 @@ export function mapFinding(row: Row): ConstraintFinding {
     resolutionNote: str(row.resolution_note),
     resolvedByLabel: str(row.resolved_by_label),
     reviewedAt: iso(row.reviewed_at),
+    createdAt: iso(row.created_at)!,
+  };
+}
+
+export function mapVerificationRun(row: Row): DecisionVerificationRun {
+  return {
+    id: row.id as string,
+    tenantId: row.tenant_id as string,
+    decisionId: row.decision_id as string,
+    eventId: str(row.event_id),
+    source: row.source as string,
+    sourceRunId: row.source_run_id as string,
+    checkName: row.check_name as string,
+    repository: row.repository as string,
+    commitSha: row.commit_sha as string,
+    conclusion: row.conclusion as DecisionVerificationRun["conclusion"],
+    detailsUrl: str(row.details_url),
+    completedAt: iso(row.completed_at)!,
     createdAt: iso(row.created_at)!,
   };
 }

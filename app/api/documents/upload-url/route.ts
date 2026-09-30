@@ -1,3 +1,4 @@
+import { limitCost } from "@/lib/api/limits";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { handleApiError } from "@/lib/api/handler";
@@ -7,6 +8,7 @@ import { buildDocumentKey, getPresignedUploadUrl } from "@/lib/aws/s3";
 import { authorityForSourceType } from "@/lib/domain/decisionStatus";
 import { recordAuditEvent } from "@/lib/repo/auditEvents";
 import { createDocument } from "@/lib/repo/documents";
+import { getDecisionLoop } from "@/lib/decisionloopInstance";
 import { getOrCreateDefaultProject, getProjectById } from "@/lib/repo/projects";
 
 /**
@@ -44,6 +46,9 @@ const RequestSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth();
+    if (getDecisionLoop().deps.reasoning.name === "none")
+      return NextResponse.json({ error: "Document extraction requires a configured reasoning model. Submit a structured observation instead." }, { status: 503 });
+    await limitCost(auth.tenantId, "upload");
     const body = RequestSchema.parse(await req.json());
 
     const project = body.projectId

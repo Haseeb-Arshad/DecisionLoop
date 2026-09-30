@@ -33,7 +33,7 @@ export interface GithubPayload {
     base?: { sha?: string; ref?: string };
     user?: { login?: string; type?: string };
   };
-  workflow_run?: { name?: string; conclusion?: string | null; html_url?: string; head_sha?: string; updated_at?: string };
+  workflow_run?: { id?: number; run_attempt?: number; name?: string; conclusion?: string | null; html_url?: string; head_sha?: string; updated_at?: string };
   release?: { tag_name?: string; html_url?: string; body?: string | null; published_at?: string };
   issue?: { number: number; title?: string; body?: string | null; html_url?: string; updated_at?: string };
   comment?: { body?: string; html_url?: string; updated_at?: string };
@@ -112,7 +112,18 @@ export function normalizeGithubEvent(input: {
       headSha: pr?.head?.sha ?? payload.head_commit?.id ?? payload.workflow_run?.head_sha ?? null,
       changedFiles: input.changedFiles ?? pushFiles,
       dependencyChanges: input.dependencyChanges ?? [],
-      ...(payload.workflow_run?.conclusion ? { ci: { workflow: payload.workflow_run.name ?? "workflow", conclusion: payload.workflow_run.conclusion } } : {}),
+      ...(payload.workflow_run?.conclusion
+        ? {
+            ci: {
+              workflow: payload.workflow_run.name ?? "workflow",
+              conclusion: payload.workflow_run.conclusion,
+              runId: payload.workflow_run.id === undefined ? null : String(payload.workflow_run.id),
+              runAttempt: payload.workflow_run.run_attempt ?? 1,
+              headSha: payload.workflow_run.head_sha ?? null,
+              detailsUrl: payload.workflow_run.html_url ?? null,
+            },
+          }
+        : {}),
     },
     provenance: { receivedVia: "github-webhook", signatureVerified: true, url },
   };

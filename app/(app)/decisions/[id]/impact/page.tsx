@@ -52,7 +52,7 @@ export default function ImpactPage({ params }: { params: Promise<{ id: string }>
                 {n.externalRef ? `${n.externalRef} — ` : ""}
                 {n.title}
               </Link>
-              <span className={`ml-2 text-xs ${n.status === "AT_RISK" ? "text-risk-400" : "text-ink-500"}`}>[{n.status}]</span>
+              <span className={`ml-2 text-xs ${n.status === "AT_RISK" ? "text-risk-600" : "text-ink-500"}`}>[{n.status}]</span>
               <span className="ml-2 text-xs text-ink-500">
                 {e.relationship.toLowerCase().replace(/_/g, " ")}
                 {e.viaAssumption ? " this assumption" : ""}
@@ -93,7 +93,7 @@ export default function ImpactPage({ params }: { params: Promise<{ id: string }>
 
       <div className="card p-5">
         {radius.error ? (
-          <p className="text-sm text-risk-400">{(radius.error as Error).message}</p>
+          <p className="text-sm text-risk-600">{(radius.error as Error).message}</p>
         ) : !radius.data ? (
           <p className="text-sm text-ink-400">Loading…</p>
         ) : (

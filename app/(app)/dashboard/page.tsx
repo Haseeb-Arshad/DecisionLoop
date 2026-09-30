@@ -1,212 +1,239 @@
 "use client";
-
 import Link from "next/link";
+import {
+  PageHeader,
+  EmptyState,
+  QueryState,
+  Icon,
+} from "@/components/Workspace";
 import { DecisionStatusBadge } from "@/components/StatusBadge";
-import { DecisionHealth } from "@/components/DecisionHealth";
-import { StatCard } from "@/components/StatCard";
-import { useDecisions, useObservability } from "@/lib/queries";
-
-/**
- * §37 — the dashboard leads with what needs attention, then recent memory
- * activity, then decision health. Every number is read from real rows via
- * /api/observability; nothing is manufactured.
- */
+import { useWorkspace } from "@/lib/workspace";
+import { useObservability } from "@/lib/queries";
+import { timeAgo } from "@/lib/v1";
 export default function DashboardPage() {
-  const { data: obs, isLoading: obsLoading } = useObservability();
-  const { data: decisionsData } = useDecisions();
-
-  const metrics = obs?.metrics;
-  const decisions = decisionsData?.decisions ?? [];
-  const atRisk = decisions.filter((d) => d.status === "AT_RISK");
-  const recentEvents = obs?.memoryEvents.slice(0, 8) ?? [];
-
+  const workspace = useWorkspace();
+  const activity = useObservability();
+  const decisions = workspace.data?.decisions ?? [];
+  const caps = workspace.data?.capabilities;
+  const active = decisions.filter((d) => d.status === "ACTIVE");
+  const risk = decisions.filter(
+    (d) => d.status === "AT_RISK" || d.status === "REOPENED",
+  );
+  const assumptions = decisions.reduce((n, d) => n + d.assumptions.length, 0);
+  const workerHealthy = caps?.workerHealthy;
+  const metrics = [
+    [
+      "Recorded decisions",
+      decisions.length,
+      "Your team's choices, in one place",
+    ],
+    ["Active decisions", active.length, "Current choices and their rationale"],
+    ["Need attention", risk.length, "Challenged or reopened decisions"],
+    ["Assumptions", assumptions, "Conditions behind your choices"],
+  ] as const;
   return (
-    <div className="animate-fade-in space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold text-ink-50">
-          Your organization&apos;s reasoning has a memory.
-        </h1>
-        <p className="mt-1 text-sm text-ink-400">
-          DecisionLoop is watching {metrics?.assumptionsTracked ?? 0} assumption
-          {metrics?.assumptionsTracked === 1 ? "" : "s"} behind{" "}
-          {metrics?.activeDecisions ?? 0} active decision
-          {metrics?.activeDecisions === 1 ? "" : "s"}.
-        </p>
-      </div>
-
-      <DecisionHealth />
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Active decisions"
-          value={obsLoading ? null : (metrics?.activeDecisions ?? 0)}
-          href="/decisions"
-        />
-        <StatCard
-          label="At risk"
-          value={obsLoading ? null : (metrics?.decisionsAtRisk ?? 0)}
-          tone={metrics && metrics.decisionsAtRisk > 0 ? "risk" : "neutral"}
-          hint={
-            metrics && metrics.decisionsAtRisk > 0
-              ? "An assumption changed."
-              : "All stored assumptions still hold."
-          }
-          href="/at-risk"
-        />
-        <StatCard
-          label="Assumptions tracked"
-          value={obsLoading ? null : (metrics?.assumptionsTracked ?? 0)}
-          hint={
-            metrics && metrics.assumptionsChallenged > 0
-              ? `${metrics.assumptionsChallenged} challenged`
-              : undefined
-          }
-        />
-        <StatCard
-          label="Cross-session recalls"
-          value={obsLoading ? null : (metrics?.crossSessionRecalls ?? 0)}
-          tone="signal"
-          hint="Memories retrieved by a later session than the one that wrote them."
-          href="/system"
-        />
-      </div>
-
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-ink-100">Needs attention</h2>
-          {atRisk.length > 0 && (
-            <Link href="/at-risk" className="text-xs text-signal-400 hover:text-signal-300">
-              View all →
-            </Link>
-          )}
-        </div>
-        {atRisk.length === 0 ? (
-          <div className="card px-6 py-8 text-center text-sm text-ink-400">
-            Nothing is at risk. Every assumption behind your committed decisions still holds, as
-            far as DecisionLoop can tell from the evidence it has seen.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {atRisk.slice(0, 4).map((decision) => (
+    <div className="animate-fade-in">
+      <PageHeader
+        eyebrow="The decision workspace"
+        title="Keep the why. Watch what changes."
+        description="Your decisions, the assumptions behind them, and the evidence that calls them into question."
+        action={
+          <Link className="btn-primary" href="/decisions/new">
+            + Record a decision
+          </Link>
+        }
+      />
+      <QueryState
+        loading={workspace.isLoading}
+        error={workspace.error}
+        retry={workspace.refetch}
+      />
+      {workspace.data && (
+        <>
+          <div className="metric-strip">
+            {metrics.map(([label, value, hint]) => (
               <Link
-                key={decision.id}
-                href={`/decisions/${decision.id}`}
-                className="card block border-risk-500/30 bg-risk-500/[0.04] p-4 transition hover:border-risk-500/50"
+                href={label === "Need attention" ? "/at-risk" : "/decisions"}
+                key={label}
+                className="metric-cell"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="font-medium text-ink-100">{decision.title}</p>
-                    <p className="mt-1 line-clamp-2 text-sm text-ink-400">
-                      {decision.riskExplanation ?? "An assumption behind this decision changed."}
-                    </p>
-                  </div>
-                  <DecisionStatusBadge status={decision.status} />
-                </div>
+                <p>{label}</p>
+                <strong
+                  className={
+                    label === "Need attention" && value > 0
+                      ? "text-risk-600"
+                      : ""
+                  }
+                >
+                  {value}
+                </strong>
+                <small>{hint}</small>
               </Link>
             ))}
           </div>
-        )}
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <div>
-          <h2 className="mb-3 text-sm font-semibold text-ink-100">Recent memory activity</h2>
-          {recentEvents.length === 0 ? (
-            <div className="card px-6 py-8 text-center text-sm text-ink-400">
-              No memory activity yet. Commit a decision to start the record.
-            </div>
-          ) : (
-            <div className="card divide-y divide-ink-800/60">
-              {recentEvents.map((event) => (
-                <div key={event.id} className="flex items-start gap-3 px-4 py-3">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-ink-500" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-ink-200">
-                      {event.eventType.replaceAll("_", " ").toLowerCase()}
-                    </p>
-                    {event.summary && (
-                      <p className="mt-0.5 line-clamp-1 text-xs text-ink-500">{event.summary}</p>
-                    )}
-                  </div>
-                  <span className="shrink-0 text-[11px] text-ink-600">
-                    {new Date(event.createdAt).toLocaleTimeString(undefined, {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
+          <div className="mt-8 grid gap-7 xl:grid-cols-[minmax(0,1.65fr)_minmax(260px,1fr)]">
+            <div className="space-y-8">
+              <section>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="section-label !mb-0">
+                    Attention queue{" "}
+                    <span className="ml-2 rounded-full bg-ink-800 px-2 py-1 text-[10px] text-ink-400">
+                      {risk.length}
+                    </span>
+                  </h2>
+                  <Link className="text-xs text-signal-600" href="/at-risk">
+                    Open queue ↗
+                  </Link>
                 </div>
-              ))}
+                {risk.length ? (
+                  <div className="card">
+                    {risk.slice(0, 4).map((d) => (
+                      <Link
+                        className="record-row"
+                        key={d.id}
+                        href={`/decisions/${d.id}`}
+                      >
+                        <span className="rounded-lg bg-orange-50 p-2 text-risk-600">
+                          <Icon name="risk" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="record-title">{d.title}</p>
+                          <p className="record-subtitle line-clamp-2">
+                            {d.riskExplanation ??
+                              "This choice needs a human review."}
+                          </p>
+                        </div>
+                        <DecisionStatusBadge status={d.status} />
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState title="No decisions are waiting for review">
+                    No recorded conflicts currently need attention. New evidence
+                    can change this.
+                  </EmptyState>
+                )}
+              </section>
+              <section>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="section-label !mb-0">Recent decisions</h2>
+                  <Link className="text-xs text-signal-600" href="/decisions">
+                    View register ↗
+                  </Link>
+                </div>
+                {decisions.length ? (
+                  <div className="card">
+                    {decisions.slice(0, 5).map((d) => (
+                      <Link
+                        className="record-row"
+                        key={d.id}
+                        href={`/decisions/${d.id}`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="record-reference mb-1">
+                            {d.externalRef ?? d.id.slice(0, 8)}
+                          </p>
+                          <p className="record-title">{d.title}</p>
+                          <p className="record-subtitle">
+                            {d.options.find((o) => o.isChosen)?.name}
+                          </p>
+                        </div>
+                        <DecisionStatusBadge status={d.status} />
+                        <span className="hidden text-[10px] text-ink-500 sm:block">
+                          {timeAgo(d.updatedAt)}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    title="Start with a decision you already made"
+                    href="/decisions/new"
+                    action="Record your first decision"
+                  >
+                    Capture the choice, why it won, and what would make you
+                    reconsider it.
+                  </EmptyState>
+                )}
+              </section>
             </div>
-          )}
-        </div>
-
-        <div>
-          <h2 className="mb-3 text-sm font-semibold text-ink-100">Memory system</h2>
-          <div className="card space-y-3 p-4">
-            <HealthRow
-              label="Conflicts detected"
-              value={metrics?.conflictsDetected ?? 0}
-              detail={
-                metrics && metrics.conflictsUnreviewed > 0
-                  ? `${metrics.conflictsUnreviewed} awaiting review`
-                  : "all reviewed"
-              }
-            />
-            <HealthRow
-              label="Evidence documents"
-              value={metrics?.documentsIngested ?? 0}
-              detail={`${metrics?.memoriesStored ?? 0} memories stored`}
-            />
-            <HealthRow
-              label="Agent runs"
-              value={metrics?.agentRuns ?? 0}
-              detail={
-                metrics?.agentRunFailures
-                  ? `${metrics.agentRunFailures} failed`
-                  : "no failures"
-              }
-            />
-            <HealthRow
-              label="Avg retrieval latency"
-              value={
-                metrics?.averageRetrievalLatencyMs === null ||
-                metrics?.averageRetrievalLatencyMs === undefined
-                  ? "—"
-                  : `${metrics.averageRetrievalLatencyMs}ms`
-              }
-              detail="CockroachDB vector search"
-            />
+            <aside className="space-y-7">
+              <section className="card p-6">
+                <p className="eyebrow">Workspace status</p>
+                <h2 className="text-lg font-semibold">A living record</h2>
+                <p className="mt-2 text-xs leading-6 text-ink-400">
+                  Evidence is checked against the conditions you record. People
+                  decide how to respond.
+                </p>
+                <dl className="mt-5 divide-y divide-ink-800 text-xs">
+                  <div className="flex justify-between py-3">
+                    <dt className="text-ink-400">Background worker</dt>
+                    <dd
+                      className={
+                        workerHealthy ? "text-signal-600" : "text-risk-600"
+                      }
+                    >
+                      {workerHealthy ? "Running" : "No recent heartbeat"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between py-3">
+                    <dt className="text-ink-400">Queued work</dt>
+                    <dd>{caps?.pendingJobs ?? "—"}</dd>
+                  </div>
+                  <div className="flex justify-between py-3">
+                    <dt className="text-ink-400">Reasoning</dt>
+                    <dd
+                      className="max-w-[140px] truncate"
+                      title={caps?.reasoning}
+                    >
+                      {caps?.reasoning === "none"
+                        ? "Manual + deterministic"
+                        : caps?.reasoning}
+                    </dd>
+                  </div>
+                </dl>
+                <Link
+                  href="/system"
+                  className="mt-4 inline-block text-xs text-signal-600"
+                >
+                  View system health →
+                </Link>
+              </section>
+              <section>
+                <h2 className="section-label">Recent activity</h2>
+                <QueryState
+                  loading={activity.isLoading}
+                  error={activity.error}
+                />
+                {activity.data?.memoryEvents.length ? (
+                  <div className="space-y-5">
+                    {activity.data.memoryEvents.slice(0, 5).map((e) => (
+                      <div className="flex gap-3" key={e.id}>
+                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-signal-600" />
+                        <div>
+                          <p className="text-xs leading-5">
+                            {e.summary ??
+                              e.eventType.replaceAll("_", " ").toLowerCase()}
+                          </p>
+                          <p className="mt-1 text-[10px] text-ink-500">
+                            {timeAgo(e.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  !activity.isLoading && (
+                    <p className="text-xs leading-6 text-ink-400">
+                      Your record begins when you commit the first decision.
+                    </p>
+                  )
+                )}
+              </section>
+            </aside>
           </div>
-          <div className="mt-3 flex gap-2">
-            <Link href="/decisions/new" className="btn-primary flex-1 justify-center">
-              Commit a decision
-            </Link>
-            <Link href="/documents" className="btn-secondary flex-1 justify-center">
-              Add evidence
-            </Link>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function HealthRow({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string | number;
-  detail?: string;
-}) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="text-sm text-ink-300">{label}</span>
-      <span className="flex items-baseline gap-2">
-        <span className="text-sm font-medium tabular-nums text-ink-100">{value}</span>
-        {detail && <span className="text-[11px] text-ink-500">{detail}</span>}
-      </span>
+        </>
+      )}
     </div>
   );
 }

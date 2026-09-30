@@ -68,6 +68,16 @@ describe("HTTP API + SDK", () => {
     expect(constraints[0]?.decision.externalRef).toBe("ADR-018");
   });
 
+  it("lets a person link a workflow over HTTP and denies an agent", async () => {
+    const human = new DecisionLoop({ baseUrl: server.url, apiKey: humanKey });
+    const agent = new DecisionLoop({ baseUrl: server.url, apiKey: agentKey });
+    const check = { name: "Authentication integration tests", repository: "Acme/Product", kind: "TEST" as const };
+    const configured = await human.decisions.configureVerificationCheck("ADR-018", check);
+    expect(configured.verificationChecks).toMatchObject([{ name: check.name, repository: "acme/product" }]);
+    expect((await human.decisions.get("ADR-018")).decision.verificationChecks).toMatchObject([{ name: check.name }]);
+    await expect(agent.decisions.configureVerificationCheck("ADR-018", check)).rejects.toMatchObject({ status: 403 });
+  });
+
   it("evidence is processed by the server's worker, asynchronously", async () => {
     const agent = new DecisionLoop({ baseUrl: server.url, apiKey: agentKey });
     const r = await agent.evidence.add({
@@ -101,6 +111,7 @@ describe("MCP over streamable HTTP", () => {
     expect(names).toEqual(expect.arrayContaining(["decisionloop_get_context", "decisionloop_propose_decision", "decisionloop_add_evidence"]));
     expect(names).not.toContain("decisionloop_commit_decision");
     expect(names).not.toContain("decisionloop_dismiss_conflict");
+    expect(names).not.toContain("decisionloop_configure_verification_check");
     const readOnly = (await client.listTools()).tools.find((t) => t.name === "decisionloop_get_context")!;
     expect(readOnly.annotations?.readOnlyHint).toBe(true);
     await client.close();
@@ -110,6 +121,7 @@ describe("MCP over streamable HTTP", () => {
     const client = await mcpClient(humanKey);
     const names = (await client.listTools()).tools.map((t) => t.name);
     expect(names).toContain("decisionloop_commit_decision");
+    expect(names).toContain("decisionloop_configure_verification_check");
     await client.close();
   });
 

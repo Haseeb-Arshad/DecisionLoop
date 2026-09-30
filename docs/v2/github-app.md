@@ -14,8 +14,8 @@ GitHub → Settings → Developer settings → GitHub Apps → New GitHub App.
 
 - **Webhook URL:** `https://<your DecisionLoop host>/api/integrations/github/webhook`
 - **Webhook secret:** a random string → `GITHUB_WEBHOOK_SECRET`
-- **Repository permissions (minimum):** Pull requests: *Read*; Contents: *Read*; Issues: *Read & write*
-  (to post the advisory comment); Metadata: *Read*.
+- **Repository permissions (minimum):** Pull requests: *Read*; Contents: *Read*; Actions: *Read*;
+  Issues: *Read & write* (to post the advisory comment); Metadata: *Read*.
 - **Subscribe to events:** Pull request, Push, Release, Workflow run, Issues.
 
 Generate a private key → `GITHUB_APP_PRIVATE_KEY` (PEM; `\n`-escaped is accepted) and note the App ID →
@@ -42,7 +42,34 @@ a separate web deployment run `decisionloop worker` (needs `DATABASE_URL`).
   webhook path can commit, approve or dismiss anything.
 - The App's installation token is requested per installation and cached until shortly before expiry.
 
+## Decision verification receipts
+
+A decision can list the exact GitHub Actions workflow name and repository whose runs provide
+verification evidence:
+
+```json
+{
+  "verificationChecks": [
+    {
+      "name": "Authentication integration tests",
+      "repository": "acme/product",
+      "kind": "TEST",
+      "description": "Covers session revocation after account offboarding"
+    }
+  ]
+}
+```
+
+`name` must exactly match the workflow's `name:` value in a completed `workflow_run` payload.
+DecisionLoop stores each matching run's conclusion, commit SHA, completion time and details URL.
+Coding agents receive the latest receipt with decision context, including when no run has been
+recorded. A receipt applies only to its recorded commit; DecisionLoop does not claim that an
+unseen or different commit passed. Receipts are evidence for review and do not block merges or
+change decision status automatically.
+
 ## Verified so far
 
 Tested against a fake GitHub API (signature rejection, redelivery idempotency, one comment edited in place
-across pushes, enrichment from PR files and manifests). Not yet exercised against a live App installation.
+across pushes, enrichment from PR files and manifests). The workflow receipt path is covered against the
+embedded database for exact matching, re-runs, failure conclusions, tenant isolation, agent context and
+human-only configuration. Not yet exercised against a live App installation or a hosted database.

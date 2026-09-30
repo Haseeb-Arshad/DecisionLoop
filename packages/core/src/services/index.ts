@@ -87,6 +87,7 @@ export function createDecisionLoop(input: {
     createWorker(opts: WorkerOptions, extraHandlers: Record<string, JobHandler> = {}) {
       return new Worker(input.store, { ...loop.jobHandlers(), ...extraHandlers }, {
         logger: input.logger,
+        ...opts,
         periodic: [
           {
             everyMs: 15 * 60_000,
@@ -94,8 +95,8 @@ export function createDecisionLoop(input: {
               await input.store.enqueueJob({ tenantId: null, kind: "sweep_expired_assumptions", payload: {}, dedupeKey: expirySweepDedupeKey() });
             },
           },
+          ...(opts.periodic ?? []),
         ],
-        ...opts,
       });
     },
   };

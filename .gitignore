@@ -53,3 +53,8 @@ next-env.d.ts
 .scratch/
 
 evals/reports/
+
+# Isolated Remotion tooling and regenerated sound assets
+/video/node_modules/
+/video/out/
+/video/public/sfx-*.wav

@@ -32,6 +32,7 @@ const EVENT_META: Record<
   APPROVAL_RESOLVED: { label: "Approval resolved", dot: "bg-ink-500" },
   CONTEXT_PROVIDED: { label: "Provided to an agent as context", dot: "bg-signal-500" },
   OUTCOME_RECORDED: { label: "Outcome recorded", dot: "bg-ink-500" },
+  VERIFICATION_CHECK_CONFIGURED: { label: "Verification workflow linked", dot: "bg-signal-500" },
 };
 
 function formatWhen(iso: string): string {

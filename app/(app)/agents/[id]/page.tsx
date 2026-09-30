@@ -38,7 +38,7 @@ function resourceLabel(r: unknown): string {
 export default function AgentSessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data, isLoading, error } = useV1<Inspection>(["session", id], `/sessions/${id}`);
-  if (error) return <div className="card p-6 text-sm text-risk-400">{(error as Error).message}</div>;
+  if (error) return <div className="card p-6 text-sm text-risk-600">{(error as Error).message}</div>;
   if (isLoading || !data) return <div className="card p-6 text-sm text-ink-400">Loading…</div>;
   const { session, contextRequests, proposals } = data;
 
@@ -90,7 +90,7 @@ export default function AgentSessionPage({ params }: { params: Promise<{ id: str
                         {d.externalRef ? `${d.externalRef} — ` : ""}
                         {d.title}
                       </Link>{" "}
-                      <span className={d.status === "AT_RISK" ? "text-risk-400" : "text-ink-500"}>[{d.status} when provided]</span>
+                      <span className={d.status === "AT_RISK" ? "text-risk-600" : "text-ink-500"}>[{d.status} when provided]</span>
                       {d.statusNow && d.statusNow !== d.status && <span className="ml-1 text-xs text-ink-500">now {d.statusNow}</span>}
                     </p>
                   ))

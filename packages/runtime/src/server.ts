@@ -1,4 +1,7 @@
 import http from "node:http";
+import { randomUUID } from "node:crypto";
+import { workerHeartbeat } from "./heartbeat";
+import { takeRequestLimit } from "./requestLimits";
 import { Readable } from "node:stream";
 import { createApiHandler, type ExtraRoute } from "@decisionloop/api";
 import type { Worker } from "@decisionloop/core/services/worker";
@@ -29,6 +32,7 @@ export async function startServer(
     worker?: boolean;
     extraRoutes?: ExtraRoute[];
     workerHandlers?: Parameters<Runtime["loop"]["createWorker"]>[1];
+    localWorkspaceId?: string;
     /**
      * Also serve the Next.js control plane from this process. It shares this
      * process's single database connection (db/client.ts reads the global
@@ -38,6 +42,7 @@ export async function startServer(
   } = {},
 ): Promise<ServerHandle> {
   const handler = createApiHandler({
+    takeRateLimit: actor => takeRequestLimit(runtime.sql, `api:${actor.tenantId}:${actor.apiKeyId ?? actor.userId ?? actor.label}`, 600),
     loop: runtime.loop,
     authenticate: async (req) => {
       const auth = req.headers.get("authorization");
@@ -50,6 +55,7 @@ export async function startServer(
   type NodeHandler = (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
   let nextHandle: NodeHandler | null = null;
   if (opts.web) {
+    globalThis.__decisionloop_local_workspace__ = opts.localWorkspaceId;
     (globalThis as { __decisionloop_sql__?: unknown }).__decisionloop_sql__ = runtime.sql;
     process.env.DATABASE_URL ??= runtime.databaseUrl;
     // Next resolves its build directories against the working directory, so
@@ -104,7 +110,8 @@ export async function startServer(
   const abort = new AbortController();
   let workerDone: Promise<void> = Promise.resolve();
   if (opts.worker !== false) {
-    worker = runtime.loop.createWorker({ workerId: `serve-${process.pid}`, pollIntervalMs: 500 }, opts.workerHandlers);
+    const workerId = `serve-${randomUUID()}`;
+    worker = runtime.loop.createWorker({ workerId, pollIntervalMs: 500, periodic: [workerHeartbeat(runtime.sql, workerId)] }, opts.workerHandlers);
     workerDone = worker.start(abort.signal);
   }
 

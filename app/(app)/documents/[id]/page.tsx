@@ -20,7 +20,7 @@ export default function EvidenceViewerPage() {
   }
   if (isError || !data) {
     return (
-      <div className="card px-6 py-12 text-center text-sm text-risk-400">
+      <div className="card px-6 py-12 text-center text-sm text-risk-600">
         {isError ? (error as Error).message : "Document not found."}
       </div>
     );
@@ -56,7 +56,7 @@ export default function EvidenceViewerPage() {
       </div>
 
       {document.processingError && (
-        <div className="card border-risk-500/40 bg-risk-500/[0.05] p-4 text-sm text-risk-400">
+        <div className="card border-risk-500/40 bg-risk-500/[0.05] p-4 text-sm text-risk-600">
           {document.processingError}
         </div>
       )}

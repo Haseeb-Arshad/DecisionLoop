@@ -92,7 +92,7 @@ export class OpenAICompatibleReasoningProvider implements ReasoningProvider {
     this.name = `openai:${cfg.model}`;
   }
 
-  private async structured<T>(system: string, user: string, schemaName: string, schema: object, validator: z.ZodType<T>): Promise<T> {
+  async structured<T>(system: string, user: string, schemaName: string, schema: object, validator: z.ZodType<T>): Promise<T> {
     let lastError: unknown;
     for (let attempt = 1; attempt <= 2; attempt++) {
       const res = await post<{ choices: Array<{ message: { content: string | null; refusal?: string | null } }> }>(

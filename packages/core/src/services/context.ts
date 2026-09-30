@@ -3,7 +3,7 @@ import { requireScope } from "../errors";
 import { matchDecisionsByResources, parseResource, resourceMatchScore, type ResourceRef } from "../resources/resources";
 import { scoreCandidates } from "../retrieval/scoring";
 import type { ConflictEvent, DecisionStatus, DecisionWithDetails, ScoredMemoryCandidate } from "../types/domain";
-import type { Actor } from "../types/records";
+import type { Actor, DecisionVerificationRun } from "../types/records";
 import { estimateTokens, sessionOf, withRun, type ServiceDeps } from "./shared";
 
 /**
@@ -40,6 +40,13 @@ export interface ContextDecision {
   rejectedAlternatives: Array<{ name: string; reason: string | null }>;
   assumptions: Array<{ id: string; statement: string; validity: string; structured: string | null }>;
   constraints: Array<{ id: string; statement: string; severity: string }>;
+  verificationChecks: Array<{
+    name: string;
+    repository: string;
+    kind: "TEST" | "BENCHMARK" | "RUNTIME";
+    description: string | null;
+    latestRun: Pick<DecisionVerificationRun, "conclusion" | "commitSha" | "detailsUrl" | "completedAt"> | null;
+  }>;
   openConflicts: Array<{ id: string; assumptionId: string; explanation: string; quote: string | null; detectedAt: string }>;
   resources: string[];
   decidedBy: string;
@@ -132,7 +139,7 @@ export class ContextService {
           const score = STRUCTURAL_WEIGHT * (s?.score ?? 0) + SEMANTIC_WEIGHT * (v?.score ?? 0);
           const matchedBy = [
             ...(s ? [`resource: ${s.reason}`] : []),
-            ...(v ? [`semantic: ${v.score.toFixed(2)}`] : []),
+            ...(v ? [`embedding similarity: ${v.score.toFixed(2)}`] : []),
           ];
           // Semantic-only matches must stand on their own.
           const strongEnough = (s && s.score >= MIN_STRUCTURAL) || score >= MIN_RELEVANCE || (v && v.score >= 0.5);
@@ -167,12 +174,16 @@ export class ContextService {
 
         const conflicts = await store.listConflicts(actor.tenantId, { decisionIds: live.map((d) => d.id), unresolvedOnly: true });
         const deps = await store.listDependencies(actor.tenantId, { decisionIds: live.map((d) => d.id) });
+        const verificationRuns = live.length
+          ? await store.listVerificationRuns(actor.tenantId, { decisionIds: live.map((d) => d.id), limit: live.length * 20, latestPerCheck: true })
+          : [];
         const decisions = live.map((d) =>
           toContextDecision(
             d,
             relevance.get(d.id)!,
             conflicts.filter((c) => c.decisionId === d.id),
             deps.filter((x) => x.decisionId === d.id && x.relationship === "SUPERSEDES").map((x) => x.targetId!).filter(Boolean),
+            verificationRuns.filter((run) => run.decisionId === d.id),
           ),
         );
         const summary = renderSummary(decisions, superseded, req.intent);
@@ -223,6 +234,12 @@ export class ContextService {
             status: d.status,
             openConflicts: d.openConflicts.length,
             constraints: d.constraints.map((c) => c.statement),
+            verificationChecks: d.verificationChecks.map((check) => ({
+              name: check.name,
+              repository: check.repository,
+              kind: check.kind,
+              latestRun: check.latestRun,
+            })),
           })),
           constraintCount: decisions.reduce((n, d) => n + d.constraints.length, 0),
           tokenEstimate: estimateTokens(summary),
@@ -284,6 +301,7 @@ function toContextDecision(
   rel: { score: number; matchedBy: string[] },
   conflicts: ConflictEvent[],
   supersedes: string[],
+  verificationRuns: DecisionVerificationRun[],
 ): ContextDecision {
   const chosen = d.options.find((o) => o.isChosen);
   return {
@@ -300,6 +318,16 @@ function toContextDecision(
       .filter((a) => a.validityStatus !== "SUPERSEDED")
       .map((a) => ({ id: a.id, statement: a.statement, validity: a.validityStatus, structured: a.normalizedStatement })),
     constraints: (d.constraints ?? []).map((c) => ({ id: c.id, statement: c.statement, severity: c.severity })),
+    verificationChecks: (d.verificationChecks ?? []).map((check) => {
+      const latest = verificationRuns.find((run) => run.checkName === check.name && run.repository === check.repository) ?? null;
+      return {
+        ...check,
+        description: check.description ?? null,
+        latestRun: latest
+          ? { conclusion: latest.conclusion, commitSha: latest.commitSha, detailsUrl: latest.detailsUrl, completedAt: latest.completedAt }
+          : null,
+      };
+    }),
     openConflicts: conflicts.map((c) => ({
       id: c.id,
       assumptionId: c.assumptionId,
@@ -335,6 +363,16 @@ function renderSummary(decisions: ContextDecision[], superseded: ContextResponse
     for (const r of d.rejectedAlternatives) out.push(`Rejected: ${r.name}${r.reason ? ` — ${r.reason}` : ""}`);
     for (const a of d.assumptions) out.push(`Assumes${a.validity === "VALID" ? "" : ` [${a.validity}]`}: ${a.statement}`);
     for (const c of d.constraints) out.push(`Constraint: ${c.statement}`);
+    for (const check of d.verificationChecks) {
+      if (!check.latestRun) {
+        out.push(`Verification not yet observed: ${check.repository} / ${check.name} (${check.kind}).`);
+      } else {
+        const run = check.latestRun;
+        out.push(
+          `Latest observed verification (${check.kind}): ${check.repository} / ${check.name} was ${run.conclusion} on commit ${run.commitSha.slice(0, 12)} at ${run.completedAt.slice(0, 10)}${run.detailsUrl ? ` — ${run.detailsUrl}` : ""}. This does not establish the status of a different commit.`,
+        );
+      }
+    }
     for (const c of d.openConflicts) out.push(`Open conflict: ${c.explanation}${c.quote ? ` (evidence: "${c.quote.slice(0, 160)}")` : ""}`);
     if (d.resources.length) out.push(`Governs: ${d.resources.slice(0, 8).join(", ")}`);
     out.push(`Decided by ${d.decidedBy} on ${d.decidedAt}. id=${d.id}`);

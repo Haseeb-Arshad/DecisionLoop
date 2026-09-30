@@ -1,553 +1,528 @@
 "use client";
-
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { SourceTypeBadge } from "@/components/StatusBadge";
-import { SOURCE_TYPE_OPTIONS } from "@/lib/api/uploadTypes";
+import Link from "next/link";
+import { PageHeader } from "@/components/Workspace";
+import { useV1Mutation, v1 } from "@/lib/v1";
+import type { DecisionWithDetails } from "@/lib/types";
 import {
-  useCreateDecision,
-  useDocuments,
-  useExtractDecision,
-  useUploadDocument,
-} from "@/lib/queries";
-import type { AssumptionOperator, AssumptionType, DocumentSourceType } from "@/lib/types";
-
-interface EditableOption {
-  name: string;
-  description: string;
-  isChosen: boolean;
-  rejectionReason: string;
-}
-
-interface EditableAssumption {
+  OPERATORS_BY_TYPE,
+  type ValueType,
+} from "@decisionloop/core/assumptions/model";
+type Assumption = {
   statement: string;
-  assumptionType: AssumptionType;
-  metric: string;
-  operator: AssumptionOperator;
-  value: string; // controlled input; parsed on submit
+  subject: string;
+  predicate: string;
+  valueType: ValueType;
+  operator: string;
+  expected: string;
   unit: string;
-  importance: number;
-  confidence: number;
-}
-
-const OPERATORS: AssumptionOperator[] = ["<", "<=", ">", ">=", "="];
-const ASSUMPTION_TYPES: AssumptionType[] = [
-  "QUANTITATIVE",
-  "QUALITATIVE",
-  "REGULATORY",
-  "CAPACITY",
-  "TEMPORAL",
-];
-
-type Step = "describe" | "review";
-
-/**
- * The §18 New Decision workflow: describe the decision, attach supporting
- * documents, let DecisionLoop analyse both, review what it extracted, then
- * explicitly commit. Nothing enters organizational memory before the final
- * button — the extraction step persists nothing.
- */
+};
+const blank = (): Assumption => ({
+  statement: "",
+  subject: "",
+  predicate: "",
+  valueType: "TEXT",
+  operator: "=",
+  expected: "",
+  unit: "",
+});
 export default function NewDecisionPage() {
   const router = useRouter();
-  const extract = useExtractDecision();
-  const create = useCreateDecision();
-  const upload = useUploadDocument();
-  const { data: documentsData } = useDocuments();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [step, setStep] = useState<Step>("describe");
-  const [notes, setNotes] = useState("");
-  const [sourceType, setSourceType] = useState<DocumentSourceType>("VENDOR_OFFICIAL");
-  const [attachedIds, setAttachedIds] = useState<string[]>([]);
-  const commitKeyRef = useRef<string | null>(null);
-
   const [title, setTitle] = useState("");
-  const [problemStatement, setProblemStatement] = useState("");
-  const [reasoning, setReasoning] = useState("");
-  const [confidence, setConfidence] = useState(0.7);
-  const [risks, setRisks] = useState<string[]>([]);
-  const [options, setOptions] = useState<EditableOption[]>([]);
-  const [assumptions, setAssumptions] = useState<EditableAssumption[]>([]);
-
-  const documents = documentsData?.documents ?? [];
-  const processedDocs = documents.filter((d) => d.status === "PROCESSED");
-  const attachedDocs = processedDocs.filter((d) => attachedIds.includes(d.id));
-
-  async function onUpload(file: File) {
-    const result = await upload.mutateAsync({ file, sourceType });
-    setAttachedIds((prev) => [...prev, result.document.id]);
-  }
-
-  async function onAnalyse() {
-    const result = await extract.mutateAsync({ notes, documentIds: attachedIds });
-    setTitle(result.title);
-    setProblemStatement(result.problemStatement);
-    setReasoning(result.reasoning);
-    setConfidence(result.confidence);
-    setRisks(result.risks);
-    setOptions(result.options);
-    setAssumptions(
-      result.assumptions.map((a) => ({
-        ...a,
-        operator: a.operator ?? "=",
-        value: a.value === undefined ? "" : String(a.value),
-      })),
+  const [problem, setProblem] = useState("");
+  const [chosen, setChosen] = useState("");
+  const [rationale, setRationale] = useState("");
+  const [alternatives, setAlternatives] = useState<
+    Array<{ name: string; rejectionReason: string }>
+  >([]);
+  const [assumptions, setAssumptions] = useState<Assumption[]>([]);
+  const [resources, setResources] = useState("");
+  const [repository, setRepository] = useState("");
+  const [checkName, setCheckName] = useState("");
+  const [checkRepository, setCheckRepository] = useState("");
+  const [error, setError] = useState("");
+  const submitLock = useRef(false);
+  const create = useV1Mutation<unknown, DecisionWithDetails>((body) =>
+    v1("/decisions?mode=commit", { body }),
+  );
+  function edit(i: number, patch: Partial<Assumption>) {
+    setAssumptions((rows) =>
+      rows.map((r, index) => (index === i ? { ...r, ...patch } : r)),
     );
-    setStep("review");
   }
-
-  function updateOption(i: number, patch: Partial<EditableOption>) {
-    setOptions((prev) => prev.map((o, idx) => (idx === i ? { ...o, ...patch } : o)));
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (submitLock.current) return;
+    setError("");
+    submitLock.current = true;
+    try {
+      const rows = assumptions.map((a) => {
+        if (!a.statement.trim())
+          throw new Error(
+            "Write a statement for each assumption, or remove it.",
+          );
+        if (
+          a.valueType !== "TEXT" &&
+          (!a.subject.trim() || !a.predicate.trim())
+        )
+          throw new Error(
+            "Checkable assumptions need a subject and a property to match evidence.",
+          );
+        const expected =
+          a.valueType === "NUMBER"
+            ? Number(a.expected)
+            : a.valueType === "BOOLEAN"
+              ? a.expected === "true"
+              : ["IN", "NOT_IN"].includes(a.operator)
+                ? a.expected
+                    .split(",")
+                    .map((value) => value.trim())
+                    .filter(Boolean)
+                : a.expected;
+        if (a.valueType !== "TEXT" && !a.expected.trim())
+          throw new Error(
+            "Enter an expected value for each checkable assumption.",
+          );
+        if (a.valueType === "NUMBER" && !Number.isFinite(expected))
+          throw new Error("Expected value must be a valid number.");
+        return {
+          statement: a.statement.trim(),
+          subject: a.subject || null,
+          predicate: a.predicate || null,
+          valueType: a.valueType,
+          operator: a.valueType === "TEXT" ? null : a.operator,
+          expected: a.valueType === "TEXT" ? null : expected,
+          unit: a.unit || null,
+          verificationPolicy:
+            a.valueType === "TEXT" ? "MANUAL" : "DETERMINISTIC_FIRST",
+          provenance: { source: "human" },
+        };
+      });
+      const d = await create.mutateAsync({
+        title: title.trim(),
+        problem: problem.trim() || null,
+        chosenOption: { name: chosen.trim() },
+        rationale: rationale.trim(),
+        alternatives: alternatives.filter((a) => a.name.trim()),
+        assumptions: rows,
+        resources: resources
+          .split(/[\n,]/)
+          .map((s) => s.trim())
+          .filter(Boolean),
+        repository: repository.trim() || null,
+        verificationChecks: checkName.trim()
+          ? [
+              {
+                name: checkName.trim(),
+                repository: checkRepository.trim(),
+                kind: "TEST",
+              },
+            ]
+          : [],
+      });
+      router.push(`/decisions/${d.id}`);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to record decision.",
+      );
+    } finally {
+      submitLock.current = false;
+    }
   }
-
-  function chooseOption(i: number) {
-    setOptions((prev) => prev.map((o, idx) => ({ ...o, isChosen: idx === i })));
-  }
-
-  function updateAssumption(i: number, patch: Partial<EditableAssumption>) {
-    setAssumptions((prev) => prev.map((a, idx) => (idx === i ? { ...a, ...patch } : a)));
-  }
-
-  async function onCommit() {
-    commitKeyRef.current ??= crypto.randomUUID();
-    const result = await create.mutateAsync({
-      idempotencyKey: commitKeyRef.current,
-      title,
-      problemStatement,
-      reasoning,
-      confidence,
-      importance: 0.7,
-      evidenceDocumentIds: attachedIds,
-      options: options.map((o) => ({
-        name: o.name,
-        description: o.description,
-        isChosen: o.isChosen,
-        rejectionReason: o.isChosen ? "" : o.rejectionReason,
-      })),
-      assumptions: assumptions
-        .filter((a) => a.statement.trim())
-        .map((a) => ({
-          statement: a.statement,
-          assumptionType: a.assumptionType,
-          metric: a.metric,
-          operator: a.value.trim() === "" ? undefined : a.operator,
-          value: a.value.trim() === "" ? undefined : Number(a.value),
-          unit: a.unit,
-          importance: a.importance,
-          confidence: a.confidence,
-        })),
-    });
-    router.push(`/decisions/${result.decision.id}`);
-  }
-
-  const canAnalyse =
-    (notes.trim().length >= 10 || attachedIds.length > 0) && !extract.isPending;
-  const canCommit = title.trim().length > 0 && options.some((o) => o.isChosen);
-
   return (
-    <div className="animate-fade-in mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-ink-50">Commit a decision</h1>
-        <p className="mt-1 text-sm text-ink-400">
-          Describe the decision and attach the documents behind it. DecisionLoop extracts the
-          options, the reasoning, and the checkable assumptions — you review and edit before
-          anything enters organizational memory.
-        </p>
+    <div className="animate-fade-in">
+      <Link href="/decisions" className="text-xs text-ink-400">
+        ← Decision register
+      </Link>
+      <div className="mt-5">
+        <PageHeader
+          eyebrow="A human commitment"
+          title="Record the choice. Preserve the why."
+          description="Write the decision in your own words. Add conditions that new evidence can check. No AI model is required."
+        />
       </div>
-
-      <ol className="flex items-center gap-2 text-xs">
-        {(["describe", "review"] as Step[]).map((s, i) => (
-          <li key={s} className="flex items-center gap-2">
-            <span
-              className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
-                step === s
-                  ? "bg-signal-500 text-ink-950"
-                  : i === 0
-                    ? "bg-ink-700 text-ink-300"
-                    : "bg-ink-800 text-ink-500"
-              }`}
-            >
-              {i + 1}
-            </span>
-            <span className={step === s ? "text-ink-100" : "text-ink-500"}>
-              {s === "describe" ? "Describe & attach" : "Review & commit"}
-            </span>
-            {i === 0 && <span className="ml-1 text-ink-700">→</span>}
-          </li>
-        ))}
-      </ol>
-
-      {step === "describe" && (
+      <form
+        onSubmit={submit}
+        className="grid items-start gap-7 xl:grid-cols-[minmax(0,1fr)_270px]"
+      >
         <div className="space-y-5">
-          <div className="card space-y-4 p-5">
-            <div>
-              <label className="label" htmlFor="notes">
-                Describe the decision
+          <section className="card form-section">
+            <h2>01 / The decision</h2>
+            <p className="form-hint">
+              What problem did you solve, and what did you choose?
+            </p>
+            <div className="space-y-5">
+              <label className="label">
+                Decision title
+                <input
+                  required
+                  maxLength={200}
+                  className="input mt-2"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Use Redis for the session cache"
+                />
               </label>
-              <textarea
-                id="notes"
-                className="input min-h-[160px] resize-y font-mono text-[13px] leading-relaxed"
-                placeholder={
-                  "e.g. Choose our analytics infrastructure provider. We evaluated SignalForge " +
-                  "and MetricLake. Leaning SignalForge — cheaper at $20K/year, meets our EU " +
-                  "residency requirement and current 5M events/day throughput."
-                }
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
+              <label className="label">
+                Problem or context
+                <textarea
+                  maxLength={4000}
+                  rows={3}
+                  className="input mt-2"
+                  value={problem}
+                  onChange={(e) => setProblem(e.target.value)}
+                  placeholder="What made this decision necessary?"
+                />
+              </label>
+              <label className="label">
+                Chosen option
+                <input
+                  required
+                  maxLength={200}
+                  className="input mt-2"
+                  value={chosen}
+                  onChange={(e) => setChosen(e.target.value)}
+                  placeholder="Redis"
+                />
+              </label>
+              <label className="label">
+                Why this option?
+                <textarea
+                  required
+                  maxLength={8000}
+                  rows={4}
+                  className="input mt-2"
+                  value={rationale}
+                  onChange={(e) => setRationale(e.target.value)}
+                  placeholder="Explain the tradeoff so someone else can understand it later."
+                />
+              </label>
             </div>
-          </div>
-
-          <div className="card space-y-4 p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="label !mb-0">Supporting documents</p>
-                <p className="mt-1 text-xs text-ink-500">
-                  Vendor proposals, architecture reviews, contracts. These become the evidence
-                  trail behind the decision.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <select
-                className="input max-w-[220px]"
-                value={sourceType}
-                onChange={(e) => setSourceType(e.target.value as DocumentSourceType)}
-              >
-                {SOURCE_TYPE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                className="btn-secondary"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={upload.isPending}
-              >
-                {upload.isPending ? "Uploading…" : "Upload document"}
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (file) await onUpload(file);
-                  e.target.value = "";
-                }}
-              />
-            </div>
-
-            {upload.isError && (
-              <p className="text-sm text-risk-400">{(upload.error as Error).message}</p>
-            )}
-
-            {processedDocs.length > 0 && (
-              <div className="space-y-1.5">
-                {processedDocs.map((doc) => (
-                  <label
-                    key={doc.id}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg border border-ink-700 bg-ink-900/40 p-2.5"
+          </section>
+          <section className="card form-section">
+            <h2>02 / Alternatives</h2>
+            <p className="form-hint">
+              A rejected option can become useful when circumstances change.
+            </p>
+            {alternatives.map((a, i) => (
+              <div key={i} className="mb-4 rounded-lg bg-ink-950 p-4">
+                <div className="mb-3 flex justify-between">
+                  <p className="text-xs font-medium">Alternative {i + 1}</p>
+                  <button
+                    type="button"
+                    className="text-xs text-ink-400"
+                    onClick={() =>
+                      setAlternatives((v) => v.filter((_, n) => i !== n))
+                    }
                   >
-                    <input
-                      type="checkbox"
-                      className="accent-signal-500"
-                      checked={attachedIds.includes(doc.id)}
-                      onChange={(e) =>
-                        setAttachedIds((prev) =>
-                          e.target.checked
-                            ? [...prev, doc.id]
-                            : prev.filter((id) => id !== doc.id),
-                        )
-                      }
-                    />
-                    <span className="flex-1 truncate text-sm text-ink-200">{doc.filename}</span>
-                    <SourceTypeBadge
-                      sourceType={doc.sourceType}
-                      authorityScore={doc.authorityScore}
-                    />
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {extract.isError && (
-            <p className="text-sm text-risk-400">{(extract.error as Error).message}</p>
-          )}
-
-          <button className="btn-primary" disabled={!canAnalyse} onClick={onAnalyse}>
-            {extract.isPending
-              ? "Analysing…"
-              : `Analyse${attachedDocs.length > 0 ? ` (${attachedDocs.length} document${attachedDocs.length === 1 ? "" : "s"})` : ""}`}
-          </button>
-        </div>
-      )}
-
-      {step === "review" && (
-        <div className="space-y-5">
-          <div className="card space-y-4 p-5">
-            <div>
-              <label className="label">Title</label>
-              <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
-            </div>
-            <div>
-              <label className="label">Problem statement</label>
-              <textarea
-                className="input min-h-[70px] resize-y"
-                value={problemStatement}
-                onChange={(e) => setProblemStatement(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="label">Reasoning</label>
-              <textarea
-                className="input min-h-[90px] resize-y"
-                value={reasoning}
-                onChange={(e) => setReasoning(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="label">Confidence: {confidence.toFixed(2)}</label>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                className="w-full accent-signal-500"
-                value={confidence}
-                onChange={(e) => setConfidence(Number(e.target.value))}
-              />
-            </div>
-          </div>
-
-          <div className="card space-y-4 p-5">
-            <div className="flex items-center justify-between">
-              <label className="label !mb-0">Options considered</label>
-              <button
-                className="text-xs text-signal-400 hover:text-signal-300"
-                onClick={() =>
-                  setOptions((prev) => [
-                    ...prev,
-                    { name: "", description: "", isChosen: false, rejectionReason: "" },
-                  ])
-                }
-              >
-                + Add option
-              </button>
-            </div>
-            <div className="space-y-3">
-              {options.map((opt, i) => (
-                <div
-                  key={i}
-                  className={`rounded-lg border p-3 ${
-                    opt.isChosen
-                      ? "border-signal-500/50 bg-signal-500/5"
-                      : "border-ink-700 bg-ink-900/40"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <button
-                      type="button"
-                      onClick={() => chooseOption(i)}
-                      className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-                        opt.isChosen ? "border-signal-400 bg-signal-500" : "border-ink-500"
-                      }`}
-                      aria-label={opt.isChosen ? "Chosen option" : "Mark as chosen"}
-                    >
-                      {opt.isChosen && <span className="h-1.5 w-1.5 rounded-full bg-ink-950" />}
-                    </button>
-                    <div className="flex-1 space-y-2">
-                      <input
-                        className="input"
-                        placeholder="Option name"
-                        value={opt.name}
-                        onChange={(e) => updateOption(i, { name: e.target.value })}
-                      />
-                      <input
-                        className="input"
-                        placeholder="Description"
-                        value={opt.description}
-                        onChange={(e) => updateOption(i, { description: e.target.value })}
-                      />
-                      {!opt.isChosen && (
-                        <input
-                          className="input"
-                          placeholder="Why it wasn't chosen"
-                          value={opt.rejectionReason}
-                          onChange={(e) => updateOption(i, { rejectionReason: e.target.value })}
-                        />
-                      )}
-                    </div>
-                    <button
-                      className="text-xs text-ink-500 hover:text-risk-400"
-                      onClick={() => setOptions((prev) => prev.filter((_, idx) => idx !== i))}
-                    >
-                      Remove
-                    </button>
-                  </div>
+                    Remove
+                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="card space-y-4 p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="label !mb-0">Assumptions</label>
-                <p className="mt-1 text-xs text-ink-500">
-                  Concrete, checkable claims this decision depends on — these are what
-                  DecisionLoop watches for contradictions.
-                </p>
-              </div>
-              <button
-                className="text-xs text-signal-400 hover:text-signal-300"
-                onClick={() =>
-                  setAssumptions((prev) => [
-                    ...prev,
-                    {
-                      statement: "",
-                      assumptionType: "QUANTITATIVE",
-                      metric: "",
-                      operator: "<",
-                      value: "",
-                      unit: "",
-                      importance: 0.6,
-                      confidence: 0.7,
-                    },
-                  ])
-                }
-              >
-                + Add assumption
-              </button>
-            </div>
-            <div className="space-y-3">
-              {assumptions.map((a, i) => (
-                <div key={i} className="rounded-lg border border-ink-700 bg-ink-900/40 p-3">
+                <label className="label">
+                  Option
                   <input
-                    className="input mb-2"
-                    placeholder="e.g. 'SignalForge pricing stays under $25,000/year'"
-                    value={a.statement}
-                    onChange={(e) => updateAssumption(i, { statement: e.target.value })}
+                    required
+                    maxLength={200}
+                    className="input mt-2"
+                    value={a.name}
+                    onChange={(e) =>
+                      setAlternatives((v) =>
+                        v.map((r, n) =>
+                          n === i ? { ...r, name: e.target.value } : r,
+                        ),
+                      )
+                    }
                   />
-                  <div className="grid grid-cols-[1fr_auto_1fr_1fr_auto] gap-2">
-                    <input
-                      className="input"
-                      placeholder="metric"
-                      value={a.metric}
-                      onChange={(e) => updateAssumption(i, { metric: e.target.value })}
-                    />
-                    <select
-                      className="input"
-                      value={a.operator}
-                      onChange={(e) =>
-                        updateAssumption(i, { operator: e.target.value as AssumptionOperator })
-                      }
-                    >
-                      {OPERATORS.map((op) => (
-                        <option key={op} value={op}>
-                          {op}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      className="input"
-                      placeholder="value"
-                      type="number"
-                      value={a.value}
-                      onChange={(e) => updateAssumption(i, { value: e.target.value })}
-                    />
-                    <input
-                      className="input"
-                      placeholder="unit"
-                      value={a.unit}
-                      onChange={(e) => updateAssumption(i, { unit: e.target.value })}
-                    />
-                    <button
-                      className="text-xs text-ink-500 hover:text-risk-400"
-                      onClick={() =>
-                        setAssumptions((prev) => prev.filter((_, idx) => idx !== i))
-                      }
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-4">
-                    <select
-                      className="input max-w-[160px] text-xs"
-                      value={a.assumptionType}
-                      onChange={(e) =>
-                        updateAssumption(i, { assumptionType: e.target.value as AssumptionType })
-                      }
-                    >
-                      {ASSUMPTION_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {t.toLowerCase()}
-                        </option>
-                      ))}
-                    </select>
-                    <label className="flex items-center gap-2 text-xs text-ink-500">
-                      importance {a.importance.toFixed(2)}
+                </label>
+                <label className="label mt-3">
+                  Why was it rejected?
+                  <input
+                    maxLength={2000}
+                    className="input mt-2"
+                    value={a.rejectionReason}
+                    onChange={(e) =>
+                      setAlternatives((v) =>
+                        v.map((r, n) =>
+                          n === i
+                            ? { ...r, rejectionReason: e.target.value }
+                            : r,
+                        ),
+                      )
+                    }
+                  />
+                </label>
+              </div>
+            ))}
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={alternatives.length >= 20}
+              onClick={() =>
+                setAlternatives((v) => [
+                  ...v,
+                  { name: "", rejectionReason: "" },
+                ])
+              }
+            >
+              + Add an alternative
+            </button>
+          </section>
+          <section className="card form-section">
+            <h2>03 / Conditions to watch</h2>
+            <p className="form-hint">
+              What must stay true for this choice to make sense?
+            </p>
+            {assumptions.map((a, i) => (
+              <div
+                key={i}
+                className="mb-4 rounded-lg border border-ink-700 bg-ink-950 p-4"
+              >
+                <div className="mb-4 flex justify-between">
+                  <p className="text-xs font-medium">Assumption {i + 1}</p>
+                  <button
+                    type="button"
+                    className="text-xs text-ink-400"
+                    onClick={() =>
+                      setAssumptions((v) => v.filter((_, n) => n !== i))
+                    }
+                  >
+                    Remove
+                  </button>
+                </div>
+                <label className="label">
+                  Condition
+                  <input
+                    required
+                    maxLength={1000}
+                    className="input mt-2"
+                    value={a.statement}
+                    onChange={(e) => edit(i, { statement: e.target.value })}
+                    placeholder="Session cache latency stays below 20 ms"
+                  />
+                </label>
+                <label className="label mt-4">
+                  How should it be checked?
+                  <select
+                    className="input mt-2"
+                    value={a.valueType}
+                    onChange={(e) =>
+                      edit(i, {
+                        valueType: e.target.value as Assumption["valueType"],
+                        operator:
+                          OPERATORS_BY_TYPE[e.target.value as ValueType][0] ??
+                          "=",
+                        expected: "",
+                      })
+                    }
+                  >
+                    <option value="TEXT">
+                      Human review of a qualitative condition
+                    </option>
+                    <option value="NUMBER">Measured number</option>
+                    <option value="BOOLEAN">True / false condition</option>
+                    <option value="CATEGORY">Category or named value</option>
+                    <option value="DATE">Date</option>
+                    <option value="VERSION">Version</option>
+                    <option value="SET">Set membership</option>
+                  </select>
+                </label>
+                {a.valueType !== "TEXT" && (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="label">
+                      Subject
                       <input
-                        type="range"
-                        min={0}
-                        max={1}
-                        step={0.05}
-                        className="accent-signal-500"
-                        value={a.importance}
-                        onChange={(e) =>
-                          updateAssumption(i, { importance: Number(e.target.value) })
-                        }
+                        required
+                        maxLength={200}
+                        className="input mt-2"
+                        placeholder="redis"
+                        value={a.subject}
+                        onChange={(e) => edit(i, { subject: e.target.value })}
                       />
                     </label>
+                    <label className="label">
+                      Property
+                      <input
+                        required
+                        maxLength={200}
+                        className="input mt-2"
+                        placeholder="p95_latency"
+                        value={a.predicate}
+                        onChange={(e) => edit(i, { predicate: e.target.value })}
+                      />
+                    </label>
+                    <label className="label">
+                      Comparison
+                      <select
+                        className="input mt-2"
+                        value={a.operator}
+                        onChange={(e) => edit(i, { operator: e.target.value })}
+                      >
+                        {OPERATORS_BY_TYPE[a.valueType].map((op) => (
+                          <option key={op}>{op}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="label">
+                      Expected value
+                      {a.valueType === "BOOLEAN" ? (
+                        <select
+                          required
+                          className="input mt-2"
+                          value={a.expected}
+                          onChange={(e) =>
+                            edit(i, { expected: e.target.value })
+                          }
+                        >
+                          <option value="">Choose a value</option>
+                          <option value="true">True</option>
+                          <option value="false">False</option>
+                        </select>
+                      ) : (
+                        <input
+                          required
+                          className="input mt-2"
+                          type={
+                            a.valueType === "NUMBER"
+                              ? "number"
+                              : a.valueType === "DATE"
+                                ? "date"
+                                : "text"
+                          }
+                          placeholder={
+                            ["IN", "NOT_IN"].includes(a.operator)
+                              ? "EU, CH (comma-separated values)"
+                              : undefined
+                          }
+                          step="any"
+                          value={a.expected}
+                          onChange={(e) =>
+                            edit(i, { expected: e.target.value })
+                          }
+                        />
+                      )}
+                    </label>
+                    {a.valueType === "NUMBER" && (
+                      <label className="label">
+                        Unit
+                        <input
+                          className="input mt-2"
+                          maxLength={60}
+                          placeholder="ms"
+                          value={a.unit}
+                          onChange={(e) => edit(i, { unit: e.target.value })}
+                        />
+                      </label>
+                    )}
                   </div>
-                </div>
-              ))}
-              {assumptions.length === 0 && (
-                <p className="text-sm text-ink-500">
-                  No assumptions extracted. Add at least one — it&apos;s what makes this decision
-                  watchable.
-                </p>
-              )}
-            </div>
-          </div>
-
-          {risks.length > 0 && (
-            <div className="card p-5">
-              <p className="label !mb-2">Risks to weigh</p>
-              <ul className="space-y-1.5">
-                {risks.map((risk, i) => (
-                  <li key={i} className="flex gap-2 text-sm text-ink-300">
-                    <span className="text-ink-600">•</span>
-                    {risk}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {create.isError && (
-            <p className="text-sm text-risk-400">{(create.error as Error).message}</p>
-          )}
-
-          <div className="flex items-center gap-3">
-            <button className="btn-primary" disabled={!canCommit || create.isPending} onClick={onCommit}>
-              {create.isPending ? "Committing…" : "Commit decision"}
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={assumptions.length >= 50}
+              onClick={() => setAssumptions((v) => [...v, blank()])}
+            >
+              + Add a condition
             </button>
-            <button className="btn-secondary" onClick={() => setStep("describe")}>
-              Back
+          </section>
+          <section className="card form-section">
+            <h2>04 / Where it applies</h2>
+            <p className="form-hint">
+              Connect this decision to the files, dependencies or services it
+              governs.
+            </p>
+            <label className="label">
+              Repository
+              <input
+                className="input mt-2"
+                maxLength={200}
+                placeholder="owner/repository (optional)"
+                value={repository}
+                onChange={(e) => setRepository(e.target.value)}
+              />
+            </label>
+            <label className="label mt-5">
+              Resources
+              <textarea
+                rows={3}
+                className="input mt-2"
+                placeholder={"src/auth/**\nnpm:redis"}
+                value={resources}
+                onChange={(e) => setResources(e.target.value)}
+              />
+            </label>
+            <p className="mt-2 text-xs text-ink-400">
+              One resource per line. Paths and dependencies help agents retrieve
+              the right decision.
+            </p>
+            <details className="mt-6 border-t border-ink-700 pt-5">
+              <summary className="cursor-pointer text-sm font-medium">
+                Attach a GitHub verification workflow
+              </summary>
+              <p className="mt-3 text-xs leading-6 text-ink-400">
+                Use the exact repository and Actions workflow name. Completed
+                runs become evidence; configuration alone does not verify the
+                decision.
+              </p>
+              <label className="label mt-4">
+                Workflow name
+                <input
+                  className="input mt-2"
+                  maxLength={200}
+                  value={checkName}
+                  onChange={(event) => setCheckName(event.target.value)}
+                  placeholder="Authentication integration tests"
+                />
+              </label>
+              <label className="label mt-4">
+                Workflow repository
+                <input
+                  className="input mt-2"
+                  maxLength={200}
+                  required={Boolean(checkName.trim())}
+                  value={checkRepository}
+                  onChange={(event) => setCheckRepository(event.target.value)}
+                  placeholder="owner/repository"
+                />
+              </label>
+            </details>
+          </section>
+          {error && (
+            <p
+              role="alert"
+              className="rounded-lg border border-risk-500/30 bg-orange-50 p-4 text-sm text-risk-600"
+            >
+              {error}
+            </p>
+          )}
+          <div className="flex justify-end gap-3">
+            <Link className="btn-secondary" href="/decisions">
+              Cancel
+            </Link>
+            <button disabled={create.isPending} className="btn-primary">
+              {create.isPending ? "Recording…" : "Commit decision →"}
             </button>
           </div>
-          <p className="text-xs text-ink-600">
-            Committing writes this decision, its options, and its assumptions to CockroachDB and
-            indexes them for retrieval. From then on, new evidence is checked against it
-            automatically — in this session and every future one.
-          </p>
         </div>
-      )}
+        <aside className="card form-section xl:sticky xl:top-8">
+          <p className="eyebrow">Before you commit</p>
+          <h2>Make it useful later.</h2>
+          <p className="text-xs leading-6 text-ink-400">
+            A good record explains the tradeoff, names the alternatives, and
+            states what would change your mind.
+          </p>
+          <hr className="my-5 border-ink-700" />
+          <p className="text-xs leading-6 text-ink-400">
+            Committing adds this choice to shared memory. Its history stays
+            traceable when evidence changes.
+          </p>
+          <div className="mt-5 rounded-lg bg-ink-950 p-3 text-xs text-signal-600">
+            You make the decision. The system keeps the record.
+          </div>
+        </aside>
+      </form>
     </div>
   );
 }

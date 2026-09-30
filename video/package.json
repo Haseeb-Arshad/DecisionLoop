@@ -1,0 +1,26 @@
+{
+  "name": "decisionloop-film",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio src/index.tsx --public-dir=public",
+    "typecheck": "tsc --noEmit",
+    "assets": "node scripts/make-sfx.mjs",
+    "render": "npm run assets && remotion render src/index.tsx DecisionLoop ../public/demo/decisionloop.mp4 --public-dir=public --codec=h264 --crf=19 --concurrency=2",
+    "poster": "remotion still src/index.tsx DecisionLoop ../public/demo/poster.png --frame=816 --public-dir=public",
+    "verify": "node scripts/verify.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.531",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.531"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "typescript": "5.7.3"
+  },
+  "optionalDependencies": {
+    "@remotion/compositor-win32-x64-msvc": "4.0.531"
+  }
+}

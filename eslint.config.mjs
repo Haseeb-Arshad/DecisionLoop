@@ -9,5 +9,6 @@ export default defineConfig([
     "coverage/**",
     "test-results/**",
     ".playwright-cli/**",
+    "video/**",
   ]),
 ]);

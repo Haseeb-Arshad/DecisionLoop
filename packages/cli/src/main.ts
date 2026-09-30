@@ -1,4 +1,5 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
+import { workerHeartbeat } from "@decisionloop/runtime/heartbeat";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -34,6 +35,7 @@ Everyday
   watch [--interval 5]                      Re-check as you work; prints when governing decisions or findings change
   decisions [--at-risk]                     List decisions
   show <id|ref>                             A decision and its history
+  verification add <id|ref> --name <workflow> --repository <owner/repo> [--kind TEST|BENCHMARK|RUNTIME]
   explain <id|ref>                          Why a decision exists
   propose --file <draft.json>               Propose a decision (JSON; see docs/v2)
   evidence add --statement <text> [--fact <json>]… [--resource <r>]…
@@ -134,7 +136,7 @@ async function cmdServe(args: string[]) {
     },
   });
   const cfg = loadConfig();
-  if (values.web) process.env.SESSION_SECRET ??= localSessionSecret();
+  if (values.web && !process.env.SESSION_SECRET?.trim()) process.env.SESSION_SECRET = localSessionSecret();
   const runtime = await loadRuntime({ embedded: true });
   const { startServer } = await import("@decisionloop/runtime/server");
   const extraRoutes = await githubRoutes(runtime);
@@ -144,6 +146,7 @@ async function cmdServe(args: string[]) {
     worker: !values["no-worker"],
     extraRoutes: extraRoutes.routes,
     workerHandlers: extraRoutes.handlers,
+    localWorkspaceId: values.host && values.host !== "127.0.0.1" && values.host !== "localhost" ? undefined : cfg.project?.workspaceId,
     web: values.web ? { dir: process.env.DECISIONLOOP_WEB_DIR ?? webDir(), dev: Boolean(values.dev) } : undefined,
   });
   process.stderr.write(
@@ -175,19 +178,16 @@ function localSessionSecret(): string {
 }
 
 async function githubRoutes(runtime: Awaited<ReturnType<typeof loadRuntime>>) {
-  try {
-    const gh = await import("@decisionloop/github");
-    return gh.githubServerExtensions(runtime.loop, process.env);
-  } catch {
-    return { routes: [], handlers: {} };
-  }
+  const gh = await import("@decisionloop/github");
+  return gh.githubServerExtensions(runtime.loop, process.env);
 }
 
 async function cmdWorker() {
   if (!process.env.DATABASE_URL) fail("`worker` needs DATABASE_URL; `serve` already runs a worker in local mode.");
   const runtime = await loadRuntime({ embedded: false, migrate: false });
   const ext = await githubRoutes(runtime);
-  const worker = runtime.loop.createWorker({ workerId: `worker-${process.pid}` }, ext.handlers);
+  const workerId = `worker-${randomUUID()}`;
+  const worker = runtime.loop.createWorker({ workerId, periodic: [workerHeartbeat(runtime.sql, workerId)] }, ext.handlers);
   const abort = new AbortController();
   process.on("SIGINT", () => abort.abort());
   process.on("SIGTERM", () => abort.abort());
@@ -462,6 +462,12 @@ async function cmdShow(args: string[], out: Out) {
       ...d.options.map((o) => `${o.isChosen ? "✓" : "✗"} ${o.name}${o.rejectionReason ? ` — ${o.rejectionReason}` : ""}`),
       ...d.assumptions.map((a) => `  [${a.validityStatus}] ${a.statement}${a.normalizedStatement ? `  (${a.normalizedStatement})` : ""}`),
       ...(d.constraints ?? []).map((c) => `  constraint: ${c.statement}`),
+      ...(d.verificationChecks ?? []).map((check) => {
+        const latest = h.latestVerificationRuns.find((run) => run.checkName === check.name && run.repository === check.repository);
+        return latest
+          ? `  verification: ${check.repository} / ${check.name} — ${latest.conclusion} on ${latest.commitSha.slice(0, 12)}${latest.detailsUrl ? ` (${latest.detailsUrl})` : ""}`
+          : `  verification: ${check.repository} / ${check.name} — no completed run recorded`;
+      }),
       ...(d.resources ?? []).map((r) => `  governs: ${r.resourceType} ${r.resourceKey}`),
       "",
       "Timeline:",
@@ -470,6 +476,29 @@ async function cmdShow(args: string[], out: Out) {
       .filter((l) => l !== "")
       .join("\n");
   });
+}
+
+async function cmdVerification(args: string[], out: Out) {
+  const action = args[0];
+  const decisionId = args[1] ?? fail("usage: decisionloop verification add <id|ref> --name <workflow> --repository <owner/repo>");
+  if (action !== "add") fail("usage: decisionloop verification add <id|ref> --name <workflow> --repository <owner/repo>");
+  const { values } = parseArgs({
+    args: args.slice(2),
+    options: {
+      name: { type: "string" },
+      repository: { type: "string" },
+      kind: { type: "string" },
+      description: { type: "string" },
+    },
+  });
+  if (!values.name || !values.repository) fail("--name and --repository are required.");
+  const decision = await client().decisions.configureVerificationCheck(decisionId, {
+    name: values.name,
+    repository: values.repository,
+    kind: (values.kind ?? "TEST") as "TEST" | "BENCHMARK" | "RUNTIME",
+    description: values.description,
+  });
+  print(out, decision, () => `Linked ${values.kind ?? "TEST"} workflow "${values.name}" in ${values.repository} to ${decision.externalRef ?? decision.title}.`);
 }
 
 async function cmdExplain(args: string[], out: Out) {
@@ -576,6 +605,8 @@ export async function main(argv: string[]): Promise<void> {
         return await cmdDecisions(rest, out);
       case "show":
         return await cmdShow(rest, out);
+      case "verification":
+        return await cmdVerification(rest, out);
       case "explain":
         return await cmdExplain(rest, out);
       case "propose":

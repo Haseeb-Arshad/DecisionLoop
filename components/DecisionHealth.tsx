@@ -20,7 +20,7 @@ function Tile({ label, value, href, tone }: { label: string; value: number | str
   const body = (
     <div className={`card p-4 ${tone === "risk" ? "border-risk-500/40" : tone === "warn" ? "border-amber-500/40" : ""}`}>
       <p className="text-xs text-ink-500">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold ${tone === "risk" ? "text-risk-400" : tone === "warn" ? "text-amber-400" : "text-ink-100"}`}>{value}</p>
+      <p className={`mt-1 text-2xl font-semibold ${tone === "risk" ? "text-risk-600" : tone === "warn" ? "text-amber-700" : "text-ink-100"}`}>{value}</p>
     </div>
   );
   return href ? <Link href={href}>{body}</Link> : body;
@@ -33,7 +33,7 @@ function Tile({ label, value, href, tone }: { label: string; value: number | str
  */
 export function DecisionHealth() {
   const { data, error } = useV1<Overview>(["overview"], "/overview", { refetchInterval: 15_000 });
-  if (error) return <div className="card p-4 text-sm text-risk-400">Decision health unavailable: {(error as Error).message}</div>;
+  if (error) return <div className="card p-4 text-sm text-risk-600">Decision health unavailable: {(error as Error).message}</div>;
   if (!data) return null;
   const a = data.assumptions;
   const monitored = Object.values(a).reduce((x, y) => x + y, 0);
@@ -51,7 +51,7 @@ export function DecisionHealth() {
         <Tile label="Agent context requests (24h)" value={data.contextRequestsSince} href="/agents" />
       </div>
       {(data.failedEvents > 0 || data.deadJobs > 0) && (
-        <p className="text-sm text-risk-400">
+        <p className="text-sm text-risk-600">
           {data.failedEvents} event(s) failed processing and {data.deadJobs} job(s) exhausted their retries — see{" "}
           <Link href="/triggers" className="underline">
             Triggers
@@ -67,7 +67,7 @@ export function DecisionHealth() {
               <span className="w-16 shrink-0 text-xs text-ink-500">{timeAgo(r.at)}</span>
               <span className="min-w-0 flex-1 truncate text-ink-300">{r.request}</span>
               {r.decisions.map((d) => (
-                <Link key={d.id} href={`/decisions/${d.id}`} className={`text-xs ${d.status === "AT_RISK" ? "text-risk-400" : "text-signal-400"} hover:underline`}>
+                <Link key={d.id} href={`/decisions/${d.id}`} className={`text-xs ${d.status === "AT_RISK" ? "text-risk-600" : "text-signal-400"} hover:underline`}>
                   {d.externalRef ?? d.title}
                 </Link>
               ))}

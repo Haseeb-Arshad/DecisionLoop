@@ -57,6 +57,9 @@ export function DataTable<T>({
                 <th
                   key={header.id}
                   onClick={header.column.getToggleSortingHandler()}
+                  tabIndex={header.column.getCanSort() ? 0 : undefined}
+                  aria-sort={header.column.getIsSorted() === "asc" ? "ascending" : header.column.getIsSorted() === "desc" ? "descending" : "none"}
+                  onKeyDown={(event) => { if (header.column.getCanSort() && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); header.column.toggleSorting(); } }}
                   className="select-none whitespace-nowrap px-4 py-3 text-xs font-medium uppercase
                     tracking-wide text-ink-400"
                   style={{ cursor: header.column.getCanSort() ? "pointer" : undefined }}
@@ -75,6 +78,8 @@ export function DataTable<T>({
             <tr
               key={row.id}
               onClick={() => onRowClick?.(row.original)}
+              tabIndex={onRowClick ? 0 : undefined}
+              onKeyDown={(event) => { if (onRowClick && event.key === "Enter") onRowClick(row.original); }}
               className={`border-b border-ink-800/60 last:border-0 ${
                 onRowClick ? "cursor-pointer hover:bg-ink-800/40" : ""
               }`}

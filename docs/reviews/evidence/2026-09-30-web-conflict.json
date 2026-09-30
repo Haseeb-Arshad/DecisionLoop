@@ -1,0 +1,9 @@
+{
+  "decisionId": "2b4fdfdd-0c81-47b0-b6b5-8402eff7623c",
+  "before": "AT_RISK",
+  "after": "ACTIVE",
+  "remainingUnresolvedConflicts": 1,
+  "remainingApprovalReviews": 2,
+  "validityAfter": "VALID",
+  "legacyRouteStatus": "ACTIVE"
+}

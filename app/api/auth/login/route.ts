@@ -5,15 +5,18 @@ import { verifyPassword } from "@/lib/auth/password";
 import { createSession, setSessionCookie } from "@/lib/auth/session";
 import { recordAuditEvent } from "@/lib/repo/auditEvents";
 import { findUserByEmail } from "@/lib/repo/users";
+import { consumeLimit, limitAuthentication } from "@/lib/api/limits";
 
 const LoginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(1),
+  password: z.string().min(1).max(200),
 });
 
 export async function POST(req: NextRequest) {
   try {
+    await limitAuthentication(req, "login");
     const body = LoginSchema.parse(await req.json());
+    await consumeLimit(`login-email:${body.email.toLowerCase()}`, 10, 600);
 
     const userWithHash = await findUserByEmail(body.email);
     if (!userWithHash) return jsonError("Invalid email or password.", 401);

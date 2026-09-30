@@ -18,7 +18,7 @@
  *
  * Usage: npm run db:seed
  */
-import "dotenv/config";
+import "@decisionloop/runtime/env";
 import fs from "node:fs";
 import path from "node:path";
 import { hashPassword } from "@/lib/auth/password";

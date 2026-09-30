@@ -4,6 +4,9 @@ import { githubServerExtensions } from "@decisionloop/github";
 import { authenticateApiKey } from "@decisionloop/runtime/apiKeys";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { getDecisionLoop } from "@/lib/decisionloopInstance";
+import { sql } from "@/db/client";
+import { takeRequestLimit } from "@decisionloop/runtime/requestLimits";
+import { getUserById } from "@/lib/repo/users";
 
 /**
  * HTTP wiring for the control plane: authentication (API key or session
@@ -40,11 +43,13 @@ export async function authenticateRequest(req: Request): Promise<Actor | null> {
   const token = cookieValue(req.headers.get("cookie"), SESSION_COOKIE_NAME);
   const claims = token ? await verifySessionToken(token) : null;
   if (!claims) return null;
+  const user = await getUserById(claims.userId);
+  if (!user || user.tenantId !== claims.tenantId) return null;
   return {
     tenantId: claims.tenantId,
     type: "user",
     userId: claims.userId,
-    label: `user:${claims.userId.slice(0, 8)}`,
+    label: user.name,
     scopes: ["admin"],
     sessionId: `sess_${claims.sessionId.slice(0, 12)}`,
   };
@@ -57,6 +62,7 @@ export function getApiHandler(): (req: Request) => Promise<Response> {
     globalThis.__decisionloop_handler__ = createApiHandler({
       loop,
       authenticate: authenticateRequest,
+      takeRateLimit: actor => takeRequestLimit(sql, `api:${actor.tenantId}:${actor.apiKeyId ?? actor.userId ?? actor.label}`, 600),
       extraRoutes: github.routes,
     });
   }

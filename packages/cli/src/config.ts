@@ -57,9 +57,9 @@ export function loadConfig(cwd = process.cwd()): { url: string; apiKey: string |
   const projectCreds = readJson<Credentials>(path.join(projectDir(cwd), "credentials.json"));
   const userCreds = readJson<Credentials>(path.join(os.homedir(), PROJECT_DIR, "credentials.json"));
   return {
-    url: process.env.DECISIONLOOP_URL ?? project?.url ?? userCreds?.url ?? "http://127.0.0.1:4318",
-    apiKey: process.env.DECISIONLOOP_API_KEY ?? projectCreds?.apiKey ?? userCreds?.apiKey ?? null,
-    agentKey: process.env.DECISIONLOOP_AGENT_KEY ?? projectCreds?.agentKey ?? null,
+    url: process.env.DECISIONLOOP_URL?.trim() || project?.url || userCreds?.url || "http://127.0.0.1:4318",
+    apiKey: process.env.DECISIONLOOP_API_KEY?.trim() || projectCreds?.apiKey || userCreds?.apiKey || null,
+    agentKey: process.env.DECISIONLOOP_AGENT_KEY?.trim() || projectCreds?.agentKey || null,
     project,
   };
 }

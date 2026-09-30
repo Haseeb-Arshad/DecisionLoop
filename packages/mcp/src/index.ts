@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   contextRequestSchema,
   decisionDraftSchema,
+  decisionVerificationCheckSchema,
   evidenceSubmissionSchema,
   resourceInputSchema,
 } from "@decisionloop/core/contracts";
@@ -311,6 +312,19 @@ export function buildMcpServer(ops: DecisionLoopOperations, caller: McpCaller): 
   }
 
   if (caller.type === "user" && can(caller, "write")) {
+    server.registerTool(
+      "decisionloop_configure_verification_check",
+      {
+        title: "Link a verification workflow to a decision",
+        description: "Record the exact GitHub Actions workflow and repository whose completed runs provide evidence for this decision. Human credentials only.",
+        inputSchema: { decisionId: z.string().uuid(), check: decisionVerificationCheckSchema },
+        annotations: SENSITIVE,
+      },
+      async (args) => run(async () => {
+        const decision = await ops.configureVerificationCheck(args.decisionId, args.check);
+        return text(`Verification workflow ${args.check.name} linked to ${summarizeDecision(decision)}.`);
+      }),
+    );
     server.registerTool(
       "decisionloop_commit_decision",
       {

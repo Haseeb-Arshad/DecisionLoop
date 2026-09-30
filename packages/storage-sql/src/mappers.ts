@@ -17,6 +17,7 @@ import type {
   DecisionOption,
   DecisionOrigin,
   DecisionResource,
+  DecisionVerificationCheck,
   DecisionStatus,
   MemoryIndexStatus,
 } from "@decisionloop/core/types/domain";
@@ -89,11 +90,27 @@ export function mapDecision(row: Row): Decision {
     externalRef: str(row.external_ref),
     tags: textArray(row.tags),
     metadata: json<Record<string, unknown> | null>(row.metadata, null),
+    verificationChecks: readVerificationChecks(json<Record<string, unknown> | null>(row.metadata, null)),
     sourceRefs: json(row.source_refs, [] as Decision["sourceRefs"]),
     validFrom: iso(row.valid_from),
     reviewedAt: iso(row.reviewed_at),
     agentSessionId: str(row.agent_session_id),
   };
+}
+
+function readVerificationChecks(metadata: Record<string, unknown> | null) {
+  let value = metadata?.verificationChecks;
+  if (typeof value === "string") {
+    try { value = JSON.parse(value); } catch { return []; }
+  }
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const item = entry as Record<string, unknown>;
+    if (typeof item.name !== "string" || typeof item.repository !== "string") return [];
+    const kind: DecisionVerificationCheck["kind"] = item.kind === "BENCHMARK" || item.kind === "RUNTIME" ? item.kind : "TEST";
+    return [{ name: item.name, repository: item.repository.toLowerCase(), kind, description: typeof item.description === "string" ? item.description : null }];
+  });
 }
 
 export function mapOption(row: Row): DecisionOption {

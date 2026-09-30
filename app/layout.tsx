@@ -3,9 +3,9 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "DecisionLoop",
+  title: "DecisionLoop — decision memory for people and agents",
   description:
-    "Assumption-aware decision memory. Remembers why a decision was made, notices when new evidence invalidates it, and proves it with a CockroachDB-backed Memory Inspector.",
+    "Give coding agents the reasoning behind your code. Preserve decisions, retrieve the right context, and review evidence when assumptions change.",
 };
 
 export default function RootLayout({

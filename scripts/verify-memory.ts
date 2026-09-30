@@ -9,7 +9,7 @@
  *
  * Usage: npx tsx scripts/verify-memory.ts [tenant-slug]
  */
-import "dotenv/config";
+import "@decisionloop/runtime/env";
 import { sql } from "@/db/client";
 import { embedText, getEmbeddingProvider, isSemanticEmbeddingProvider } from "@/lib/ai/embeddings";
 import { retrieveMemory } from "@/lib/engine/retrieval";

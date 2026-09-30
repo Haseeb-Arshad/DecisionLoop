@@ -16,8 +16,8 @@ export function StatCard({
   const toneClasses = {
     neutral: "text-ink-50",
     signal: "text-signal-400",
-    risk: "text-risk-400",
-    warn: "text-amber-400",
+    risk: "text-risk-600",
+    warn: "text-amber-700",
   }[tone];
 
   const body = (

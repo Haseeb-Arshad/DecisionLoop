@@ -1,4 +1,7 @@
-# DecisionLoop — Architecture & Implementation Decisions
+# Architecture
+
+> Deployment and verification note (2026-09-30): local and automated behavior is verified separately from live providers. Use docs/deployment.md for the current container topology. Statements about intended external integrations below are architecture descriptions, not proof of a running deployment.
+
 
 > **1.x architecture.** DecisionLoop 2.0 keeps these decisions but moves business logic into a headless
 > core with an MCP server, HTTP API, SDK, CLI, trigger engine and durable worker — see
@@ -43,14 +46,14 @@ Three features get disproportionate engineering attention:
   4. flips the decision to **AT RISK**, writes a `conflict_events` row explaining the contradiction,
   5. suggests reconsidering MetricLake,
   6. the Memory Inspector shows the exact CockroachDB rows and similarity scores that drove step 2–4.
-- All of this runs against the **deployed** app, backed by **real** CockroachDB persistence — no
+- The deployment target persists this data in CockroachDB or PostgreSQL — no
   hard-coded "if filename contains SignalForge" branching.
 
 ## 3. Stack decisions
 
 | Concern | Decision | Why |
 |---|---|---|
-| App framework | **Next.js 15, App Router, TypeScript** | One deployable for UI + API routes; fastest path to a polished demo UI; server actions avoid a separate backend process. |
+| App framework | **Next.js 16, App Router, TypeScript** | One deployable for UI + API routes; fastest path to a polished demo UI; server actions avoid a separate backend process. |
 | Styling | **Tailwind CSS v4** | Fast, consistent, no separate design-system build step. |
 | Database | **CockroachDB Cloud** (Serverless/Basic), Postgres wire protocol | Required by the spec. Native `VECTOR` type + C-SPANN distributed vector indexing (v25.2+) means we don't need a separate vector DB — CockroachDB *is* the memory store. |
 | DB driver | **`postgres` (porsager/postgres.js)**, raw parameterized SQL, hand-written migrations | CockroachDB has real dialect differences from Postgres (index syntax, `SHOW`, some type quirks). An ORM fights this. Raw SQL keeps the vector-index DDL and C-SPANN specifics visible and debuggable, which matters for a judge reading the code. |
@@ -61,7 +64,7 @@ Three features get disproportionate engineering attention:
 | Deterministic conflict check | Before any model call, `lib/ai/bedrock.ts#tryDeterministicConflictCheck` compares a stated numeric fact against an assumption's structured `{metric, operator, value, unit}` directly — no LLM involved when both sides are structured and the metric/unit match. | A pure numeric contradiction (`price < 25000` vs `price = 42000`) shouldn't need a model to detect. Falls through to the LLM judgment only for cross-metric, unstructured, or inequality-shaped facts. |
 | Embeddings | **Amazon Titan Text Embeddings V2** on Bedrock (`BEDROCK_EMBEDDING_MODEL_ID`), requested at 512 dimensions; deterministic local hash-embedding fallback when `AWS_REGION` is unset (tests / offline dev) | Same AWS-native rationale as reasoning — one cloud provider for both. Titan V2 retains ~99% retrieval accuracy at 512 dims vs. its 1024 default. The fallback keeps `npm test` and local dev working without live AWS credentials. |
 | CockroachDB MCP | Real client of CockroachDB's **Managed MCP Server** (`https://cockroachlabs.cloud/mcp`), invoked from the Memory Inspector API route, using a service-account API key | The Managed MCP Server is designed for AI dev tools, not app runtime traffic — so it is *not* on the hot path for every request. It is used specifically where its purpose lines up with ours: independently proving, through Anthropic's own MCP tool calls (`select_query`, `get_table_schema`), that the rows the Memory Inspector claims were used really are in CockroachDB. This is a genuine second, independent verification path, not a relabeled internal DB call. |
-| Deployment | **AWS Amplify Hosting** (SSR, connects directly to the GitHub repo, builds on push) with a `Dockerfile` kept for an App Runner / ECS fallback | Needs no local Docker/AWS CLI to stand up; judges can watch a build in the Amplify console. |
+| Deployment | Container runtime with external SQL storage and a durable worker | See docs/deployment.md and docker-compose.production.yml. |
 | Observability | Structured JSON logs (`pino`), `audit_events` table for every mutating action, `/api/health` and `/api/observability/recent` endpoints | Enough to demonstrate the requirement without standing up Prometheus/Grafana for a hackathon judge to look at once. |
 
 ## 4. Data model (see `db/migrations/0001_init.sql` for the authoritative schema)
@@ -119,12 +122,7 @@ guessing wrong at build time.
 
 ## 8. Deployment target
 
-AWS Amplify Hosting, connected to `github.com/Haseeb-Arshad/DecisionLoop`, `main` branch.
-`amplify.yml` runs `npm ci`, linting, resumable migrations, and the production build. Environment
-variables (CockroachDB connection string, S3 bucket/region, Bedrock model IDs, CockroachDB MCP
-service key and cluster scope, session secret) are set in the Amplify console, never committed.
-A `Dockerfile` is kept in the repo as a portable fallback (App Runner / ECS / any container
-host) since it requires no extra setup beyond what Amplify already needs.
+The supported deployment is the container topology documented in [deployment.md](deployment.md). The image includes the built web app, shared services, migrations and worker. Secrets are injected at runtime; migrations run as an explicit release step. PostgreSQL or CockroachDB persists state, and the background worker processes evidence and expiry jobs. Local mode uses one process with a shared embedded connection.
 
 ## 8b. Companion documents
 

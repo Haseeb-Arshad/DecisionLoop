@@ -27,6 +27,17 @@ export const constraintInputSchema = z.object({
   severity: z.enum(["ADVISORY", "BLOCKING"]).default("ADVISORY"),
 });
 
+/**
+ * A verification check is matched against the exact completed GitHub Actions
+ * workflow name and repository. It records evidence; it never blocks a merge.
+ */
+export const decisionVerificationCheckSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  repository: z.string().trim().min(3).max(200).transform((v) => v.toLowerCase()),
+  kind: z.enum(["TEST", "BENCHMARK", "RUNTIME"]).default("TEST"),
+  description: z.string().max(1000).nullish(),
+});
+
 export const decisionDraftSchema = z.object({
   title: z.string().min(1).max(200),
   problem: z.string().max(4000).nullish(),
@@ -44,6 +55,7 @@ export const decisionDraftSchema = z.object({
   rationale: z.string().max(8000).nullish(),
   assumptions: z.array(assumptionSpecSchema).max(50).default([]),
   constraints: z.array(constraintInputSchema).max(50).default([]),
+  verificationChecks: z.array(decisionVerificationCheckSchema).max(20).default([]),
   resources: z.array(resourceInputSchema).max(200).default([]),
   repository: z.string().max(200).nullish(),
   domain: z.string().max(60).default("engineering"),

@@ -1,4 +1,6 @@
 import { invokeBedrockStructured } from "@decisionloop/providers/bedrock";
+import { OpenAICompatibleReasoningProvider } from "@decisionloop/providers/openaiCompatible";
+import { DecisionLoopError } from "@decisionloop/core/errors";
 import type { ZodType } from "zod";
 import { UNTRUSTED_CONTENT_BOUNDARY, wrapUntrustedContent } from "@/lib/ai/promptSafety";
 import {
@@ -62,6 +64,14 @@ interface StructuredCallOptions<T> {
 }
 
 function callBedrockStructured<T>(opts: StructuredCallOptions<T>): Promise<T> {
+  const provider = process.env.DECISIONLOOP_REASONING_PROVIDER?.trim() || (process.env.AWS_REGION?.trim() ? "bedrock" : "none");
+  if (provider === "none") throw new DecisionLoopError("AI assistance is unavailable. Record a decision or submit structured evidence directly, or configure a reasoning provider.", "unavailable");
+  if (provider === "openai") {
+    const model = process.env.OPENAI_REASONING_MODEL?.trim();
+    if (!model) throw new DecisionLoopError("OPENAI_REASONING_MODEL is required for AI assistance.", "unavailable");
+    return new OpenAICompatibleReasoningProvider({ baseUrl: process.env.OPENAI_BASE_URL?.trim() || "https://api.openai.com/v1", apiKey: process.env.OPENAI_API_KEY, model }).structured(opts.system, opts.prompt, "decisionloop_result", opts.schema, opts.validator);
+  }
+  if (provider !== "bedrock") throw new DecisionLoopError("Unknown reasoning provider.", "unavailable");
   return invokeBedrockStructured({
     ...opts,
     modelId: BEDROCK_REASONING_MODEL_ID,

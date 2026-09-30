@@ -8,8 +8,8 @@ import type {
 const DECISION_STYLES: Record<DecisionStatus, string> = {
   DRAFT: "bg-ink-600/40 text-ink-200 ring-1 ring-inset ring-ink-500/40",
   ACTIVE: "bg-signal-500/15 text-signal-400 ring-1 ring-inset ring-signal-500/30",
-  AT_RISK: "bg-risk-500/15 text-risk-400 ring-1 ring-inset ring-risk-500/40",
-  REOPENED: "bg-amber-500/15 text-amber-400 ring-1 ring-inset ring-amber-500/40",
+  AT_RISK: "bg-risk-500/15 text-risk-600 ring-1 ring-inset ring-risk-500/40",
+  REOPENED: "bg-amber-500/15 text-amber-700 ring-1 ring-inset ring-amber-500/40",
   SUPERSEDED: "bg-ink-600/40 text-ink-300 ring-1 ring-inset ring-ink-500/40",
   ARCHIVED: "bg-ink-700/40 text-ink-400 ring-1 ring-inset ring-ink-600/40",
 };
@@ -40,8 +40,8 @@ export function DecisionStatusBadge({ status }: { status: DecisionStatus }) {
 const VALIDITY_STYLES: Record<AssumptionValidity, string> = {
   VALID: "bg-signal-500/10 text-signal-400 ring-1 ring-inset ring-signal-500/25",
   UNCERTAIN: "bg-ink-600/40 text-ink-200 ring-1 ring-inset ring-ink-500/40",
-  CHALLENGED: "bg-amber-500/15 text-amber-400 ring-1 ring-inset ring-amber-500/40",
-  INVALIDATED: "bg-risk-500/10 text-risk-400 ring-1 ring-inset ring-risk-500/30",
+  CHALLENGED: "bg-amber-500/15 text-amber-700 ring-1 ring-inset ring-amber-500/40",
+  INVALIDATED: "bg-risk-500/10 text-risk-600 ring-1 ring-inset ring-risk-500/30",
   SUPERSEDED: "bg-ink-700/40 text-ink-400 ring-1 ring-inset ring-ink-600/40",
 };
 
@@ -61,7 +61,7 @@ const DOCUMENT_STYLES: Record<DocumentStatus, string> = {
   UPLOADED: "bg-ink-600/40 text-ink-200 ring-1 ring-inset ring-ink-500/40",
   PROCESSING: "bg-ink-600/40 text-ink-200 ring-1 ring-inset ring-ink-500/40",
   PROCESSED: "bg-signal-500/15 text-signal-400 ring-1 ring-inset ring-signal-500/30",
-  FAILED: "bg-risk-500/15 text-risk-400 ring-1 ring-inset ring-risk-500/40",
+  FAILED: "bg-risk-500/15 text-risk-600 ring-1 ring-inset ring-risk-500/40",
 };
 
 export function DocumentStatusBadge({ status }: { status: DocumentStatus }) {

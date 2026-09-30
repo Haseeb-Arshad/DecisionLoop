@@ -94,6 +94,7 @@ export type MemoryEventType =
   | "ASSUMPTION_SUPPORTED"
   | "ASSUMPTION_PROPOSED"
   | "CONSTRAINT_VIOLATION_SUSPECTED"
+  | "VERIFICATION_CHECK_CONFIGURED"
   | "APPROVAL_REQUESTED"
   | "APPROVAL_RESOLVED"
   | "CONTEXT_PROVIDED"
@@ -258,6 +259,16 @@ export interface Decision {
   validFrom: string | null;
   reviewedAt: string | null;
   agentSessionId: string | null;
+  /** Exact GitHub Actions workflow runs that provide evidence for this decision. */
+  verificationChecks?: DecisionVerificationCheck[];
+}
+
+export interface DecisionVerificationCheck {
+  /** Exact `workflow_run.name` supplied by GitHub. */
+  name: string;
+  repository: string;
+  kind: "TEST" | "BENCHMARK" | "RUNTIME";
+  description?: string | null;
 }
 
 export interface DecisionResource {

@@ -18,7 +18,7 @@ export default function ProjectDetailPage() {
   }
   if (isError || !data) {
     return (
-      <div className="card px-6 py-12 text-center text-sm text-risk-400">
+      <div className="card px-6 py-12 text-center text-sm text-risk-600">
         {isError ? (error as Error).message : "Project not found."}
       </div>
     );
@@ -41,7 +41,7 @@ export default function ProjectDetailPage() {
 
       {atRisk.length > 0 && (
         <div className="card border-risk-500/30 bg-risk-500/[0.05] p-4">
-          <p className="text-sm text-risk-400">
+          <p className="text-sm text-risk-600">
             {atRisk.length} decision{atRisk.length === 1 ? "" : "s"} in this project{" "}
             {atRisk.length === 1 ? "is" : "are"} at risk.
           </p>

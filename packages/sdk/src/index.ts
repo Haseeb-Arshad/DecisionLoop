@@ -2,6 +2,7 @@ import type { ContextRequestInput, DecisionDraftInput, EvidenceSubmissionInput }
 import type { DecisionLoopOperations } from "@decisionloop/core/operations";
 import type { ResourceRef } from "@decisionloop/core/resources/resources";
 import type { ApprovalStatus } from "@decisionloop/core/types/records";
+import type { DecisionVerificationCheck } from "@decisionloop/core/types/domain";
 
 /**
  * DecisionLoop TypeScript SDK.
@@ -111,6 +112,7 @@ export class DecisionLoop {
     createDecision: (draft) => this.request("POST", "/decisions?mode=commit", draft),
     commitDecision: (id, note) => this.request("POST", `/decisions/${id}/commit`, { note }),
     supersedeDecision: (id, supersededBy, note) => this.request("POST", `/decisions/${id}/supersede`, { supersededBy, note }),
+    configureVerificationCheck: (id, check) => this.request("POST", `/decisions/${id}/verification-checks`, check),
     addEvidence: (input) => this.request("POST", "/evidence", input),
     getEvent: (id) => this.request("GET", `/events/${id}`),
     listEvents: (limit = 50) => this.request("GET", `/events?limit=${limit}`),
@@ -156,6 +158,7 @@ export class DecisionLoop {
     atRisk: (limit?: number) => this.operations.listAtRisk(limit),
     commit: (id: string, note?: string) => this.operations.commitDecision(id, note),
     supersede: (id: string, by: string, note?: string) => this.operations.supersedeDecision(id, by, note),
+    configureVerificationCheck: (id: string, check: DecisionVerificationCheck) => this.operations.configureVerificationCheck(id, check),
     recordOutcome: (decisionId: string, summary: string, sentiment?: "POSITIVE" | "NEUTRAL" | "NEGATIVE") =>
       this.operations.recordOutcome({ decisionId, summary, sentiment }),
     blastRadius: (input: { assumptionId?: string; decisionId?: string; maxDepth?: number }) => this.operations.blastRadius(input),

@@ -170,6 +170,23 @@ export interface RepositoryBinding {
   createdAt: string;
 }
 
+/** Immutable receipt from a completed, signature-verified external check. */
+export interface DecisionVerificationRun {
+  id: string;
+  tenantId: string;
+  decisionId: string;
+  eventId: string | null;
+  source: string;
+  sourceRunId: string;
+  checkName: string;
+  repository: string;
+  commitSha: string;
+  conclusion: "success" | "failure" | "neutral" | "cancelled" | "timed_out" | "action_required" | "stale" | "skipped" | "startup_failure";
+  detailsUrl: string | null;
+  completedAt: string;
+  createdAt: string;
+}
+
 /**
  * Who is acting, resolved by the surface that authenticated them. Services
  * take this instead of trusting identity claims inside request bodies.

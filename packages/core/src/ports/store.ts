@@ -17,6 +17,7 @@ import type {
   DecisionOrigin,
   DecisionResource,
   DecisionStatus,
+  DecisionVerificationCheck,
   DecisionWithDetails,
   MemoryEvent,
   MemoryEventType,
@@ -34,6 +35,7 @@ import type {
   ApprovalStatus,
   AssumptionEvaluation,
   ConstraintFinding,
+  DecisionVerificationRun,
   DecisionDependency,
   EvaluationMethod,
   EvidenceItem,
@@ -96,12 +98,23 @@ export interface DecisionStore {
   ): Promise<Decision>;
   markDecisionReviewed(tenantId: string, id: string): Promise<void>;
   setMemoryIndexStatus(tenantId: string, id: string, status: "PENDING" | "INDEXED" | "FAILED", error?: string | null): Promise<void>;
+  upsertDecisionVerificationCheck(tenantId: string, id: string, check: DecisionVerificationCheck): Promise<void>;
+  findDecisionsForVerificationCheck(tenantId: string, repository: string, checkName: string): Promise<DecisionWithDetails[]>;
 
   /** Resources recorded on active-ish decisions, for structural matching in core. */
   listResourcesForMatching(
     tenantId: string,
     opts: { types?: string[]; statuses?: DecisionStatus[]; limit?: number },
   ): Promise<DecisionResource[]>;
+
+  /** Persist one completed external check per decision, idempotent on its source run id. */
+  recordVerificationRun(
+    input: Omit<DecisionVerificationRun, "id" | "createdAt">,
+  ): Promise<{ run: DecisionVerificationRun; created: boolean }>;
+  listVerificationRuns(
+    tenantId: string,
+    opts: { decisionIds: string[]; limit?: number; latestPerCheck?: boolean },
+  ): Promise<DecisionVerificationRun[]>;
 
   // ── Assumptions ──────────────────────────────────────────────────────────
   getAssumption(tenantId: string, id: string): Promise<Assumption | null>;
@@ -405,6 +418,7 @@ export interface NewDecisionRecord {
   externalRef: string | null;
   tags: string[];
   metadata: Record<string, unknown> | null;
+  verificationChecks?: DecisionVerificationCheck[];
   sourceRefs: Array<{ type: string; ref: string; url?: string | null }>;
   createdBy: string | null;
   createdInSession: string | null;

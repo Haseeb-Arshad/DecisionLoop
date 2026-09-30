@@ -49,6 +49,7 @@ import {
   mapEvent,
   mapEvidenceItem,
   mapFinding,
+  mapVerificationRun,
   mapJob,
   mapMemoryEvent,
   mapRun,
@@ -235,6 +236,10 @@ export class SqlDecisionStore implements DecisionStore {
         `;
       }
 
+      for (const check of input.verificationChecks ?? []) {
+        await txStore.upsertDecisionVerificationCheck(input.tenantId, decision.id, check);
+      }
+
       const full = await txStore.getDecision(input.tenantId, decision.id);
       if (!full) throw new Error("Decision insert did not persist.");
       return full;
@@ -311,11 +316,12 @@ export class SqlDecisionStore implements DecisionStore {
     const ids = rows.map((r) => r.id as string);
     // Child tables are reached only through decision ids already proven to
     // belong to this tenant by the parent query above.
-    const [options, assumptions, resources, constraints] = await Promise.all([
+    const [options, assumptions, resources, constraints, verificationChecks] = await Promise.all([
       this.q`SELECT * FROM decision_options WHERE decision_id IN ${this.q(ids)} ORDER BY created_at`,
       this.q`SELECT * FROM assumptions WHERE decision_id IN ${this.q(ids)} ORDER BY created_at`,
       this.q`SELECT * FROM decision_resources WHERE tenant_id = ${tenantId} AND decision_id IN ${this.q(ids)} ORDER BY created_at`,
       this.q`SELECT * FROM decision_constraints WHERE tenant_id = ${tenantId} AND decision_id IN ${this.q(ids)} ORDER BY created_at`,
+      this.q`SELECT * FROM decision_verification_checks WHERE tenant_id = ${tenantId} AND decision_id IN ${this.q(ids)} ORDER BY created_at`,
     ]);
     return rows.map((row) => {
       const d = mapDecision(row);
@@ -325,6 +331,12 @@ export class SqlDecisionStore implements DecisionStore {
         assumptions: assumptions.filter((a) => a.decision_id === d.id).map(mapAssumption),
         resources: resources.filter((r) => r.decision_id === d.id).map(mapResource),
         constraints: constraints.filter((c) => c.decision_id === d.id).map(mapConstraint),
+        verificationChecks: verificationChecks.filter((c) => c.decision_id === d.id).map((c) => ({
+          name: c.name as string,
+          repository: c.repository as string,
+          kind: c.kind as "TEST" | "BENCHMARK" | "RUNTIME",
+          description: c.description as string | null,
+        })),
       };
     });
   }
@@ -384,6 +396,73 @@ export class SqlDecisionStore implements DecisionStore {
       ${opts.limit ? this.q`LIMIT ${opts.limit}` : this.q``}
     `;
     return rows.map(mapResource);
+  }
+
+  async upsertDecisionVerificationCheck(tenantId: string, id: string, check: import("@decisionloop/core/types/domain").DecisionVerificationCheck) {
+    const [row] = await this.q`
+      INSERT INTO decision_verification_checks (tenant_id, decision_id, name, repository, kind, description)
+      SELECT d.tenant_id, d.id, ${check.name}, ${check.repository.toLowerCase()}, ${check.kind}, ${check.description ?? null}
+      FROM decisions d WHERE d.id = ${id} AND d.tenant_id = ${tenantId}
+      ON CONFLICT (tenant_id, decision_id, repository, name)
+      DO UPDATE SET kind = EXCLUDED.kind, description = EXCLUDED.description, updated_at = now()
+      RETURNING id
+    `;
+    if (!row) throw new Error("Decision not found in this workspace.");
+  }
+
+  async findDecisionsForVerificationCheck(tenantId: string, repository: string, checkName: string) {
+    const rows = await this.q`
+      SELECT d.* FROM decisions d
+      JOIN decision_verification_checks c ON c.decision_id = d.id AND c.tenant_id = d.tenant_id
+      WHERE d.tenant_id = ${tenantId}
+        AND d.status IN ('ACTIVE', 'AT_RISK', 'REOPENED')
+        AND c.repository = ${repository.toLowerCase()} AND c.name = ${checkName}
+    `;
+    return this.hydrate(tenantId, rows);
+  }
+
+  async recordVerificationRun(input: Parameters<DecisionStore["recordVerificationRun"]>[0]) {
+    const inserted = await this.q`
+      INSERT INTO decision_verification_runs (
+        tenant_id, decision_id, event_id, source, source_run_id, check_name,
+        repository, commit_sha, conclusion, details_url, completed_at
+      )
+      SELECT ${input.tenantId}, d.id, ${input.eventId}, ${input.source}, ${input.sourceRunId},
+             ${input.checkName}, ${input.repository.toLowerCase()}, ${input.commitSha},
+             ${input.conclusion}, ${input.detailsUrl}, ${new Date(input.completedAt)}
+      FROM decisions d
+      JOIN event_inbox e ON e.id = ${input.eventId} AND e.tenant_id = d.tenant_id
+      WHERE d.id = ${input.decisionId} AND d.tenant_id = ${input.tenantId}
+      ON CONFLICT (tenant_id, decision_id, source, source_run_id) DO NOTHING
+      RETURNING *
+    `;
+    if (inserted[0]) return { run: mapVerificationRun(inserted[0]), created: true };
+    const [existing] = await this.q`
+      SELECT * FROM decision_verification_runs
+      WHERE tenant_id = ${input.tenantId} AND decision_id = ${input.decisionId}
+        AND source = ${input.source} AND source_run_id = ${input.sourceRunId}
+    `;
+    if (!existing) throw new Error("Decision or source event not found in this workspace.");
+    return { run: mapVerificationRun(existing), created: false };
+  }
+
+  async listVerificationRuns(tenantId: string, opts: { decisionIds: string[]; limit?: number; latestPerCheck?: boolean }) {
+    if (opts.decisionIds.length === 0) return [];
+    const rows = await this.q`
+      SELECT * FROM (
+        SELECT v.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY decision_id, repository, check_name
+            ORDER BY completed_at DESC, created_at DESC
+          ) AS run_rank
+        FROM decision_verification_runs v
+        WHERE tenant_id = ${tenantId} AND decision_id IN ${this.q(opts.decisionIds)}
+      ) ranked
+      WHERE ${Boolean(opts.latestPerCheck)} = false OR run_rank = 1
+      ORDER BY completed_at DESC, created_at DESC
+      LIMIT ${opts.limit ?? 100}
+    `;
+    return rows.map(mapVerificationRun);
   }
 
   // ── Assumptions ──────────────────────────────────────────────────────────

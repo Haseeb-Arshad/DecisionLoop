@@ -1,0 +1,16 @@
+{
+  "database": "disposable embedded PostgreSQL over TCP",
+  "reasoning": "none",
+  "embeddings": "lexical",
+  "productionHealth": "ok",
+  "authentication": true,
+  "unconfiguredAssistance": "503 with actionable guidance",
+  "unconfiguredDocumentExtraction": "503 before upload",
+  "createdDecision": "c93affa7-47b5-4aa4-820a-ddd81f52efe8",
+  "multipleConflictReview": "passed",
+  "workerHeartbeat": true,
+  "contextRetrieval": "passed",
+  "restartPersistence": "passed",
+  "closedHostedSignup": "passed",
+  "completedAt": "2026-09-30T17:49:54.786Z"
+}

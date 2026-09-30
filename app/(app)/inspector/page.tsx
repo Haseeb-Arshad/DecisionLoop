@@ -1,4 +1,5 @@
 "use client";
+import { PageHeader, QueryState } from "@/components/Workspace";
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -15,38 +16,45 @@ const ACTION_LABELS: Record<string, string> = {
 
 function scoreColor(score: number): string {
   if (score >= 0.6) return "text-signal-400";
-  if (score >= 0.35) return "text-amber-400";
+  if (score >= 0.35) return "text-amber-700";
   return "text-ink-500";
 }
 
 function MemoryInspectorInner() {
   const searchParams = useSearchParams();
   const decisionId = searchParams.get("decisionId") ?? undefined;
-  const { data, isLoading } = useMemoryTraces(decisionId);
+  const { data, isLoading, error, refetch } = useMemoryTraces(decisionId);
   const traces = data?.traces ?? [];
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const selected = traces.find((t) => t.id === selectedId) ?? traces[0] ?? null;
+  if (error) return <QueryState error={error} retry={refetch} />;
 
   return (
     <div className="animate-fade-in space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-ink-50">Memory Inspector</h1>
-        <p className="mt-1 max-w-3xl text-sm text-ink-400">
-          Every AI action that touched memory, in order. Each trace shows the exact SQL that ran,
-          every candidate row with its real hybrid score, which ones were used in reasoning, and
-          the model&apos;s stated conclusion — plus an independent cross-check via
-          CockroachDB&apos;s own Managed MCP Server. None of these numbers are illustrative.
-          {decisionId && " Filtered to one decision."}
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Workspace operations"
+        title="Memory Inspector"
+        description={
+          <>
+            Every AI action that touched memory, in order. Each trace shows the
+            exact SQL that ran, every candidate row with its real hybrid score,
+            which ones were used in reasoning, and the model&apos;s stated
+            conclusion — plus an independent cross-check via CockroachDB&apos;s
+            own Managed MCP Server. None of these numbers are illustrative.
+            {decisionId && " Filtered to one decision."}
+          </>
+        }
+      />
 
       {isLoading ? (
-        <div className="card px-6 py-12 text-center text-sm text-ink-400">Loading…</div>
+        <div className="card px-6 py-12 text-center text-sm text-ink-400">
+          Loading…
+        </div>
       ) : traces.length === 0 ? (
         <div className="card px-6 py-12 text-center text-sm text-ink-400">
-          No memory traces yet — commit a decision, upload evidence, or ask a question to generate
-          one.
+          No memory traces yet — commit a decision, upload evidence, or ask a
+          question to generate one.
         </div>
       ) : (
         <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
@@ -56,7 +64,9 @@ function MemoryInspectorInner() {
                 key={t.id}
                 onClick={() => setSelectedId(t.id)}
                 className={`block w-full px-4 py-3 text-left transition ${
-                  selected?.id === t.id ? "bg-ink-800/70" : "hover:bg-ink-900/60"
+                  selected?.id === t.id
+                    ? "bg-ink-800/70"
+                    : "hover:bg-ink-900/60"
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -72,7 +82,8 @@ function MemoryInspectorInner() {
                 </p>
                 <p className="mt-1 text-[11px] text-ink-500">
                   {t.candidates.length} retrieved · {t.usedChunkIds.length} used
-                  {t.retrievalLatencyMs !== null && ` · ${t.retrievalLatencyMs}ms`}
+                  {t.retrievalLatencyMs !== null &&
+                    ` · ${t.retrievalLatencyMs}ms`}
                 </p>
               </button>
             ))}
@@ -87,7 +98,8 @@ function MemoryInspectorInner() {
 
 function TraceDetail({ trace }: { trace: MemoryTrace }) {
   const verify = useVerifyTrace();
-  const verification = verify.data?.trace.mcpVerification ?? trace.mcpVerification;
+  const verification =
+    verify.data?.trace.mcpVerification ?? trace.mcpVerification;
 
   return (
     <div className="space-y-4">
@@ -133,8 +145,9 @@ function TraceDetail({ trace }: { trace: MemoryTrace }) {
             <span>contextual {trace.scoringWeights.contextual}</span>
           </div>
           <p className="mt-2 text-xs text-ink-600">
-            final = Σ(weight × component). Vector similarity alone would rank an unimportant note
-            from an unverified source above a load-bearing, contract-backed assumption.
+            final = Σ(weight × component). Vector similarity alone would rank an
+            unimportant note from an unverified source above a load-bearing,
+            contract-backed assumption.
           </p>
         </div>
       )}
@@ -167,7 +180,10 @@ function TraceDetail({ trace }: { trace: MemoryTrace }) {
               </thead>
               <tbody>
                 {trace.candidates.map((c) => (
-                  <tr key={c.chunkId} className="border-b border-ink-800/60 last:border-0">
+                  <tr
+                    key={c.chunkId}
+                    className="border-b border-ink-800/60 last:border-0"
+                  >
                     <td className="px-5 py-2.5 align-top text-xs text-ink-300">
                       {c.sourceType}
                       {c.crossSession && (
@@ -214,15 +230,18 @@ function TraceDetail({ trace }: { trace: MemoryTrace }) {
             </table>
           </div>
           <p className="px-5 pb-4 pt-3 text-xs text-ink-600">
-            ✦ marks a memory written by a different session than the one that retrieved it — the
-            cross-session recall this product exists to demonstrate.
+            ✦ marks a memory written by a different session than the one that
+            retrieved it — the cross-session recall this product exists to
+            demonstrate.
           </p>
         </div>
       )}
 
       <div className="card p-5">
         <div className="mb-3 flex items-center justify-between">
-          <p className="label !mb-0">Independent verification (CockroachDB Managed MCP)</p>
+          <p className="label !mb-0">
+            Independent verification (CockroachDB Managed MCP)
+          </p>
           <button
             className="btn-secondary !px-3 !py-1.5 text-xs"
             onClick={() => verify.mutate(trace.id)}
@@ -236,9 +255,10 @@ function TraceDetail({ trace }: { trace: MemoryTrace }) {
           <McpVerificationPanel verification={verification} />
         ) : (
           <p className="text-sm text-ink-500">
-            Not yet checked. This re-runs a read-only query against CockroachDB via its own
-            Managed MCP Server — a second channel, independent of the app&apos;s database
-            connection — to confirm these rows are real, current data.
+            Not yet checked. This re-runs a read-only query against CockroachDB
+            via its own Managed MCP Server — a second channel, independent of
+            the app&apos;s database connection — to confirm these rows are real,
+            current data.
           </p>
         )}
       </div>
@@ -260,7 +280,9 @@ function McpVerificationPanel({
   }
   return (
     <div className="space-y-2">
-      <p className="text-sm text-signal-400">✓ Verified via CockroachDB Managed MCP Server</p>
+      <p className="text-sm text-signal-400">
+        ✓ Verified via CockroachDB Managed MCP Server
+      </p>
       {verification.toolCalls.map((call, i) => (
         <pre
           key={i}
@@ -276,7 +298,11 @@ function McpVerificationPanel({
 export default function MemoryInspectorPage() {
   return (
     <Suspense
-      fallback={<div className="card px-6 py-12 text-center text-sm text-ink-400">Loading…</div>}
+      fallback={
+        <div className="card px-6 py-12 text-center text-sm text-ink-400">
+          Loading…
+        </div>
+      }
     >
       <MemoryInspectorInner />
     </Suspense>

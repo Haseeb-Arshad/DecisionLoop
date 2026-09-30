@@ -1,10 +1,10 @@
 "use client";
-
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useSignup } from "@/lib/queries";
-
+import { AuthFrame } from "@/components/AuthFrame";
 export default function SignupPage() {
   const router = useRouter();
   const signup = useSignup();
@@ -12,109 +12,134 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    try {
-      await signup.mutateAsync({ workspaceName, name, email, password });
-      router.push("/decisions");
-    } catch {
-      // error surfaced via signup.error below
-    }
-  }
-
+  const setup = useQuery<{
+    available: boolean;
+    local: boolean;
+    workspaceName: string | null;
+  }>({
+    queryKey: ["signup-availability"],
+    queryFn: async () => {
+      const r = await fetch("/api/auth/signup");
+      if (!r.ok) throw new Error("Unable to check workspace setup.");
+      return r.json();
+    },
+  });
   return (
-    <main className="flex min-h-screen items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm animate-fade-in">
-        <Link href="/" className="mb-8 inline-flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-signal-500 text-xs font-bold text-ink-950">
-            D
-          </div>
-          <span className="text-sm font-semibold">DecisionLoop</span>
-        </Link>
-
-        <h1 className="mb-1 text-xl font-semibold text-ink-50">Create your workspace</h1>
-        <p className="mb-6 text-sm text-ink-400">
-          One workspace per team — every decision, document, and memory trace is scoped to it.
+    <AuthFrame>
+      <div className="w-full max-w-[400px]">
+        <p className="eyebrow">Begin the shared record</p>
+        <h1 className="text-3xl font-semibold">
+          {setup.data?.local
+            ? "Set up your local account."
+            : "Create your workspace."}
+        </h1>
+        <p className="mb-7 mt-3 text-sm leading-6 text-ink-400">
+          {setup.data?.local
+            ? "This account uses the same workspace as your CLI and agents."
+            : "Start a private workspace for your team's decisions."}
         </p>
-
-        <form onSubmit={onSubmit} className="card space-y-4 p-5">
-          <div>
-            <label className="label" htmlFor="workspaceName">
-              Workspace name
-            </label>
-            <input
-              id="workspaceName"
-              required
-              autoComplete="organization"
-              className="input"
-              value={workspaceName}
-              onChange={(e) => setWorkspaceName(e.target.value)}
-              placeholder="Acme Platform Team"
-            />
+        {setup.isLoading ? (
+          <p role="status" className="text-sm text-ink-400">
+            Checking workspace setup…
+          </p>
+        ) : setup.error ? (
+          <p role="alert" className="text-sm text-risk-600">
+            {setup.error.message}
+          </p>
+        ) : !setup.data?.available ? (
+          <div className="card p-5">
+            <p className="text-sm leading-6 text-ink-400">
+              Account registration is closed for this instance. Use an existing
+              account or ask its administrator for access.
+            </p>
+            <Link href="/login" className="btn-primary mt-5">
+              Sign in
+            </Link>
           </div>
-          <div>
-            <label className="label" htmlFor="name">
+        ) : (
+          <form
+            className="space-y-4"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                await signup.mutateAsync({
+                  workspaceName: setup.data?.workspaceName ?? workspaceName,
+                  name,
+                  email,
+                  password,
+                });
+                router.push("/dashboard");
+              } catch {}
+            }}
+          >
+            {!setup.data.local && (
+              <label className="label">
+                Workspace name
+                <input
+                  className="input mt-2"
+                  required
+                  minLength={2}
+                  maxLength={120}
+                  autoComplete="organization"
+                  value={workspaceName}
+                  onChange={(e) => setWorkspaceName(e.target.value)}
+                  placeholder="Platform team"
+                />
+              </label>
+            )}
+            <label className="label">
               Your name
+              <input
+                className="input mt-2"
+                required
+                maxLength={120}
+                autoComplete="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
             </label>
-            <input
-              id="name"
-              required
-              autoComplete="name"
-              className="input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Jordan Lee"
-            />
-          </div>
-          <div>
-            <label className="label" htmlFor="email">
+            <label className="label">
               Email
+              <input
+                className="input mt-2"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </label>
-            <input
-              id="email"
-              type="email"
-              required
-              autoComplete="email"
-              className="input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-            />
-          </div>
-          <div>
-            <label className="label" htmlFor="password">
+            <label className="label">
               Password
+              <input
+                className="input mt-2"
+                type="password"
+                minLength={8}
+                maxLength={200}
+                required
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 8 characters"
+              />
             </label>
-            <input
-              id="password"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              className="input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
-            />
-          </div>
-
-          {signup.isError && (
-            <p className="text-sm text-risk-400">{(signup.error as Error).message}</p>
-          )}
-
-          <button type="submit" className="btn-primary w-full" disabled={signup.isPending}>
-            {signup.isPending ? "Creating workspace…" : "Create workspace"}
-          </button>
-        </form>
-
-        <p className="mt-4 text-center text-sm text-ink-400">
-          Already have a workspace?{" "}
-          <Link href="/login" className="text-signal-400 hover:text-signal-300">
+            {signup.error && (
+              <p role="alert" className="text-sm text-risk-600">
+                {signup.error.message}
+              </p>
+            )}
+            <button className="btn-primary w-full" disabled={signup.isPending}>
+              {signup.isPending ? "Creating account…" : "Create account →"}
+            </button>
+          </form>
+        )}
+        <p className="mt-6 text-xs text-ink-400">
+          Already have an account?{" "}
+          <Link className="font-medium text-signal-600" href="/login">
             Sign in
           </Link>
         </p>
       </div>
-    </main>
+    </AuthFrame>
   );
 }

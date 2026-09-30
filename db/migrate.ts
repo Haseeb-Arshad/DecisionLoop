@@ -6,7 +6,7 @@
  *
  * Usage: npm run db:migrate   (reads DATABASE_URL; CockroachDB or PostgreSQL)
  */
-import "dotenv/config";
+import "@decisionloop/runtime/env";
 import path from "node:path";
 import { createSql } from "@decisionloop/storage-sql/connection";
 import { runMigrations } from "@decisionloop/storage-sql/migrate";

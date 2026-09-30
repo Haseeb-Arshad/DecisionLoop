@@ -1,6 +1,6 @@
 # Getting started: first decision, first contradiction
 
-About ten minutes, entirely local. Assumes you ran `npm install && npm link` in a DecisionLoop clone
+About ten minutes, entirely local. Assumes you ran `npm ci, npm run build, and npm link` in a DecisionLoop clone
 (see the [README](../../README.md)).
 
 ## 1. Initialise and start
@@ -18,12 +18,7 @@ decisionloop serve --web
 - `local-agents` — for coding agents. Read + propose only; agents can never make memory authoritative.
 
 `serve --web` runs the API (`/api/v1`), MCP (`/mcp`), the job worker and the control plane on
-`http://127.0.0.1:4318`. To sign in to the control plane, create a user for the workspace (the password
-is read from the environment so it never lands in shell history):
-
-```bash
-DECISIONLOOP_USER_PASSWORD='…' decisionloop user create --email you@example.com
-```
+`http://127.0.0.1:4318`. Open `/signup` to create the first local account. It joins the workspace created by `init`, so the UI and CLI share decisions. Subsequent signup is closed. Stop the server before using `user create` or other commands that open the embedded database directly.
 
 ## 2. Record a decision
 
@@ -54,6 +49,14 @@ Save as `adr-018.json`:
   "constraints": [
     { "statement": "Sessions stay server-side and revocable (keep Redis)", "rule": { "kind": "dependency_present", "subject": "npm:redis" } }
   ],
+  "verificationChecks": [
+    {
+      "name": "Authentication integration tests",
+      "repository": "acme/product",
+      "kind": "TEST",
+      "description": "Covers revocation after account offboarding"
+    }
+  ],
   "resources": ["src/auth/**", "src/session/**"],
   "importance": 0.9
 }
@@ -65,6 +68,20 @@ decisionloop propose --commit --file adr-018.json
 
 `--commit` makes it authoritative immediately because *you* are committing it. Without `--commit` (and
 always for agents) it becomes a proposal in the approval queue.
+
+You can also attach the exact workflow after a decision exists:
+
+```bash
+decisionloop verification add ADR-018 \
+  --name "Authentication integration tests" \
+  --repository acme/product \
+  --kind TEST \
+  --description "Covers revocation after account offboarding"
+decisionloop show ADR-018
+```
+
+This configuration is human-only. Use the workflow's exact Actions name and the repository as shown by
+GitHub; configuration changes are recorded in the decision history.
 
 ### Assumption types
 
@@ -99,6 +116,12 @@ decisionloop decisions --at-risk
 The worker evaluates the evidence within a second: deterministic comparison, authority check (a person
 outranks an agent), policy (`high_impact_architecture` asks for review), and ADR-018 moves to **AT RISK**.
 Open **Triggers** in the control plane to see every check it made, and **Approvals** to review it.
+
+When a bound GitHub App receives a completed Actions workflow with the exact name and repository
+listed in `verificationChecks`, DecisionLoop records its conclusion, commit SHA, completion time and
+details URL. Agents see the latest observed result alongside the decision and are told when no run
+has been recorded. A result is evidence for that commit; it does not imply that a different commit
+was checked.
 
 ## 5. Check a change before committing
 

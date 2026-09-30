@@ -1,4 +1,5 @@
 import type { ContextRequestInput, DecisionDraftInput, EvidenceSubmissionInput } from "./contracts";
+import type { DecisionVerificationCheck } from "./types/domain";
 import { ApprovalRequiredError, NotFoundError, requireScope } from "./errors";
 import type { StoredEvent } from "./events/event";
 import type { ApprovalService } from "./services/approvals";
@@ -41,6 +42,7 @@ export interface DecisionLoopOperations {
   createDecision(draft: DecisionDraftInput): Promise<DecisionWithDetails>;
   commitDecision(id: string, note?: string | null): Promise<DecisionWithDetails>;
   supersedeDecision(id: string, supersededBy: string, note?: string | null): Promise<Decision>;
+  configureVerificationCheck(decisionId: string, check: DecisionVerificationCheck): Promise<DecisionWithDetails>;
   addEvidence(input: EvidenceSubmissionInput): Promise<{ eventId: string; created: boolean; jobId: string | null; status: string }>;
   getEvent(id: string): Promise<StoredEvent>;
   listEvents(limit?: number): Promise<StoredEvent[]>;
@@ -101,6 +103,7 @@ export function bindOperations(loop: DecisionLoop, initialActor: Actor): Decisio
     createDecision: (draft) => loop.decisions.create(actor, draft),
     commitDecision: (id, note) => loop.decisions.commit(actor, id, { note }),
     supersedeDecision: (id, by, note) => loop.decisions.supersede(actor, id, by, note),
+    configureVerificationCheck: (id, check) => loop.decisions.configureVerificationCheck(actor, id, check),
     async addEvidence(input) {
       const r = await loop.evidence.submit(actor, input);
       return { eventId: r.event.id, created: r.created, jobId: r.jobId, status: r.event.status };

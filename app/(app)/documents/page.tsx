@@ -1,214 +1,375 @@
 "use client";
-
+import { useState, useRef } from "react";
 import Link from "next/link";
-import { useRef, useState } from "react";
-import { DocumentStatusBadge, SourceTypeBadge } from "@/components/StatusBadge";
-import { SOURCE_TYPE_OPTIONS } from "@/lib/api/uploadTypes";
-import { useDocuments, useUploadDocument } from "@/lib/queries";
-import type { DocumentSourceType } from "@/lib/types";
-import type { UploadResult } from "@/lib/api/client";
-
-export default function DocumentsPage() {
-  const { data, isLoading } = useDocuments();
+import { PageHeader, QueryState, EmptyState } from "@/components/Workspace";
+import { useV1Mutation, useV1, v1, timeAgo } from "@/lib/v1";
+import { useWorkspace } from "@/lib/workspace";
+import { useUploadDocument, useDocuments } from "@/lib/queries";
+import type { StoredEvent } from "@decisionloop/core/events/event";
+export default function EvidencePage() {
+  const [statement, setStatement] = useState("");
+  const [subject, setSubject] = useState("");
+  const [predicate, setPredicate] = useState("");
+  const [type, setType] = useState("NUMBER");
+  const [value, setValue] = useState("");
+  const [unit, setUnit] = useState("");
+  const [source, setSource] = useState("");
+  const [error, setError] = useState("");
+  const [structured, setStructured] = useState(true);
+  const lock = useRef(false);
+  const submit = useV1Mutation<
+    unknown,
+    { eventId: string; created: boolean; status: string }
+  >((body) => v1("/evidence", { body }));
+  const events = useV1<StoredEvent[]>(["events"], "/events?limit=30", {
+    refetchInterval: 3000,
+  });
+  const ws = useWorkspace();
+  const docs = useDocuments();
   const upload = useUploadDocument();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [lastResult, setLastResult] = useState<UploadResult | null>(null);
-  const [dragOver, setDragOver] = useState(false);
-  const [sourceType, setSourceType] = useState<DocumentSourceType>("VENDOR_OFFICIAL");
-
-  async function handleFile(file: File) {
-    setLastResult(null);
-    const result = await upload.mutateAsync({ file, sourceType });
-    setLastResult(result);
-  }
-
-  async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) await handleFile(file);
-    e.target.value = "";
-  }
-
-  async function onDrop(e: React.DragEvent) {
+  const file = useRef<HTMLInputElement>(null);
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) await handleFile(file);
+    if (lock.current) return;
+    setError("");
+    lock.current = true;
+    try {
+      const parsed =
+        type === "NUMBER"
+          ? Number(value)
+          : type === "SET"
+            ? value
+                .split(",")
+                .map((item) => item.trim())
+                .filter(Boolean)
+            : type === "BOOLEAN"
+              ? value === "true"
+              : value;
+      if (
+        structured &&
+        (!value.trim() || (type === "NUMBER" && !Number.isFinite(parsed)))
+      )
+        throw new Error("Enter a valid observed value.");
+      await submit.mutateAsync({
+        kind: "OBSERVATION",
+        statement,
+        subject: subject || null,
+        sourceRef: source || null,
+        facts: structured
+          ? [
+              {
+                subject,
+                predicate,
+                valueType: type,
+                value: parsed,
+                operator: "=",
+                unit: unit || null,
+                statement,
+                quote: statement,
+                extractor: "human",
+              },
+            ]
+          : [],
+      });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      lock.current = false;
+    }
   }
-
-  const documents = data?.documents ?? [];
-  const summary = lastResult?.conflictSummary;
-  const activeSource = SOURCE_TYPE_OPTIONS.find((o) => o.value === sourceType);
-
   return (
-    <div className="animate-fade-in space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-ink-50">Evidence</h1>
-        <p className="mt-1 max-w-2xl text-sm text-ink-400">
-          Upload a document with no reference to any existing decision. DecisionLoop extracts
-          facts, checks them against every stored assumption across your workspace, and flags a
-          decision as <span className="font-medium text-risk-400">at risk</span> if one no longer
-          holds.
-        </p>
-      </div>
-
-      <div className="card p-4">
-        <label className="label" htmlFor="source-type">
-          Source type
-        </label>
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            id="source-type"
-            className="input max-w-xs"
-            value={sourceType}
-            onChange={(e) => setSourceType(e.target.value as DocumentSourceType)}
-          >
-            {SOURCE_TYPE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-ink-500">{activeSource?.hint}</p>
-        </div>
-      </div>
-
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={onDrop}
-        className={`card flex flex-col items-center justify-center gap-3 border-2 border-dashed
-          px-6 py-14 text-center transition ${
-            dragOver ? "border-signal-500 bg-signal-500/5" : "border-ink-700"
-          }`}
-      >
-        <p className="text-sm text-ink-300">
-          Drag a file here, or{" "}
-          <button
-            className="text-signal-400 underline underline-offset-2 hover:text-signal-300"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            browse
-          </button>
-        </p>
-        <p className="text-xs text-ink-500">PDF, TXT, or Markdown. Max 25MB.</p>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown"
-          className="hidden"
-          onChange={onFileChange}
-        />
-        {upload.isPending && (
-          <p className="mt-2 flex items-center gap-2 text-xs text-signal-400">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-signal-400" />
-            Extracting text, embedding, checking every stored assumption…
-          </p>
-        )}
-        {upload.isError && (
-          <p className="mt-2 text-xs text-risk-400">{(upload.error as Error).message}</p>
-        )}
-      </div>
-
-      {lastResult && (
-        <div
-          className={`card p-5 ${
-            summary && summary.conflictsFound > 0 ? "border-risk-500/40 bg-risk-500/[0.05]" : ""
-          }`}
-        >
-          {lastResult.duplicateOf ? (
-            <>
-              <p className="mb-1 text-sm font-semibold text-ink-100">
-                Duplicate content — no re-analysis
-              </p>
-              <p className="text-sm text-ink-400">
-                This file&apos;s content matches a document already in memory, so DecisionLoop
-                skipped re-embedding it and did not raise the same conflicts twice.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="mb-2 text-sm font-semibold text-ink-100">
-                {summary && summary.conflictsFound > 0
-                  ? `${summary.conflictsFound} conflict${summary.conflictsFound === 1 ? "" : "s"} found`
-                  : "No conflicts found"}
-              </p>
-              <p className="text-sm text-ink-400">
-                Extracted {summary?.factsExtracted ?? 0} fact
-                {summary?.factsExtracted === 1 ? "" : "s"}, checked against{" "}
-                {summary?.candidatesConsidered ?? 0} candidate assumption
-                {summary?.candidatesConsidered === 1 ? "" : "s"} retrieved from CockroachDB.
-                {summary && summary.assumptionsChallenged > 0 && (
-                  <>
-                    {" "}
-                    <span className="text-amber-400">
-                      {summary.assumptionsChallenged} challenged
-                    </span>{" "}
-                    (source authority too low to invalidate outright).
-                  </>
-                )}
-              </p>
-              {summary?.injectionSuspected && (
-                <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/[0.06] p-3 text-xs text-amber-300">
-                  This document contains text that looks like instructions to an AI
-                  ({summary.injectionPatterns.join(", ")}). It was processed as data only — see
-                  the audit log.
-                </p>
-              )}
-              {summary && summary.decisionsMarkedAtRisk.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {summary.decisionsMarkedAtRisk.map((id) => (
-                    <Link
-                      key={id}
-                      href={`/decisions/${id}`}
-                      className="pill bg-risk-500/15 text-risk-400 ring-1 ring-inset ring-risk-500/30 hover:bg-risk-500/25"
+    <div className="animate-fade-in">
+      <PageHeader
+        eyebrow="What changed in the world?"
+        title="Evidence"
+        description="Record a measured observation or a source statement. Matching conditions are checked in the background; every result stays traceable."
+      />
+      <div className="grid items-start gap-7 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,1fr)]">
+        <div>
+          <form onSubmit={onSubmit} className="card form-section">
+            <h2>Submit an observation</h2>
+            <p className="form-hint">
+              Use the same subject, property, and unit as the condition you want
+              to check.
+            </p>
+            <label className="label">
+              What did you observe?
+              <textarea
+                rows={3}
+                maxLength={1000}
+                required
+                className="input mt-2"
+                placeholder="Redis p95 latency reached 30 ms in the load test."
+                value={statement}
+                onChange={(e) => setStatement(e.target.value)}
+              />
+            </label>
+            <label className="mt-4 flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={structured}
+                onChange={(e) => setStructured(e.target.checked)}
+              />{" "}
+              Include a structured fact for deterministic checking
+            </label>
+            {structured && (
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <label className="label">
+                  Subject
+                  <input
+                    required
+                    maxLength={200}
+                    className="input mt-2"
+                    placeholder="redis"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                  />
+                </label>
+                <label className="label">
+                  Property
+                  <input
+                    required
+                    maxLength={200}
+                    className="input mt-2"
+                    placeholder="p95_latency"
+                    value={predicate}
+                    onChange={(e) => setPredicate(e.target.value)}
+                  />
+                </label>
+                <label className="label">
+                  Value type
+                  <select
+                    className="input mt-2"
+                    value={type}
+                    onChange={(e) => {
+                      setType(e.target.value);
+                      setValue("");
+                    }}
+                  >
+                    <option value="NUMBER">Number</option>
+                    <option value="BOOLEAN">True / false</option>
+                    <option value="CATEGORY">Named value</option>
+                    <option value="DATE">Date</option>
+                    <option value="VERSION">Version</option>
+                    <option value="SET">Set of values</option>
+                  </select>
+                </label>
+                <label className="label">
+                  Observed value
+                  {type === "BOOLEAN" ? (
+                    <select
+                      required
+                      className="input mt-2"
+                      value={value}
+                      onChange={(e) => setValue(e.target.value)}
                     >
-                      View decision now at risk →
+                      <option value="">Choose a value</option>
+                      <option value="true">True</option>
+                      <option value="false">False</option>
+                    </select>
+                  ) : (
+                    <input
+                      required
+                      step="any"
+                      type={
+                        type === "NUMBER"
+                          ? "number"
+                          : type === "DATE"
+                            ? "date"
+                            : "text"
+                      }
+                      className="input mt-2"
+                      value={value}
+                      onChange={(e) => setValue(e.target.value)}
+                    />
+                  )}
+                </label>
+                {type === "NUMBER" && (
+                  <label className="label">
+                    Unit
+                    <input
+                      maxLength={60}
+                      className="input mt-2"
+                      placeholder="ms"
+                      value={unit}
+                      onChange={(e) => setUnit(e.target.value)}
+                    />
+                  </label>
+                )}
+              </div>
+            )}
+            {!structured && (
+              <p className="mt-3 rounded-lg bg-ink-950 p-3 text-xs leading-6 text-ink-400">
+                Free text extraction requires a reasoning provider. Without one,
+                the observation is stored, and semantic checks remain
+                unavailable.
+              </p>
+            )}
+            <label className="label mt-5">
+              Source reference (optional)
+              <input
+                maxLength={2000}
+                className="input mt-2"
+                placeholder="Report URL, file path, or test run identifier"
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+              />
+            </label>
+            {error && (
+              <p role="alert" className="mt-4 text-sm text-risk-600">
+                {error}
+              </p>
+            )}
+            {submit.data && (
+              <div
+                role="status"
+                className="mt-4 rounded-lg bg-emerald-50 p-4 text-xs leading-6 text-signal-600"
+              >
+                {submit.data.created
+                  ? "Observation received. Background evaluation is queued."
+                  : "This observation is already recorded."}{" "}
+                <Link className="underline" href="/triggers">
+                  Follow its evaluation →
+                </Link>
+              </div>
+            )}
+            <button className="btn-primary mt-5" disabled={submit.isPending}>
+              {submit.isPending ? "Submitting…" : "Submit evidence →"}
+            </button>
+          </form>
+          <section className="mt-7">
+            <h2 className="section-label">Recent incoming evidence</h2>
+            <QueryState
+              loading={events.isLoading}
+              error={events.error}
+              retry={events.refetch}
+            />
+            {events.data &&
+              (events.data.length ? (
+                <div className="card">
+                  {events.data.map((e) => (
+                    <Link href="/triggers" key={e.id} className="record-row">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm line-clamp-2">
+                          {e.text ?? e.type}
+                        </p>
+                        <p className="mt-2 text-[10px] text-ink-400">
+                          {e.source} · {timeAgo(e.receivedAt)}
+                        </p>
+                      </div>
+                      <span
+                        className={`text-[10px] ${e.status === "FAILED" ? "text-risk-600" : "text-signal-600"}`}
+                      >
+                        {e.status.toLowerCase()}
+                      </span>
                     </Link>
                   ))}
                 </div>
-              )}
-            </>
-          )}
+              ) : (
+                <EmptyState title="No observations received yet">
+                  Start with a fact that could support or challenge a recorded
+                  condition.
+                </EmptyState>
+              ))}
+          </section>
         </div>
-      )}
-
-      <div>
-        <p className="label !mb-3">Upload history</p>
-        {isLoading ? (
-          <div className="card px-6 py-10 text-center text-sm text-ink-400">Loading…</div>
-        ) : documents.length === 0 ? (
-          <div className="card px-6 py-10 text-center text-sm text-ink-400">
-            No documents uploaded yet.
-          </div>
-        ) : (
-          <div className="card divide-y divide-ink-800/60">
-            {documents.map((doc) => (
-              <Link
-                key={doc.id}
-                href={`/documents/${doc.id}`}
-                className="flex items-center justify-between gap-4 px-4 py-3 transition hover:bg-ink-800/40"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm text-ink-100">{doc.filename}</p>
-                  <p className="mt-0.5 text-xs text-ink-500">
-                    {new Date(doc.createdAt).toLocaleString()}
-                    {doc.processingError ? ` — ${doc.processingError}` : ""}
+        <aside className="space-y-5">
+          <section className="card form-section">
+            <p className="eyebrow">Document sources</p>
+            <h2>Attach a source file</h2>
+            <p className="form-hint">
+              PDF, Markdown or plain text. Document storage uses your configured
+              S3 bucket.
+            </p>
+            {ws.data?.capabilities.documentUpload ? (
+              <>
+                <input
+                  type="file"
+                  className="hidden"
+                  ref={file}
+                  accept=".pdf,.txt,.md"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (f)
+                      try {
+                        await upload.mutateAsync({
+                          file: f,
+                          sourceType: "INTERNAL_ANALYSIS",
+                        });
+                      } catch {}
+                    e.target.value = "";
+                  }}
+                />
+                <button
+                  className="btn-secondary w-full"
+                  disabled={upload.isPending}
+                  onClick={() => file.current?.click()}
+                >
+                  {upload.isPending ? "Uploading…" : "Choose a document"}
+                </button>
+                {upload.error && (
+                  <p role="alert" className="mt-3 text-xs text-risk-600">
+                    {upload.error.message}
                   </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <SourceTypeBadge
-                    sourceType={doc.sourceType}
-                    authorityScore={doc.authorityScore}
-                  />
-                  <DocumentStatusBadge status={doc.status} />
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+                )}
+                {upload.data && (
+                  <p role="status" className="mt-3 text-xs text-signal-600">
+                    Document received.
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="rounded-lg bg-ink-950 p-4 text-xs leading-6 text-ink-400">
+                Document upload requires configured storage and a reasoning
+                model. You can submit structured observations directly.
+              </div>
+            )}
+          </section>
+          <section>
+            <h2 className="section-label">Source library</h2>
+            <QueryState
+              loading={docs.isLoading}
+              error={docs.error}
+              retry={docs.refetch}
+            />
+            {docs.data?.documents.length ? (
+              <div className="card">
+                {docs.data.documents.map((d) => (
+                  <Link
+                    className="record-row"
+                    href={`/documents/${d.id}`}
+                    key={d.id}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-medium">
+                        {d.filename}
+                      </p>
+                      <p className="mt-1 text-[10px] text-ink-400">
+                        {d.status.toLowerCase()} ·{" "}
+                        {d.sourceType.toLowerCase().replaceAll("_", " ")}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              !docs.isLoading && (
+                <p className="text-xs leading-6 text-ink-400">
+                  Uploaded source documents will appear here.
+                </p>
+              )
+            )}
+          </section>
+          <section className="rounded-xl border border-ink-700 p-5">
+            <h3 className="text-sm font-semibold">
+              Keep observations precise.
+            </h3>
+            <p className="mt-3 text-xs leading-6 text-ink-400">
+              “Latency = 30 ms” can check “latency &lt; 20 ms.” A changed
+              subject or unit may require a different interpretation.
+            </p>
+          </section>
+        </aside>
       </div>
     </div>
   );

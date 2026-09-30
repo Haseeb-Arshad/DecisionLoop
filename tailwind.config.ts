@@ -9,22 +9,22 @@ const config: Config = {
     extend: {
       colors: {
         ink: {
-          950: "#0b0f14",
-          900: "#10161d",
-          800: "#161e27",
-          700: "#1f2a36",
-          600: "#2b3947",
-          500: "#3c4d5c",
-          400: "#5c7285",
-          300: "#8ea0af",
-          200: "#c2ccd3",
-          100: "#e6eaed",
-          50: "#f5f7f8",
+          950: "#f6f8f7",
+          900: "#ffffff",
+          800: "#edf1ef",
+          700: "#dce4e0",
+          600: "#c6d2cc",
+          500: "#7c8d85",
+          400: "#63786e",
+          300: "#52675c",
+          200: "#344a40",
+          100: "#21372d",
+          50: "#14271e",
         },
         signal: {
-          600: "#0e7c66",
-          500: "#12a37f",
-          400: "#2ec591",
+          600: "#166c58",
+          500: "#20836b",
+          400: "#176f5a",
         },
         risk: {
           600: "#b3401f",
@@ -34,7 +34,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
-          "Inter",
+          "Segoe UI Variable",
           "ui-sans-serif",
           "system-ui",
           "-apple-system",

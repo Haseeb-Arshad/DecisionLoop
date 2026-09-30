@@ -1,6 +1,7 @@
 import { assumptionSpecSchema, type AssumptionSpecInput } from "../assumptions/model";
 import {
   decisionDraftSchema,
+  decisionVerificationCheckSchema,
   outcomeSchema,
   proposeAssumptionSchema,
   searchRequestSchema,
@@ -80,6 +81,7 @@ export class DecisionService {
       externalRef: draft.externalRef ?? null,
       tags: draft.tags,
       metadata: draft.supersedes ? { proposedSupersedes: draft.supersedes } : null,
+      verificationChecks: draft.verificationChecks,
       sourceRefs: draft.sourceRefs,
       createdBy: actor.userId,
       createdInSession: sessionOf(actor),
@@ -469,12 +471,14 @@ export class DecisionService {
   /** Full history: decision, timeline, conflicts, evaluations, evidence, dependencies. */
   async history(actor: Actor, idOrRef: string) {
     const decision = await this.get(actor, idOrRef);
-    const [timeline, conflicts, evaluations, dependencies, dependents] = await Promise.all([
+    const [timeline, conflicts, evaluations, dependencies, dependents, verificationRuns, latestVerificationRuns] = await Promise.all([
       this.store.listMemoryEvents(actor.tenantId, decision.id),
       this.store.listConflicts(actor.tenantId, { decisionId: decision.id }),
       this.store.listEvaluations(actor.tenantId, { decisionId: decision.id, limit: 50 }),
       this.store.listDependencies(actor.tenantId, { decisionIds: [decision.id] }),
       this.store.listDependencies(actor.tenantId, { targetIds: [decision.id, ...decision.assumptions.map((a) => a.id)] }),
+      this.store.listVerificationRuns(actor.tenantId, { decisionIds: [decision.id], limit: 100 }),
+      this.store.listVerificationRuns(actor.tenantId, { decisionIds: [decision.id], limit: 20, latestPerCheck: true }),
     ]);
     const evidenceIds = Array.from(
       new Set(evaluations.map((e) => e.evidenceItemId).filter((id): id is string => Boolean(id))),
@@ -482,7 +486,7 @@ export class DecisionService {
     const evidence = (
       await Promise.all(evidenceIds.slice(0, 20).map((id) => this.store.getEvidence(actor.tenantId, id)))
     ).filter((e): e is NonNullable<typeof e> => Boolean(e));
-    return { decision, timeline, conflicts, evaluations, evidence, dependencies, dependents };
+    return { decision, timeline, conflicts, evaluations, evidence, dependencies, dependents, verificationRuns, latestVerificationRuns };
   }
 
   /** Why the decision exists, with citations — the `decisionloop_explain` answer. */
@@ -500,6 +504,12 @@ export class DecisionService {
         .map((o) => `Rejected ${o.name}${o.rejectionReason ? `: ${o.rejectionReason}` : "."}`),
       ...d.assumptions.map((a) => `Assumes (${a.validityStatus}): ${a.statement}`),
       ...(d.constraints ?? []).map((c) => `Constraint: ${c.statement}`),
+      ...(d.verificationChecks ?? []).map((check) => {
+        const latest = h.latestVerificationRuns.find((run) => run.checkName === check.name && run.repository === check.repository);
+        return latest
+          ? `Verification (${check.kind}) ${check.repository} / ${check.name}: ${latest.conclusion} on ${latest.commitSha.slice(0, 12)}${latest.detailsUrl ? ` — ${latest.detailsUrl}` : ""}.`
+          : `Verification (${check.kind}) ${check.repository} / ${check.name}: no completed run recorded.`;
+      }),
       `Decided by ${d.decidedByType === "USER" ? "a person" : (d.decidedByLabel ?? d.decidedByType)} (${d.origin}) on ${d.createdAt.slice(0, 10)}.`,
       ...d.sourceRefs.map((s) => `Source: ${s.type} ${s.ref}`),
       ...h.conflicts.map(
@@ -616,5 +626,51 @@ export class DecisionService {
     const a = await this.store.addAssumption(actor.tenantId, decisionId, assumptionSpecSchema.parse(spec));
     await this.indexOrQueue(actor.tenantId, decisionId);
     return a;
+  }
+
+  /** A person can attach or revise the CI workflows that provide evidence for a decision. */
+  async configureVerificationCheck(actor: Actor, decisionIdOrRef: string, input: unknown) {
+    requireHuman(actor, "configure decision verification");
+    const parsedCheck = decisionVerificationCheckSchema.parse(input);
+    const check = { ...parsedCheck, description: parsedCheck.description ?? null };
+    return this.store.transaction(async (tx) => {
+      const decision = UUID_RE.test(decisionIdOrRef)
+        ? await tx.getDecision(actor.tenantId, decisionIdOrRef)
+        : await tx.getDecisionByExternalRef(actor.tenantId, decisionIdOrRef);
+      if (!decision) throw new NotFoundError("Decision");
+      const checks = [...(decision.verificationChecks ?? [])];
+      const index = checks.findIndex((current) => current.name === check.name && current.repository === check.repository);
+      if (index < 0) {
+        if (checks.length >= 20) throw new InvalidRequestError("A decision may have at most 20 verification workflows.");
+        checks.push(check);
+      } else {
+        const current = checks[index]!;
+        if (current.kind === check.kind && current.description === check.description) return decision;
+        checks[index] = check;
+      }
+      await tx.upsertDecisionVerificationCheck(actor.tenantId, decision.id, check);
+      await tx.recordMemoryEvent({
+        tenantId: actor.tenantId,
+        projectId: decision.projectId,
+        entityType: "decision",
+        entityId: decision.id,
+        decisionId: decision.id,
+        eventType: "VERIFICATION_CHECK_CONFIGURED",
+        actorType: "USER",
+        actorUserId: actor.userId,
+        summary: `${check.kind} verification linked to ${check.repository} / ${check.name}.`,
+        metadata: { workflow: check.name, repository: check.repository },
+      });
+      await tx.recordAudit({
+        tenantId: actor.tenantId,
+        actorUserId: actor.userId,
+        actorLabel: actor.label,
+        action: "decision.verification_check_configured",
+        entityType: "decision",
+        entityId: decision.id,
+        metadata: { workflow: check.name, repository: check.repository, kind: check.kind },
+      });
+      return (await tx.getDecision(actor.tenantId, decision.id))!;
+    });
   }
 }

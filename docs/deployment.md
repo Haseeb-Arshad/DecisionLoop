@@ -1,207 +1,127 @@
-# DecisionLoop — Deployment
+# Deployment and local operation
 
-From an empty AWS account and a fresh CockroachDB cluster to a running deployment, plus how
-to run each tier of the test suite.
+DecisionLoop has two supported runtime layouts: a single local process with an embedded database,
+or a container deployment with an external database and a durable worker. The UI is a control plane;
+the CLI, SDK, MCP and browser use the same decision services.
 
-## 1. Prerequisites
+## Fresh local installation
 
-| Service | What you need | Notes |
-|---|---|---|
-| CockroachDB Cloud | A cluster (Basic/Serverless is fine) | v25.2+ gets the C-SPANN vector index; older versions still work (see §3) |
-| AWS account | IAM credentials or a role | Used for S3, Bedrock, and hosting |
-| Amazon Bedrock | **Model access enabled** for the reasoning and embedding models | This is opt-in per account *and* per region — an IAM key alone does not grant it |
-| S3 | A private bucket | Never make it public |
-| CockroachDB MCP *(optional)* | Service-account API key with `mcp:read`, `COCKROACHDB_MCP_CLUSTER_ID`, and the MCP database name if it differs from `DATABASE_URL` | The Memory Inspector degrades gracefully without it |
+Use Node 22 LTS and npm. From the DecisionLoop clone:
 
-## 2. Enable Bedrock model access
-
-The single most common first-run failure. In the AWS console:
-
-1. Go to **Bedrock → Model access** in the region you'll deploy to.
-2. Request access to **Anthropic Claude** (the model in `BEDROCK_REASONING_MODEL_ID`, default
-   `us.anthropic.claude-sonnet-4-5-20250929-v1:0`) and **Amazon Titan Text Embeddings V2**.
-3. Wait for status **Access granted**.
-
-Two notes:
-
-- Newer Claude models on Bedrock require a **cross-region inference profile ID** (the
-  `us.`-prefixed form) rather than the bare model ID for on-demand invocation. The default in
-  `.env.example` is already in that form. Using the bare ID returns *"on-demand throughput
-  isn't supported"*.
-- Model availability differs by region. If your chosen model isn't listed, either switch
-  region or set `BEDROCK_REASONING_MODEL_ID` to one that is available to you.
-
-Verify from the CLI before deploying:
-
-```bash
-aws bedrock list-foundation-models --region us-east-1 --query "modelSummaries[?contains(modelId,'claude')].modelId"
+```powershell
+npm ci
+npm run build
+npm link
 ```
 
-## 3. Create the CockroachDB cluster
+From the repository whose decisions you want to record:
 
-1. Create a cluster in CockroachDB Cloud.
-2. Create a SQL user and copy the **connection string** (Connect → Connection string). It
-   already includes `sslmode=verify-full` and, for Serverless, the `options=--cluster=...`
-   parameter — keep both.
-3. Set it as `DATABASE_URL`.
-
-The official CockroachDB connection also requires the cluster CA certificate.
-On Windows, use the Cloud Console's **Download CA Cert** command; the app
-automatically reads `%APPDATA%\\postgresql\\root.crt`. In a hosted environment,
-set `DATABASE_SSL_CA` to the PEM certificate as a secret (preserving line
-breaks as `\\n`) or mount the certificate and set `DATABASE_SSL_ROOT_CERT` to its
-path. Never commit `root.crt` or put it in `.env.example`.
-
-**Vector index:** `db/migrations/0002_vector_index.optional.sql` creates a C-SPANN vector
-index and requires CockroachDB v25.2+. The migration runner treats it as optional: if the
-cluster doesn't support `CREATE VECTOR INDEX`, it logs a warning, marks it applied, and the
-app falls back to a brute-force `ORDER BY embedding <=> $1` scan. Identical results, slower at
-scale. You'll see `skip*` in the migration output if this happened.
-
-## 4. Create the S3 bucket
-
-```bash
-aws s3api create-bucket --bucket decisionloop-documents --region us-east-1
-aws s3api put-public-access-block --bucket decisionloop-documents \
-  --public-access-block-configuration \
-  "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+```powershell
+decisionloop init
+decisionloop serve --web
 ```
 
-CORS is required because the browser PUTs directly to S3 via a presigned URL:
+Open http://127.0.0.1:4318/signup and create the first account. It joins the CLI workspace,
+so browser and agent records stay together. Subsequent local registration is closed.
+The server runs the web app, API, MCP and worker over one shared embedded connection.
+Stop the server before running local commands that open the database directly (init, user create).
+Normal client commands such as context, propose and doctor use HTTP and work while it runs.
 
-```bash
-aws s3api put-bucket-cors --bucket decisionloop-documents --cors-configuration '{
-  "CORSRules": [{
-    "AllowedHeaders": ["*"],
-    "AllowedMethods": ["PUT", "GET"],
-    "AllowedOrigins": ["https://your-app-domain"],
-    "ExposeHeaders": ["ETag"],
-    "MaxAgeSeconds": 3000
-  }]
-}'
+For UI development, use `decisionloop serve --web --dev`. This skips the production build requirement.
+Plain `npm run dev` requires an external DATABASE_URL and a separate worker; it is not the embedded entry point.
+The CLI and database scripts load .env.local and other Next-style environment files before starting.
+Existing process environment variables take precedence.
+
+## Container deployment
+
+Use Docker Compose v2. Copy .env.production.example to .env.production.
+Set POSTGRES_PASSWORD to a URL-safe strong random value and SESSION_SECRET to a random 32+ character secret.
+Set APP_BASE_URL to the HTTPS address you will expose.
+
+```powershell
+Copy-Item .env.production.example .env.production
+# Edit the two secrets and APP_BASE_URL before running this command.
+docker compose --env-file .env.production -f docker-compose.production.yml up --build -d
 ```
 
-Replace `AllowedOrigins` with your real domain — `*` would let any site upload using a
-presigned URL leaked from your app.
+The topology is explicit:
 
-## 5. IAM permissions
+- postgres: pgvector PostgreSQL with a persistent volume and no public database port.
+- migrate: one-shot resumable migrations, required before either application process starts.
+- web: the built Next.js app and API; its internal worker is disabled.
+- worker: the same image running the durable job loop, including GitHub handlers and assumption expiry.
 
-Minimum policy for the app's role or user:
+Port 3000 is bound to loopback. Put an HTTPS reverse proxy in front of it. Production session cookies
+are Secure. APP_BASE_URL describes the public address; it does not configure TLS.
+If your proxy replaces untrusted forwarding headers, set DECISIONLOOP_TRUST_PROXY=true.
+Otherwise leave it false; authentication limits use a conservative shared bucket.
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
-      "Resource": "arn:aws:s3:::decisionloop-documents/*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": ["bedrock:InvokeModel"],
-      "Resource": [
-        "arn:aws:bedrock:*::foundation-model/*",
-        "arn:aws:bedrock:*:*:inference-profile/*"
-      ]
-    }
-  ]
-}
+Registration is closed by default. For the initial account, temporarily set
+DECISIONLOOP_ALLOW_SIGNUP=true, restart the web service, create the owner through /signup,
+then set it back to false and recreate the web service. Leave it closed for a private demo.
+
+For a managed CockroachDB or PostgreSQL database, use the same image, provide its DATABASE_URL,
+run `npm run db:migrate` once, then run `npm start`. The start command runs a worker by default.
+To scale web and worker independently, set DECISIONLOOP_DISABLE_WORKER=true on the web processes
+and run `node bin/decisionloop.mjs worker` in a separate process. Each replica shares database-backed
+request budgets. Only one process may open a given embedded database directory.
+
+`npm start` requires an external DATABASE_URL and SESSION_SECRET; it refuses silent embedded fallback.
+Runtime secrets are passed at startup. They are excluded from the image build context.
+The image includes the built UI, packages, migrations and tsx runtime; no nonexistent public directory is copied.
+
+## Optional integrations
+
+The default is no reasoning model and offline lexical embeddings. Recording decisions, typed
+evidence checking, reviews and resource-based context retrieval work without a model.
+Lexical retrieval is based on vocabulary, not semantic model quality.
+
+For OpenAI-compatible models, explicitly set DECISIONLOOP_REASONING_PROVIDER=openai and
+OPENAI_REASONING_MODEL; set the embedding provider separately if needed. OPENAI_BASE_URL defaults
+to the official endpoint when blank. Embeddings must return 512 dimensions.
+For Bedrock, select bedrock, set AWS_REGION and grant the runtime role model access.
+The browser's AI endpoints follow the same provider selection as the core.
+
+S3 document upload is optional and extraction requires a reasoning model. Set S3_BUCKET_NAME and AWS_REGION, grant private bucket access,
+and configure bucket CORS for the HTTPS app origin and PUT uploads. Prefer workload roles to static keys.
+When absent, the browser offers structured observations instead of a broken upload flow.
+
+For the GitHub App, follow [the GitHub guide](v2/github-app.md). Workflow checks match exact
+repository and workflow names. A configured check is not proof that a live workflow ran.
+
+## Verification and operations
+
+```powershell
+npm run typecheck
+npm run lint
+npm test
+npm run eval
+npm run build
+npm audit
 ```
 
-The inference-profile ARN is required alongside the foundation-model ARN — invoking through a
-cross-region profile checks both.
+GitHub Actions repeats the checks and builds the Docker image. A successful CI run requires pushing
+the changes; adding the workflow file alone is not evidence of a hosted run.
 
-## 6. Deploy — AWS Amplify Hosting (primary path)
+GET /api/health checks database connectivity. The authenticated System health view shows worker
+heartbeat, queue state and configured providers. A health response cannot prove model access,
+document upload, GitHub delivery, or end-to-end decision processing.
 
-1. Amplify console → **New app → Host web app** → connect the GitHub repository, branch
-   `main`. Amplify detects Next.js and picks up [`amplify.yml`](../amplify.yml).
-2. Set every environment variable from [`.env.example`](../.env.example) under **App settings
-   → Environment variables**.
-3. Deploy.
+Back up the database volume or managed database, test recovery, monitor failed/dead jobs in the
+overview and incoming events, and inspect the oldest queued job and worker heartbeat.
+Do not switch embedding providers on existing data without reindexing memory with the new provider.
 
-`amplify.yml` runs `npm run lint`, then `npm run db:migrate`, before `npm run build` on every
-deploy. Migrations are tracked in `schema_migrations`; each statement is also recorded in
-`schema_migration_statements`, so a failed migration resumes from the first incomplete statement
-instead of replaying already-applied DDL.
+The old Amplify deployment configuration has been removed: it omitted the durable worker and
+was based on an older framework support assumption. Use the container topology above.
 
-**Prefer a service role over static keys.** Attach the IAM policy above to the Amplify service
-role and omit `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` entirely — both `lib/aws/s3.ts`
-and `lib/ai/bedrock.ts` fall through to the default AWS credential provider chain.
+## Evidence boundary
 
-### Fallback: any container host
+The repository is an alpha engineering project. Automated tests cover local processing and simulated
+external integrations. A real cloud environment still needs fresh validation of authentication,
+persistence after restart, evidence processing, model/S3 access, and GitHub App delivery.
+Docker image execution must be verified on a machine with Docker available.
 
-[`Dockerfile`](../Dockerfile) builds a self-contained Next.js standalone image for App Runner,
-ECS, or anything else:
-
-```bash
-docker build -t decisionloop .
-docker run -p 3000:3000 --env-file .env.local decisionloop
-```
-
-Migrations aren't run by the image — run `npm run db:migrate` as a separate step or an ECS
-task before rolling out.
-
-## 7. Seed the demo
-
-```bash
-npm run db:seed
-```
-
-This runs the Northstar Commerce scenario end-to-end **through the real pipeline** — it
-extracts a decision from the three vendor documents via Bedrock, commits it, then ingests the
-2027 pricing notice in a separate session and lets conflict detection find the contradiction
-on its own. Expect it to take a minute or two and to print the decision URL at the end.
-
-Credentials: `maya.chen@northstar.example` / `decisionloop-demo`.
-
-To start over: `npm run db:reset-demo -- --yes`, then seed again.
-
-## 8. Verify the deployment
-
-```bash
-curl https://your-app/api/health
-npm run verify:memory
-```
-
-`verify:memory` checks the things §71 says must be true before claiming the system works: the
-schema is the full model, `memory_chunks.embedding` is a native `VECTOR` column, a real
-embedding provider is in use (not the local fallback), vector retrieval returns scored rows,
-at-risk decisions are backed by real conflict rows and traces, and cross-session recall has
-actually occurred. It exits non-zero on failure. Run it only against a non-production validation
-cluster with real AWS credentials; a local build or HTTP 200 does not prove these conditions.
-
-## 9. Running the tests
-
-```bash
-npm run test:unit          # no infrastructure needed
-npm run test:integration   # requires DATABASE_URL; skips itself without one
-npm run test:e2e           # requires E2E_BASE_URL; skips itself without one
-npm test                   # unit + integration
-```
-
-**Integration** tests create and delete their own throwaway tenants. Point `DATABASE_URL` at a
-non-production cluster.
-
-**E2E** runs Playwright against a *deployed* URL — §61 is explicit that localhost success is
-not deployment success:
-
-```bash
-npx playwright install chromium
-E2E_BASE_URL=https://your-app npm run test:e2e
-```
-
-It drives the full two-session story in separate browser contexts, so a pass proves the memory
-survived a session boundary through CockroachDB rather than client state.
-
-## 10. Troubleshooting
-
-| Symptom | Cause | Fix |
-|---|---|---|
-| `on-demand throughput isn't supported` | Bare model ID used where an inference profile is required | Use the `us.`-prefixed profile ID |
-| `AccessDeniedException` from Bedrock | Model access not granted in that region | Bedrock → Model access; check the region matches `AWS_REGION` |
-| Seed finds no conflicts | Local hash-embedding fallback in use — it has no semantic meaning | Set `AWS_REGION` and enable Titan Embeddings access |
-| `CREATE VECTOR INDEX` warning in migrations | CockroachDB below v25.2 | Harmless; brute-force scan is used. Upgrade for ANN performance. |
-| S3 upload fails in the browser with a CORS error | Bucket CORS missing your origin | Add it to `AllowedOrigins` |
-| `SESSION_SECRET is not set` | Missing env var | Generate one: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
-| Migration fails mid-file | A schema change conflicted | The runner applies statements one at a time; fix the failing statement and re-run — applied migrations are skipped |
+The production entry point is checked after the build with `npm run verify:deployment`.
+It starts an isolated SQL server, launches the actual production process, tests authentication,
+model-free decisions and evidence, browser conflict resolution, context retrieval, and restart
+persistence, then confirms hosted registration is closed. It never opens the configured database.

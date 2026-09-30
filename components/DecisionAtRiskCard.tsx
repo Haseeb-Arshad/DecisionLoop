@@ -50,7 +50,7 @@ export function DecisionAtRiskCard({
       <div className="border-b border-risk-500/25 bg-risk-500/[0.07] px-6 py-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-risk-400">
+            <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-risk-600">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-risk-400 opacity-75" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-risk-400" />
@@ -106,7 +106,7 @@ export function DecisionAtRiskCard({
           <p className="label !mb-2">New evidence</p>
           <p className="text-sm text-ink-100">{conflict.factStatement}</p>
           {conflict.newValue && (
-            <p className="mt-1.5 font-mono text-xs text-risk-400">{conflict.newValue}</p>
+            <p className="mt-1.5 font-mono text-xs text-risk-600">{conflict.newValue}</p>
           )}
           {conflict.sourceQuote && (
             <blockquote className="mt-2 border-l-2 border-ink-600 pl-3 text-xs italic text-ink-400">
@@ -220,7 +220,7 @@ export function DecisionAtRiskCard({
               </button>
             </div>
             {(reopen.isError || resolve.isError) && (
-              <p className="mt-2 text-sm text-risk-400">
+              <p className="mt-2 text-sm text-risk-600">
                 {((reopen.error ?? resolve.error) as Error).message}
               </p>
             )}

@@ -8,7 +8,7 @@
  *
  * Usage: npx tsx scripts/reset-demo.ts --yes
  */
-import "dotenv/config";
+import "@decisionloop/runtime/env";
 import { sql } from "@/db/client";
 
 const DEMO_SLUGS = ["northstar-commerce", "decisionloop-demo"];

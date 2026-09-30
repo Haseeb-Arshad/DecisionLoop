@@ -1,0 +1,50 @@
+{
+  "ok": true,
+  "decisionId": "4caa443d-d91e-450c-a0a5-fe278752f347",
+  "before": "ACTIVE",
+  "after": "AT_RISK",
+  "approvalCount": 1,
+  "evidenceReplayCreated": false,
+  "rows": [
+    {
+      "path": "/decisions?mode=commit",
+      "status": 200
+    },
+    {
+      "path": "/decisions?mode=commit",
+      "status": 403
+    },
+    {
+      "path": "/context",
+      "status": 200
+    },
+    {
+      "path": "/evidence",
+      "status": 200
+    },
+    {
+      "path": "/events/abeb6a9f-9725-4eca-8676-70a85b15b84b",
+      "status": 200
+    },
+    {
+      "path": "/events/abeb6a9f-9725-4eca-8676-70a85b15b84b",
+      "status": 200
+    },
+    {
+      "path": "/context",
+      "status": 200
+    },
+    {
+      "path": "/approvals",
+      "status": 200
+    },
+    {
+      "path": "/evidence",
+      "status": 200
+    },
+    {
+      "path": "/decisions/4caa443d-d91e-450c-a0a5-fe278752f347",
+      "status": 200
+    }
+  ]
+}

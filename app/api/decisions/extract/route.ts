@@ -1,3 +1,4 @@
+import { limitCost } from "@/lib/api/limits";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { handleApiError } from "@/lib/api/handler";
@@ -22,6 +23,7 @@ const ExtractSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth();
+    await limitCost(auth.tenantId, "extract");
     const body = ExtractSchema.parse(await req.json());
 
     const documents = await Promise.all(

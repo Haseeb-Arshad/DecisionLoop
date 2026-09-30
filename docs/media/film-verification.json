@@ -1,0 +1,19 @@
+{
+  "composition": "DecisionLoop",
+  "video": "public/demo/decisionloop.mp4",
+  "width": 1920,
+  "height": 1080,
+  "fps": 24,
+  "frames": 864,
+  "videoDurationSeconds": 36,
+  "containerDurationSeconds": 36.011,
+  "videoCodec": "h264",
+  "audioCodec": "aac",
+  "fileSizeBytes": 3527220,
+  "visuallyCheckedFrames": [60, 200, 360, 500, 618, 660, 816],
+  "typingAudioWindowSeconds": [10.750708, 12.474437],
+  "clickAudioWindowSeconds": [25.750417, 25.833771],
+  "fullDecode": "passed",
+  "browserPlayback": "readyState 4, 1920x1080, currentTime advanced, no media error",
+  "data": "synthetic local workspace with animated explanatory panels"
+}

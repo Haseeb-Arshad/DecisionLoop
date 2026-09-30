@@ -28,13 +28,13 @@ type Env = Record<string, string | undefined>;
  * as UNAVAILABLE and change nothing.
  */
 export function selectReasoningProvider(env: Env = process.env): ReasoningProvider {
-  const choice = env.DECISIONLOOP_REASONING_PROVIDER ?? defaultChoice(env, "none");
+  const choice = env.DECISIONLOOP_REASONING_PROVIDER?.trim() || defaultChoice(env, "none");
   switch (choice) {
     case "bedrock":
       return new BedrockReasoningProviderV2(env.BEDROCK_REASONING_MODEL_ID);
     case "openai":
       return new OpenAICompatibleReasoningProvider({
-        baseUrl: env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
+        baseUrl: env.OPENAI_BASE_URL?.trim() || "https://api.openai.com/v1",
         apiKey: env.OPENAI_API_KEY,
         model: requireEnv(env, "OPENAI_REASONING_MODEL"),
       });
@@ -46,15 +46,15 @@ export function selectReasoningProvider(env: Env = process.env): ReasoningProvid
 }
 
 export function selectEmbeddingProvider(env: Env = process.env): EmbeddingProvider {
-  const choice = env.DECISIONLOOP_EMBEDDING_PROVIDER ?? defaultChoice(env, "lexical");
+  const choice = env.DECISIONLOOP_EMBEDDING_PROVIDER?.trim() || defaultChoice(env, "lexical");
   switch (choice) {
     case "bedrock":
       return new BedrockEmbeddingProvider(env.BEDROCK_EMBEDDING_MODEL_ID);
     case "openai":
       return new OpenAICompatibleEmbeddingProvider({
-        baseUrl: env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
+        baseUrl: env.OPENAI_BASE_URL?.trim() || "https://api.openai.com/v1",
         apiKey: env.OPENAI_API_KEY,
-        model: env.OPENAI_EMBEDDING_MODEL ?? "text-embedding-3-small",
+        model: env.OPENAI_EMBEDDING_MODEL?.trim() || "text-embedding-3-small",
       });
     case "lexical":
       return new LexicalEmbeddingProvider();
@@ -64,7 +64,7 @@ export function selectEmbeddingProvider(env: Env = process.env): EmbeddingProvid
 }
 
 function defaultChoice(env: Env, fallback: string): string {
-  if (env.AWS_REGION) return "bedrock";
+  if (env.AWS_REGION?.trim()) return "bedrock";
   return fallback;
 }
 

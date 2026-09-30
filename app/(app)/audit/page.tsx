@@ -1,4 +1,5 @@
 "use client";
+import { PageHeader, QueryState } from "@/components/Workspace";
 
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/DataTable";
@@ -19,7 +20,9 @@ const columns: ColumnDef<AuditEvent, unknown>[] = [
     accessorKey: "action",
     header: "Action",
     cell: ({ row }) => (
-      <span className="font-mono text-xs text-ink-100">{row.original.action}</span>
+      <span className="font-mono text-xs text-ink-100">
+        {row.original.action}
+      </span>
     ),
   },
   {
@@ -28,7 +31,8 @@ const columns: ColumnDef<AuditEvent, unknown>[] = [
     accessorFn: (e) => e.actorLabel ?? e.actorUserId ?? "system",
     cell: ({ row }) => (
       <span className="text-xs text-ink-300">
-        {row.original.actorLabel ?? (row.original.actorUserId ? "user" : "system")}
+        {row.original.actorLabel ??
+          (row.original.actorUserId ? "user" : "system")}
       </span>
     ),
   },
@@ -39,29 +43,41 @@ const columns: ColumnDef<AuditEvent, unknown>[] = [
     cell: ({ row }) => (
       <span className="text-xs text-ink-400">
         {row.original.entityType ?? "—"}
-        {row.original.entityId ? ` (${row.original.entityId.slice(0, 8)}…)` : ""}
+        {row.original.entityId
+          ? ` (${row.original.entityId.slice(0, 8)}…)`
+          : ""}
       </span>
     ),
   },
 ];
 
 export default function AuditPage() {
-  const { data, isLoading } = useAuditEvents();
+  const { data, isLoading, error, refetch } = useAuditEvents();
   const events = data?.events ?? [];
+  if (error) return <QueryState error={error} retry={refetch} />;
 
   return (
     <div className="animate-fade-in space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-ink-50">Audit log</h1>
-        <p className="mt-1 text-sm text-ink-400">
-          Every mutating action in this workspace — who (or what system process) did it, and to
-          what.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Workspace operations"
+        title="Audit log"
+        description={
+          <>
+            Every mutating action in this workspace — who (or what system
+            process) did it, and to what.
+          </>
+        }
+      />
       {isLoading ? (
-        <div className="card px-6 py-12 text-center text-sm text-ink-400">Loading…</div>
+        <div className="card px-6 py-12 text-center text-sm text-ink-400">
+          Loading…
+        </div>
       ) : (
-        <DataTable columns={columns} data={events} emptyLabel="No audit events recorded yet." />
+        <DataTable
+          columns={columns}
+          data={events}
+          emptyLabel="No audit events recorded yet."
+        />
       )}
     </div>
   );

@@ -129,6 +129,7 @@ export function githubServerExtensions(loop: DecisionLoop, env: Env = process.en
     };
     if (!p.tenantId || !p.deliveryId) throw new PermanentJobError("github_event job is missing tenant or delivery id.");
     const repo = p.payload.repository?.full_name ?? "";
+    const type = eventTypeOf(p.event, p.payload);
     const pr = p.payload.pull_request;
 
     // Enrich: which files changed, and how dependencies moved.
@@ -147,12 +148,58 @@ export function githubServerExtensions(loop: DecisionLoop, env: Env = process.en
 
     const inbound = normalizeGithubEvent({ event: p.event, deliveryId: p.deliveryId, payload: p.payload, changedFiles, dependencyChanges });
     const { event } = await loop.evidence.ingest(p.tenantId, inbound);
+    // Match only exact workflow names that a person recorded on a decision.
+    // Receipts are per commit and remain advisory; a result for one SHA does
+    // not claim that another commit was verified.
+    const workflowRun = p.payload.workflow_run;
+    const conclusion = workflowRun?.conclusion;
+    const supportedConclusions = new Set([
+      "success", "failure", "neutral", "cancelled", "timed_out", "action_required", "stale", "skipped", "startup_failure",
+    ]);
+    let verificationReceipts = 0;
+    if (
+      type === "workflow_run.completed" &&
+      repo &&
+      workflowRun?.name &&
+      workflowRun.id !== undefined &&
+      workflowRun.head_sha &&
+      conclusion &&
+      supportedConclusions.has(conclusion)
+    ) {
+      const decisions = await loop.store.findDecisionsForVerificationCheck(p.tenantId, repo, workflowRun.name);
+      const completedAt = workflowRun.updated_at && Number.isFinite(Date.parse(workflowRun.updated_at))
+        ? new Date(workflowRun.updated_at).toISOString()
+        : new Date().toISOString();
+      for (const decision of decisions) {
+        for (const check of decision.verificationChecks ?? []) {
+          if (check.repository !== repo.toLowerCase() || check.name !== workflowRun.name) continue;
+          const saved = await loop.store.recordVerificationRun({
+            tenantId: p.tenantId,
+            decisionId: decision.id,
+            eventId: event.id,
+            source: "github",
+            // GitHub keeps the same run ID when a run is re-executed; the
+            // attempt distinguishes those receipts while preserving delivery idempotency.
+            sourceRunId: `${workflowRun.id}:${workflowRun.run_attempt ?? 1}`,
+            checkName: workflowRun.name,
+            repository: repo,
+            commitSha: workflowRun.head_sha,
+            conclusion: conclusion as "success" | "failure" | "neutral" | "cancelled" | "timed_out" | "action_required" | "stale" | "skipped" | "startup_failure",
+            detailsUrl: workflowRun.html_url ?? null,
+            completedAt,
+          });
+          if (saved.created) verificationReceipts += 1;
+        }
+      }
+    }
+
     // Evaluate now, in this job: ingest also queued process_event, which
     // will find the event already processed and return its stored result.
+    // A valid CI receipt is saved first so a later evaluation failure cannot
+    // erase the observation; retries remain idempotent.
     const result = await loop.triggers.process(p.tenantId, event.id);
 
     let commented = false;
-    const type = eventTypeOf(p.event, p.payload);
     // A result that reused earlier evidence carries no findings of its own;
     // rendering it would overwrite the existing comment with an emptier one.
     if (pr && client && p.advisory && type !== "pull_request.merged" && !result.duplicateOfEvidenceId) {
@@ -168,7 +215,7 @@ export function githubServerExtensions(loop: DecisionLoop, env: Env = process.en
         commented = true;
       }
     }
-    return { eventId: event.id, findings: result.constraintFindings.length, conflicts: result.conflictIds.length, commented };
+    return { eventId: event.id, findings: result.constraintFindings.length, conflicts: result.conflictIds.length, verificationReceipts, commented };
   };
 
   return { routes: [route], handlers: { github_event: handler } as Record<string, JobHandler> };

@@ -12,6 +12,7 @@ import { childLogger } from "@/lib/logger";
 
 declare global {
   var __decisionloop_loop__: DecisionLoop | undefined;
+  var __decisionloop_local_workspace__: string | undefined;
 }
 
 const log = childLogger({ module: "decisionloop" });
