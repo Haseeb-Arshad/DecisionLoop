@@ -11,12 +11,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   return (
     <AuthFrame>
-      <div className="w-full max-w-[380px]">
-        <p className="eyebrow">Your decision workspace</p>
-        <h1 className="text-3xl font-semibold">Welcome back.</h1>
-        <p className="mb-8 mt-3 text-sm leading-6 text-ink-400">
-          Sign in to pick up the reasoning where you left it.
-        </p>
+      <div className="w-full">
+        <h1 className="text-xl">Sign in</h1>
+        <p className="mb-6 mt-1 text-sm text-ink-400">Use the account for this workspace.</p>
         <form
           className="space-y-5"
           onSubmit={async (e) => {
@@ -55,18 +52,15 @@ export default function LoginPage() {
             </p>
           )}
           <button className="btn-primary w-full" disabled={login.isPending}>
-            {login.isPending ? "Signing in…" : "Sign in →"}
+            {login.isPending ? "Signing in…" : "Sign in"}
           </button>
         </form>
-        <p className="mt-7 border-t border-ink-700 pt-6 text-xs text-ink-400">
-          Setting up a workspace?{" "}
-          <Link href="/signup" className="font-medium text-signal-600">
-            Create an account
+        <p className="mt-6 text-xs text-ink-400">
+          No account?{" "}
+          <Link href="/signup" className="text-signal-600 underline">
+            Create one
           </Link>
         </p>
-        <Link href="/" className="mt-7 inline-block text-xs text-ink-500">
-          ← About DecisionLoop
-        </Link>
       </div>
     </AuthFrame>
   );

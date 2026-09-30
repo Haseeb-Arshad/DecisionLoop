@@ -29,7 +29,7 @@ export default function EvidenceViewerPage() {
   const { document, chunks, downloadUrl } = data;
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="space-y-6">
       <div>
         <Link href="/documents" className="text-xs text-ink-400 hover:text-ink-200">
           ← All evidence
@@ -97,7 +97,7 @@ export default function EvidenceViewerPage() {
           <div className="space-y-2">
             {chunks.map((chunk) => (
               <div key={chunk.id} className="card p-4">
-                <div className="mb-2 flex items-center gap-3 text-[11px] text-ink-500">
+                <div className="mb-2 flex items-center gap-3 text-xs text-ink-500">
                   <span className="font-mono">#{chunk.chunkIndex ?? 0}</span>
                   {chunk.pageNumber && <span>page {chunk.pageNumber}</span>}
                   <span className="font-mono">{chunk.id.slice(0, 8)}…</span>

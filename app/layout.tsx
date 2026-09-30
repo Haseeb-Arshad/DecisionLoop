@@ -3,9 +3,9 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "DecisionLoop — decision memory for people and agents",
+  title: "DecisionLoop: decision memory for people and agents",
   description:
-    "Give coding agents the reasoning behind your code. Preserve decisions, retrieve the right context, and review evidence when assumptions change.",
+    "Record why something was decided, let agents ask what governs their work before they act, and review decisions when evidence contradicts their assumptions.",
 };
 
 export default function RootLayout({

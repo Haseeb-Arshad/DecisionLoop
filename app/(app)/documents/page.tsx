@@ -78,9 +78,8 @@ export default function EvidencePage() {
     }
   }
   return (
-    <div className="animate-fade-in">
+    <div>
       <PageHeader
-        eyebrow="What changed in the world?"
         title="Evidence"
         description="Record a measured observation or a source statement. Matching conditions are checked in the background; every result stays traceable."
       />
@@ -199,7 +198,7 @@ export default function EvidencePage() {
               </div>
             )}
             {!structured && (
-              <p className="mt-3 rounded-lg bg-ink-950 p-3 text-xs leading-6 text-ink-400">
+              <p className="mt-3 rounded bg-ink-800 p-3 text-xs leading-6 text-ink-400">
                 Free text extraction requires a reasoning provider. Without one,
                 the observation is stored, and semantic checks remain
                 unavailable.
@@ -223,7 +222,7 @@ export default function EvidencePage() {
             {submit.data && (
               <div
                 role="status"
-                className="mt-4 rounded-lg bg-emerald-50 p-4 text-xs leading-6 text-signal-600"
+                className="mt-4 rounded bg-ink-800 p-4 text-xs leading-6 text-signal-600"
               >
                 {submit.data.created
                   ? "Observation received. Background evaluation is queued."
@@ -253,12 +252,12 @@ export default function EvidencePage() {
                         <p className="text-sm line-clamp-2">
                           {e.text ?? e.type}
                         </p>
-                        <p className="mt-2 text-[10px] text-ink-400">
+                        <p className="mt-2 text-xs text-ink-400">
                           {e.source} · {timeAgo(e.receivedAt)}
                         </p>
                       </div>
                       <span
-                        className={`text-[10px] ${e.status === "FAILED" ? "text-risk-600" : "text-signal-600"}`}
+                        className={`text-xs ${e.status === "FAILED" ? "text-risk-600" : "text-signal-600"}`}
                       >
                         {e.status.toLowerCase()}
                       </span>
@@ -319,7 +318,7 @@ export default function EvidencePage() {
                 )}
               </>
             ) : (
-              <div className="rounded-lg bg-ink-950 p-4 text-xs leading-6 text-ink-400">
+              <div className="rounded bg-ink-800 p-4 text-xs leading-6 text-ink-400">
                 Document upload requires configured storage and a reasoning
                 model. You can submit structured observations directly.
               </div>
@@ -344,7 +343,7 @@ export default function EvidencePage() {
                       <p className="truncate text-xs font-medium">
                         {d.filename}
                       </p>
-                      <p className="mt-1 text-[10px] text-ink-400">
+                      <p className="mt-1 text-xs text-ink-400">
                         {d.status.toLowerCase()} ·{" "}
                         {d.sourceType.toLowerCase().replaceAll("_", " ")}
                       </p>
@@ -360,7 +359,7 @@ export default function EvidencePage() {
               )
             )}
           </section>
-          <section className="rounded-xl border border-ink-700 p-5">
+          <section className="rounded border border-ink-700 p-5">
             <h3 className="text-sm font-semibold">
               Keep observations precise.
             </h3>

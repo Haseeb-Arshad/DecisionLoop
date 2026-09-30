@@ -1,9 +1,8 @@
 "use client";
-import { PageHeader } from "@/components/Workspace";
-
 import Link from "next/link";
-import { useState } from "react";
-import { timeAgo, useV1 } from "@/lib/v1";
+import { Fragment, useState } from "react";
+import { PageHeader, QueryState, EmptyState, When } from "@/components/Workspace";
+import { useV1 } from "@/lib/v1";
 
 interface EventRow {
   id: string;
@@ -62,85 +61,82 @@ interface EventDetail {
 }
 
 const STATUS_STYLE: Record<EventRow["status"], string> = {
-  RECEIVED: "text-ink-300",
-  PROCESSING: "text-amber-700",
-  PROCESSED: "text-signal-400",
-  FAILED: "text-risk-600",
-  IGNORED: "text-ink-500",
+  RECEIVED: "status",
+  PROCESSING: "status status-warn",
+  PROCESSED: "status status-active",
+  FAILED: "status status-risk",
+  IGNORED: "status status-muted",
 };
 
 /**
- * Trigger history: every event that entered DecisionLoop and exactly what it
- * did — including the checks where nothing changed, so "why didn't this
- * fire?" has an answer.
+ * Every event that entered DecisionLoop and exactly what it did, including
+ * the checks where nothing changed, so "why didn't this fire?" has an answer.
  */
 export default function TriggersPage() {
-  const { data, isLoading, error } = useV1<EventRow[]>(
-    ["events"],
-    "/events?limit=100",
-    { refetchInterval: 5000 },
-  );
+  const { data, isLoading, error } = useV1<EventRow[]>(["events"], "/events?limit=100", { refetchInterval: 5000 });
   const [open, setOpen] = useState<string | null>(null);
   const events = data ?? [];
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div>
       <PageHeader
-        eyebrow="Workspace operations"
         title="Triggers"
-        description={
-          <>
-            Evidence from GitHub, agents, people and documents, as it arrives.
-            Each event is checked against recorded assumptions —
-            deterministically first, by a model only when needed — and every
-            check is recorded.
-          </>
-        }
+        description="Evidence from source systems, agents, people and documents as it arrives. Each event is compared with recorded assumptions by code first, and by a model only when code cannot decide."
       />
-      {error ? (
-        <div className="card px-6 py-6 text-sm text-risk-600">
-          Could not load events: {(error as Error).message}
-        </div>
-      ) : isLoading ? (
-        <div className="card px-6 py-12 text-center text-sm text-ink-400">
-          Loading…
-        </div>
-      ) : events.length === 0 ? (
-        <div className="card px-6 py-12 text-center text-sm text-ink-400">
-          No events yet.
-        </div>
-      ) : (
-        <div className="card divide-y divide-ink-800">
-          {events.map((e) => (
-            <div key={e.id}>
-              <button
-                className="flex w-full items-center gap-4 px-5 py-3 text-left hover:bg-ink-900/60"
-                onClick={() => setOpen(open === e.id ? null : e.id)}
-              >
-                <span
-                  className={`w-24 shrink-0 text-xs font-medium ${STATUS_STYLE[e.status]}`}
-                >
-                  {e.status}
-                </span>
-                <span className="w-56 shrink-0 truncate font-mono text-xs text-ink-300">
-                  {e.source} · {e.type}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-sm text-ink-400">
-                  {e.status === "FAILED"
-                    ? `attempt ${e.attempts}: ${e.lastError ?? "error"}`
-                    : e.result
-                      ? `${e.result.evaluations?.length ?? 0} check(s) · ${e.result.conflictIds?.length ?? 0} conflict(s) · ${e.result.decisionsAtRisk?.length ?? 0} at risk · ${e.result.constraintFindings?.length ?? 0} finding(s)`
-                      : "queued"}
-                </span>
-                <span className="shrink-0 text-xs text-ink-500">
-                  {timeAgo(e.receivedAt)}
-                </span>
-              </button>
-              {open === e.id && <EventDetailPanel id={e.id} />}
-            </div>
-          ))}
-        </div>
-      )}
+      <QueryState loading={isLoading} error={error as Error | null} />
+      {!isLoading &&
+        !error &&
+        (events.length === 0 ? (
+          <EmptyState title="No events yet">Submit evidence, upload a document, or connect a source system.</EmptyState>
+        ) : (
+          <div className="overflow-x-auto rounded border border-ink-700">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-ink-800 text-xs text-ink-400">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Status</th>
+                  <th className="px-3 py-2 font-medium">Source</th>
+                  <th className="px-3 py-2 font-medium">Type</th>
+                  <th className="px-3 py-2 font-medium">Result</th>
+                  <th className="px-3 py-2 font-medium">Received</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((e) => (
+                  <Fragment key={e.id}>
+                    <tr
+                      className="cursor-pointer border-t border-ink-700/60 hover:bg-ink-800"
+                      onClick={() => setOpen(open === e.id ? null : e.id)}
+                      aria-expanded={open === e.id}
+                    >
+                      <td className="px-3 py-2">
+                        <span className={STATUS_STYLE[e.status]}>{e.status.toLowerCase()}</span>
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs">{e.source}</td>
+                      <td className="px-3 py-2 font-mono text-xs text-ink-300">{e.type}</td>
+                      <td className="px-3 py-2 text-ink-300">
+                        {e.status === "FAILED"
+                          ? `attempt ${e.attempts}: ${e.lastError ?? "error"}`
+                          : e.result
+                            ? `${e.result.evaluations?.length ?? 0} checks, ${e.result.conflictIds?.length ?? 0} conflicts, ${e.result.decisionsAtRisk?.length ?? 0} at risk, ${e.result.constraintFindings?.length ?? 0} findings`
+                            : "queued"}
+                      </td>
+                      <td className="px-3 py-2 text-xs">
+                        <When iso={e.receivedAt} />
+                      </td>
+                    </tr>
+                    {open === e.id && (
+                      <tr className="bg-ink-800">
+                        <td colSpan={5}>
+                          <EventDetailPanel id={e.id} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
     </div>
   );
 }
@@ -160,7 +156,7 @@ function EventDetailPanel({ id }: { id: string }) {
     return <div className="px-5 pb-4 text-sm text-ink-500">Loading…</div>;
   const { event, evidence, evaluations, findings } = data;
   return (
-    <div className="space-y-4 bg-ink-950/50 px-5 pb-5 pt-2 text-sm">
+    <div className="space-y-4 px-4 pb-4 pt-2 text-sm">
       <p className="text-xs text-ink-500">
         {event.actor.label ?? event.actor.type} · authority{" "}
         {evidence[0]?.authority.toFixed(2) ?? "—"}
@@ -185,7 +181,7 @@ function EventDetailPanel({ id }: { id: string }) {
       </p>
       {evidence.flatMap((ev) => ev.facts).length > 0 && (
         <div>
-          <p className="label">Facts observed</p>
+          <p className="eyebrow">Facts observed</p>
           {evidence
             .flatMap((ev) => ev.facts)
             .map((f, i) => (
@@ -205,7 +201,7 @@ function EventDetailPanel({ id }: { id: string }) {
         </div>
       )}
       <div>
-        <p className="label">Assumption checks</p>
+        <p className="eyebrow">Assumption checks</p>
         {evaluations.length === 0 ? (
           <p className="text-ink-500">
             No recorded assumption was affected by this event.
@@ -214,7 +210,7 @@ function EventDetailPanel({ id }: { id: string }) {
           evaluations.map((ev) => (
             <div
               key={ev.id}
-              className="mb-2 rounded-md border border-ink-800 p-3"
+              className="mb-2 rounded border border-ink-700 bg-white p-3"
             >
               <p className="text-xs text-ink-400">
                 <span className="font-mono">{ev.method}</span> · {ev.relation} ·{" "}
@@ -234,9 +230,9 @@ function EventDetailPanel({ id }: { id: string }) {
               <p className="mt-1 text-ink-200">{ev.explanation}</p>
               <Link
                 href={`/decisions/${ev.decisionId}`}
-                className="mt-1 inline-block text-xs text-signal-400 hover:underline"
+                className="mt-1 inline-block text-xs text-signal-600 underline"
               >
-                Open decision →
+                Open decision
               </Link>
             </div>
           ))
@@ -244,7 +240,7 @@ function EventDetailPanel({ id }: { id: string }) {
       </div>
       {findings.length > 0 && (
         <div>
-          <p className="label">Constraint findings (advisory)</p>
+          <p className="eyebrow">Constraint findings (advisory)</p>
           {findings.map((f) => (
             <p key={f.id} className="text-amber-700">
               {f.explanation}{" "}

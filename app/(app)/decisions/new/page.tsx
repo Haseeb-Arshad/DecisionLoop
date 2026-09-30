@@ -131,13 +131,12 @@ export default function NewDecisionPage() {
     }
   }
   return (
-    <div className="animate-fade-in">
+    <div>
       <Link href="/decisions" className="text-xs text-ink-400">
         ← Decision register
       </Link>
       <div className="mt-5">
         <PageHeader
-          eyebrow="A human commitment"
           title="Record the choice. Preserve the why."
           description="Write the decision in your own words. Add conditions that new evidence can check. No AI model is required."
         />
@@ -206,7 +205,7 @@ export default function NewDecisionPage() {
               A rejected option can become useful when circumstances change.
             </p>
             {alternatives.map((a, i) => (
-              <div key={i} className="mb-4 rounded-lg bg-ink-950 p-4">
+              <div key={i} className="mb-4 rounded bg-ink-800 p-4">
                 <div className="mb-3 flex justify-between">
                   <p className="text-xs font-medium">Alternative {i + 1}</p>
                   <button
@@ -276,7 +275,7 @@ export default function NewDecisionPage() {
             {assumptions.map((a, i) => (
               <div
                 key={i}
-                className="mb-4 rounded-lg border border-ink-700 bg-ink-950 p-4"
+                className="mb-4 rounded border border-ink-700 bg-ink-800 p-4"
               >
                 <div className="mb-4 flex justify-between">
                   <p className="text-xs font-medium">Assumption {i + 1}</p>
@@ -492,7 +491,7 @@ export default function NewDecisionPage() {
           {error && (
             <p
               role="alert"
-              className="rounded-lg border border-risk-500/30 bg-orange-50 p-4 text-sm text-risk-600"
+              className="rounded border border-risk-500/30 bg-white p-4 text-sm text-risk-600"
             >
               {error}
             </p>
@@ -518,7 +517,7 @@ export default function NewDecisionPage() {
             Committing adds this choice to shared memory. Its history stays
             traceable when evidence changes.
           </p>
-          <div className="mt-5 rounded-lg bg-ink-950 p-3 text-xs text-signal-600">
+          <div className="mt-5 rounded bg-ink-800 p-3 text-xs text-signal-600">
             You make the decision. The system keeps the record.
           </div>
         </aside>

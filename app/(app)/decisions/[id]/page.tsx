@@ -2,36 +2,34 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { PageHeader, QueryState, EmptyState } from "@/components/Workspace";
-import {
-  DecisionStatusBadge,
-  AssumptionStatusBadge,
-} from "@/components/StatusBadge";
-import { useV1, useV1Mutation, v1, timeAgo } from "@/lib/v1";
+import { PageHeader, QueryState, EmptyState, When } from "@/components/Workspace";
+import { DecisionStatusBadge, AssumptionStatusBadge } from "@/components/StatusBadge";
+import { MemoryTimeline } from "@/components/MemoryTimeline";
+import { useV1, useV1Mutation, v1 } from "@/lib/v1";
 import type { DecisionService } from "@decisionloop/core/services/decisions";
 import { useWorkspace } from "@/lib/workspace";
+
 type History = Awaited<ReturnType<DecisionService["history"]>>;
+
+function verifiedBy(a: History["decision"]["assumptions"][number]): string {
+  if (a.verificationPolicy === "MANUAL") return "A person";
+  if (a.valueType === "TEXT") return "A model (if configured)";
+  return "Comparison by code";
+}
+
 export default function DecisionDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const q = useV1<History>(["decision", id], `/decisions/${id}`, {
-    refetchInterval: 10000,
-  });
+  const q = useV1<History>(["decision", id], `/decisions/${id}`, { refetchInterval: 10000 });
   const [note, setNote] = useState("");
   const workspace = useWorkspace();
   const [replacement, setReplacement] = useState("");
-  const supersede = useV1Mutation<string, unknown>((supersededBy) =>
-    v1(`/decisions/${id}/supersede`, {
-      body: { supersededBy, note: note || undefined },
-    }),
-  );
   const [localError, setLocalError] = useState("");
-  const resolve = useV1Mutation<
-    { conflictId: string; action: string },
-    unknown
-  >((x) =>
-    v1(`/conflicts/${x.conflictId}/${x.action}`, {
-      body: { note: note || undefined },
-    }),
+
+  const supersede = useV1Mutation<string, unknown>((supersededBy) =>
+    v1(`/decisions/${id}/supersede`, { body: { supersededBy, note: note || undefined } }),
+  );
+  const resolve = useV1Mutation<{ conflictId: string; action: string }, unknown>((x) =>
+    v1(`/conflicts/${x.conflictId}/${x.action}`, { body: { note: note || undefined } }),
   );
   const reopen = useV1Mutation<void, unknown>(async () => {
     const r = await fetch(`/api/decisions/${id}/actions`, {
@@ -43,6 +41,7 @@ export default function DecisionDetailPage() {
     if (!r.ok) throw new Error(b.error);
     return b;
   });
+
   async function act(conflictId: string, action: string) {
     setLocalError("");
     try {
@@ -51,370 +50,267 @@ export default function DecisionDetailPage() {
       setLocalError((e as Error).message);
     }
   }
-  if (q.isLoading || q.error || !q.data)
-    return (
-      <QueryState loading={q.isLoading} error={q.error} retry={q.refetch} />
-    );
-  const {
-    decision: d,
-    conflicts,
-    timeline,
-    evidence,
-    evaluations,
-    latestVerificationRuns,
-  } = q.data;
+
+  if (q.isLoading || q.error || !q.data) return <QueryState loading={q.isLoading} error={q.error} retry={q.refetch} />;
+
+  const { decision: d, conflicts, timeline, evidence, evaluations, latestVerificationRuns } = q.data;
   const chosen = d.options.find((o) => o.isChosen);
+  const rejected = d.options.filter((o) => !o.isChosen);
   const open = conflicts.filter((c) => !c.resolution);
+  const live = d.status === "ACTIVE" || d.status === "AT_RISK" || d.status === "REOPENED";
+
   return (
-    <div className="animate-fade-in">
-      <Link href="/decisions" className="text-xs text-ink-400">
-        ← Decision register
+    <div>
+      <Link href="/decisions" className="text-xs text-ink-400 underline">
+        All decisions
       </Link>
-      <div className="mt-5">
+      <div className="mt-3">
         <PageHeader
-          eyebrow={d.externalRef ?? "Decision record"}
-          title={d.title}
-          description={
-            d.problemStatement ??
-            "The choice, rationale, and conditions preserved in shared memory."
-          }
+          title={`${d.externalRef ? `${d.externalRef}  ` : ""}${d.title}`}
+          description={d.problemStatement}
           action={<DecisionStatusBadge status={d.status} />}
         />
       </div>
+
       {d.supersededByDecisionId && (
-        <Link
-          className="mb-6 block rounded-lg border border-ink-700 bg-ink-900 p-4 text-sm text-signal-600"
-          href={`/decisions/${d.supersededByDecisionId}`}
-        >
-          This record has been replaced. Read the current decision →
-        </Link>
+        <p className="mb-6 rounded border border-ink-700 bg-ink-800 px-4 py-3 text-sm">
+          This decision was replaced.{" "}
+          <Link className="text-signal-600 underline" href={`/decisions/${d.supersededByDecisionId}`}>
+            Read the current one
+          </Link>
+          .
+        </p>
       )}
-      <div className="grid items-start gap-7 xl:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="space-y-6">
-          <section className="card form-section">
-            <p className="eyebrow">The chosen direction</p>
-            <h2 className="!text-2xl">{chosen?.name ?? "No chosen option"}</h2>
-            {chosen?.description && (
-              <p className="mb-5 text-sm text-ink-400">{chosen.description}</p>
-            )}
-            <div className="mt-5 border-t border-ink-700 pt-5">
-              <h3 className="mb-3 text-sm font-semibold">Why this choice</h3>
-              <p className="whitespace-pre-wrap text-sm leading-7 text-ink-300">
-                {d.reasoning ?? "No rationale recorded."}
-              </p>
-            </div>
-            {d.options.filter((o) => !o.isChosen).length > 0 && (
-              <div className="mt-6">
-                <h3 className="mb-3 text-sm font-semibold">
-                  Alternatives considered
-                </h3>
-                <div className="space-y-3">
-                  {d.options
-                    .filter((o) => !o.isChosen)
-                    .map((o) => (
-                      <div key={o.id} className="rounded-lg bg-ink-950 p-4">
-                        <p className="text-sm font-medium">{o.name}</p>
-                        <p className="mt-2 text-xs leading-6 text-ink-400">
-                          {o.rejectionReason ??
-                            o.description ??
-                            "No rejection reason recorded."}
-                        </p>
-                      </div>
+      {d.riskExplanation && d.status === "AT_RISK" && (
+        <p role="note" className="mb-6 rounded border border-risk-500/40 px-4 py-3 text-sm text-risk-600">
+          {d.riskExplanation}
+        </p>
+      )}
+
+      <div className="space-y-8">
+        <section>
+          <h2 className="section-label">Decision</h2>
+          <dl className="kv">
+            <dt>Chosen</dt>
+            <dd className="font-medium">
+              {chosen?.name ?? "—"}
+              {chosen?.description && <span className="block font-normal text-ink-400">{chosen.description}</span>}
+            </dd>
+            <dt>Why</dt>
+            <dd className="whitespace-pre-wrap">{d.reasoning ?? "No rationale recorded."}</dd>
+            {rejected.map((o) => (
+              <div key={o.id} className="contents">
+                <dt>Rejected</dt>
+                <dd>
+                  <span className="font-medium">{o.name}</span>
+                  <span className="block text-ink-400">{o.rejectionReason ?? o.description ?? "No reason recorded."}</span>
+                </dd>
+              </div>
+            ))}
+            <dt>Domain</dt>
+            <dd>{d.domain ?? "—"}</dd>
+            <dt>Decided by</dt>
+            <dd>
+              {d.decidedByType === "USER" ? "A person" : (d.decidedByLabel ?? d.decidedByType.toLowerCase())} on {new Date(d.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
+            </dd>
+            {d.resources?.filter((r) => r.resourceType !== "repository").length ? (
+              <>
+                <dt>Governs</dt>
+                <dd className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-xs">
+                  {d.resources
+                    .filter((r) => r.resourceType !== "repository")
+                    .map((r) => (
+                      <span key={r.id}>{r.resourceType === "path" ? r.resourceKey : `${r.resourceType}:${r.resourceKey}`}</span>
                     ))}
-                </div>
-              </div>
-            )}
-          </section>
-          {d.constraints?.length ? (
-            <section className="card form-section">
-              <h2>Recorded guardrails</h2>
-              <div className="mt-4 space-y-4">
-                {d.constraints.map((constraint) => (
-                  <div key={constraint.id}>
-                    <p className="text-sm leading-6">{constraint.statement}</p>
-                    <p className="mt-1 text-[10px] text-ink-400">
-                      {constraint.severity.toLowerCase()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
-          <section>
-            <h2 className="section-label">
-              Conditions behind the choice{" "}
-              <span className="ml-2 text-xs font-normal text-ink-400">
-                {d.assumptions.length}
-              </span>
-            </h2>
-            {d.assumptions.length ? (
-              <div className="card divide-y divide-ink-800">
-                {d.assumptions.map((a) => (
-                  <div className="p-5" key={a.id}>
-                    <div className="flex items-start justify-between gap-4">
-                      <p className="text-sm font-medium leading-6">
-                        {a.statement}
-                      </p>
-                      <AssumptionStatusBadge status={a.validityStatus} />
-                    </div>
-                    {a.normalizedStatement && (
-                      <p className="mt-3 font-mono text-xs text-ink-400">
-                        {a.normalizedStatement}
-                      </p>
-                    )}
-                    <p className="mt-2 text-[11px] text-ink-400">
-                      {a.verificationPolicy === "MANUAL"
-                        ? "Human review required"
-                        : a.valueType === "TEXT"
-                          ? "Semantic review requires a model"
-                          : "Checked against matching structured observations"}
-                      {a.validUntil
-                        ? " · Valid until " +
-                          new Date(a.validUntil).toLocaleDateString()
-                        : ""}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState title="No conditions recorded">
-                This choice has a rationale, but no explicit assumptions to
-                monitor.
-              </EmptyState>
-            )}
-          </section>
-          {open.length > 0 && (
-            <section className="card form-section border-risk-500/30">
-              <p className="eyebrow !text-risk-600">Human review required</p>
-              <h2>
-                {open.length} open conflict{open.length === 1 ? "" : "s"}
-              </h2>
-              <p className="form-hint">
-                Read the evidence and decide whether the contradiction applies.
-              </p>
-              <label className="label">
-                Review note
-                <textarea
-                  className="input mt-2"
-                  rows={2}
-                  value={note}
-                  maxLength={500}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Explain your judgment for the next reviewer."
-                />
-              </label>
-              {open.map((c) => (
-                <div key={c.id} className="mt-5 border-t border-ink-700 pt-5">
-                  <p className="text-sm leading-7">{c.explanation}</p>
-                  {c.sourceQuote && (
-                    <blockquote className="mt-3 border-l-2 border-risk-500/40 pl-4 text-xs leading-6 text-ink-400">
-                      {c.sourceQuote}
-                    </blockquote>
-                  )}
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <button
-                      className="btn-primary"
-                      disabled={resolve.isPending}
-                      onClick={() => act(c.id, "accept")}
-                    >
-                      Accept evidence
-                    </button>
-                    <button
-                      className="btn-secondary"
-                      disabled={resolve.isPending}
-                      onClick={() => act(c.id, "dismiss")}
-                    >
-                      Dismiss conflict
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {localError && (
-                <p role="alert" className="mt-4 text-sm text-risk-600">
-                  {localError}
-                </p>
-              )}
-            </section>
+                </dd>
+              </>
+            ) : null}
+          </dl>
+        </section>
+
+        <section>
+          <h2 className="section-label">Assumptions ({d.assumptions.length})</h2>
+          {d.assumptions.length ? (
+            <div className="overflow-x-auto rounded border border-ink-700">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-ink-800 text-xs text-ink-400">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Assumption</th>
+                    <th className="px-3 py-2 font-medium">Rule</th>
+                    <th className="px-3 py-2 font-medium">Checked by</th>
+                    <th className="px-3 py-2 font-medium">Valid until</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {d.assumptions.map((a) => (
+                    <tr key={a.id} className="border-t border-ink-700/60 align-top">
+                      <td className="px-3 py-2">{a.statement}</td>
+                      <td className="px-3 py-2 font-mono text-xs text-ink-300">{a.normalizedStatement ?? "—"}</td>
+                      <td className="px-3 py-2 text-ink-300">{verifiedBy(a)}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-ink-300">{a.validUntil ? new Date(a.validUntil).toLocaleDateString() : "—"}</td>
+                      <td className="px-3 py-2">
+                        <AssumptionStatusBadge status={a.validityStatus} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState title="No assumptions recorded">This decision has a rationale but nothing explicit for evidence to be checked against.</EmptyState>
           )}
+        </section>
+
+        {d.constraints?.length ? (
           <section>
-            <h2 className="section-label">Evidence & evaluation</h2>
-            {evaluations.length ? (
-              <div className="card divide-y divide-ink-800">
-                {evaluations.map((e) => (
-                  <div key={e.id} className="p-5">
-                    <div className="flex justify-between gap-3">
-                      <p className="text-xs font-semibold">
-                        {e.relation} · {e.method}
-                      </p>
-                      <span className="text-[10px] text-ink-400">
-                        {timeAgo(e.createdAt)}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-ink-300">
-                      {e.explanation}
-                    </p>
-                    <p className="mt-2 text-xs text-ink-400">
-                      {evidence.find((x) => x.id === e.evidenceItemId)?.content}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState title="Evidence hasn't tested this choice yet">
-                Submit an observation that matches one of its conditions to
-                start the evaluation record.
-              </EmptyState>
-            )}
-            <Link
-              href="/documents"
-              className="mt-4 inline-block text-xs text-signal-600"
-            >
-              + Submit evidence →
-            </Link>
-          </section>
-          <section>
-            <h2 className="section-label">Decision history</h2>
-            <div className="card divide-y divide-ink-800">
-              {timeline.map((e) => (
-                <div key={e.id} className="flex gap-4 p-5">
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-signal-600" />
-                  <div>
-                    <p className="text-sm">
-                      {e.summary ??
-                        e.eventType.replaceAll("_", " ").toLowerCase()}
-                    </p>
-                    <p className="mt-2 text-[10px] text-ink-500">
-                      {new Date(e.createdAt).toLocaleString()} ·{" "}
-                      {e.actorType.toLowerCase()}
-                    </p>
-                  </div>
-                </div>
-              ))}
+            <h2 className="section-label">Constraints ({d.constraints.length})</h2>
+            <div className="overflow-x-auto rounded border border-ink-700">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-ink-800 text-xs text-ink-400">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Constraint</th>
+                    <th className="px-3 py-2 font-medium">Kind</th>
+                    <th className="px-3 py-2 font-medium">Severity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {d.constraints.map((c) => (
+                    <tr key={c.id} className="border-t border-ink-700/60 align-top">
+                      <td className="px-3 py-2">{c.statement}</td>
+                      <td className="px-3 py-2 font-mono text-xs text-ink-300">{c.rule.kind.replaceAll("_", " ")}</td>
+                      <td className="px-3 py-2 text-ink-300">{c.severity.toLowerCase()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </section>
-        </div>
-        <aside className="space-y-5">
+        ) : null}
+
+        {open.length > 0 && (
           <section className="card form-section">
-            <p className="eyebrow">Record details</p>
-            <dl className="space-y-4 text-xs">
-              <div>
-                <dt className="text-ink-400">Recorded</dt>
-                <dd className="mt-1">
-                  {new Date(d.createdAt).toLocaleDateString(undefined, {
-                    dateStyle: "medium",
-                  })}
-                </dd>
+            <h2 className="text-risk-600">
+              {open.length} open conflict{open.length === 1 ? "" : "s"}: needs a person
+            </h2>
+            <label className="label mt-3" htmlFor="review-note">
+              Review note (kept in the history)
+            </label>
+            <textarea id="review-note" className="input" rows={2} value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} />
+            {open.map((c) => (
+              <div key={c.id} className="mt-4 border-t border-ink-700 pt-4">
+                <p className="text-sm">{c.explanation}</p>
+                {c.sourceQuote && <blockquote className="mt-2 border-l-2 border-ink-600 pl-3 text-xs text-ink-300">“{c.sourceQuote}”</blockquote>}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button className="btn-primary" disabled={resolve.isPending} onClick={() => act(c.id, "accept")}>
+                    Accept evidence
+                  </button>
+                  <button className="btn-secondary" disabled={resolve.isPending} onClick={() => act(c.id, "dismiss")}>
+                    Dismiss conflict
+                  </button>
+                </div>
               </div>
-              <div>
-                <dt className="text-ink-400">Domain</dt>
-                <dd className="mt-1">{d.domain ?? "engineering"}</dd>
-              </div>
-              <div>
-                <dt className="text-ink-400">Memory index</dt>
-                <dd className="mt-1">{d.memoryIndexStatus.toLowerCase()}</dd>
-              </div>
-              <div>
-                <dt className="text-ink-400">Repository</dt>
-                <dd className="mt-1 break-all">
-                  {d.resources?.find((r) => r.resourceType === "repository")
-                    ?.resourceKey ?? "Not recorded"}
-                </dd>
-              </div>
-            </dl>
-            {d.resources?.length ? (
-              <div className="mt-6 border-t border-ink-700 pt-5">
-                <h3 className="mb-3 text-xs font-semibold">
-                  Governed resources
-                </h3>
-                {d.resources.map((r) => (
-                  <p
-                    key={r.id}
-                    className="mb-2 break-all rounded bg-ink-950 p-2 font-mono text-[10px]"
-                  >
-                    {r.resourceKey}
-                  </p>
-                ))}
-              </div>
-            ) : null}
+            ))}
+            {localError && (
+              <p role="alert" className="mt-3 text-sm text-risk-600">
+                {localError}
+              </p>
+            )}
           </section>
-          {d.verificationChecks?.length ? (
-            <section className="card form-section">
-              <p className="eyebrow">Executable evidence</p>
-              <h2>Verification checks</h2>
+        )}
+
+        <section>
+          <h2 className="section-label">Evidence checked ({evaluations.length})</h2>
+          {evaluations.length ? (
+            <div className="overflow-x-auto rounded border border-ink-700">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-ink-800 text-xs text-ink-400">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Result</th>
+                    <th className="px-3 py-2 font-medium">How</th>
+                    <th className="px-3 py-2 font-medium">Explanation</th>
+                    <th className="px-3 py-2 font-medium">When</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evaluations.map((e) => (
+                    <tr key={e.id} className="border-t border-ink-700/60 align-top">
+                      <td className="whitespace-nowrap px-3 py-2 font-medium">{e.relation.toLowerCase()}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-ink-300">{e.method.toLowerCase()}</td>
+                      <td className="px-3 py-2">
+                        {e.explanation}
+                        {evidence.find((x) => x.id === e.evidenceItemId)?.content && (
+                          <span className="mt-1 block text-xs text-ink-400">{evidence.find((x) => x.id === e.evidenceItemId)?.content?.slice(0, 240)}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-xs">
+                        <When iso={e.createdAt} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState title="No evidence has been checked against this decision yet">An observation that matches one of its assumptions starts the record.</EmptyState>
+          )}
+          <Link href="/documents" className="mt-2 inline-block text-xs text-signal-600 underline">
+            Submit evidence
+          </Link>
+        </section>
+
+        {d.verificationChecks?.length ? (
+          <section>
+            <h2 className="section-label">Verification workflows</h2>
+            <dl className="kv">
               {d.verificationChecks.map((c) => {
-                const run = latestVerificationRuns.find(
-                  (r) =>
-                    r.checkName === c.name && r.repository === c.repository,
-                );
+                const run = latestVerificationRuns.find((r) => r.checkName === c.name && r.repository === c.repository);
                 return (
-                  <div key={c.name + c.repository} className="mt-4">
-                    <p className="text-xs font-semibold">{c.name}</p>
-                    <p className="mt-1 text-[10px] text-ink-400">
-                      {c.repository}
-                    </p>
-                    <p className="mt-2 text-xs">
-                      {run
-                        ? `${run.conclusion} · ${run.commitSha.slice(0, 8)}`
-                        : "No completed run recorded"}
-                    </p>
-                    {run?.detailsUrl?.startsWith("https://github.com/") && (
-                      <a
-                        target="_blank"
-                        rel="noreferrer"
-                        href={run.detailsUrl}
-                        className="mt-1 inline-block text-xs text-signal-600"
-                      >
-                        View run ↗
-                      </a>
-                    )}
+                  <div key={c.name + c.repository} className="contents">
+                    <dt>{c.repository}</dt>
+                    <dd>
+                      {c.name}: {run ? `${run.conclusion} on ${run.commitSha.slice(0, 8)}` : "no completed run recorded"}
+                      {run?.detailsUrl?.startsWith("https://github.com/") && (
+                        <a target="_blank" rel="noreferrer" href={run.detailsUrl} className="ml-2 text-signal-600 underline">
+                          view run
+                        </a>
+                      )}
+                    </dd>
                   </div>
                 );
               })}
-            </section>
-          ) : null}
-          {(d.status === "ACTIVE" ||
-            d.status === "AT_RISK" ||
-            d.status === "REOPENED") && (
-            <section className="card form-section">
-              <h2>Reconsider the choice</h2>
-              <p className="form-hint">
-                Reopening preserves the record and signals that the choice is
-                back on the table.
-              </p>
-              <button
-                className="btn-secondary w-full"
-                disabled={reopen.isPending || d.status === "REOPENED"}
-                onClick={() => reopen.mutate()}
-              >
-                {d.status === "REOPENED"
-                  ? "Already reopened"
-                  : "Reopen decision"}
+            </dl>
+          </section>
+        ) : null}
+
+        <section>
+          <h2 className="section-label">History</h2>
+          <MemoryTimeline events={timeline} />
+        </section>
+
+        {live && (
+          <section className="card form-section">
+            <h2>Change this decision</h2>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button className="btn-secondary" disabled={reopen.isPending || d.status === "REOPENED"} onClick={() => reopen.mutate()}>
+                {d.status === "REOPENED" ? "Already reopened" : "Reopen"}
               </button>
-              {reopen.error && (
-                <p role="alert" className="mt-3 text-xs text-risk-600">
-                  {reopen.error.message}
-                </p>
-              )}
-              <Link
-                href={`/decisions/${id}/impact`}
-                className="mt-4 block text-xs text-signal-600"
-              >
-                View dependent decisions →
+              <Link href={`/decisions/${id}/impact`} className="text-sm text-signal-600 underline">
+                Decisions that depend on this one
               </Link>
-              <details className="mt-5 border-t border-ink-700 pt-4">
-                <summary className="cursor-pointer text-xs font-medium">
-                  Replace with a newer decision
-                </summary>
-                <p className="mt-3 text-xs leading-6 text-ink-400">
-                  The old record is preserved and points to its replacement.
-                </p>
-                <label className="label mt-3">
+            </div>
+            {reopen.error && (
+              <p role="alert" className="mt-2 text-sm text-risk-600">
+                {reopen.error.message}
+              </p>
+            )}
+            <details className="mt-4">
+              <summary className="cursor-pointer text-sm font-medium">Replace with a newer decision</summary>
+              <p className="mt-2 text-sm text-ink-400">The old record stays and points to its replacement.</p>
+              <div className="mt-2 flex flex-wrap items-end gap-2">
+                <label className="label !mb-0 flex-1" htmlFor="replacement">
                   Replacement
-                  <select
-                    className="input mt-2"
-                    value={replacement}
-                    onChange={(event) => setReplacement(event.target.value)}
-                  >
+                  <select id="replacement" className="input mt-1.5" value={replacement} onChange={(e) => setReplacement(e.target.value)}>
                     <option value="">Choose an active decision</option>
                     {workspace.data?.decisions
                       .filter((row) => row.id !== id && row.status === "ACTIVE")
@@ -425,22 +321,18 @@ export default function DecisionDetailPage() {
                       ))}
                   </select>
                 </label>
-                <button
-                  className="btn-secondary mt-3 w-full"
-                  disabled={!replacement || supersede.isPending}
-                  onClick={() => supersede.mutate(replacement)}
-                >
-                  {supersede.isPending ? "Replacing…" : "Supersede decision"}
+                <button className="btn-secondary" disabled={!replacement || supersede.isPending} onClick={() => supersede.mutate(replacement)}>
+                  {supersede.isPending ? "Replacing…" : "Supersede"}
                 </button>
-                {supersede.error && (
-                  <p role="alert" className="mt-3 text-xs text-risk-600">
-                    {supersede.error.message}
-                  </p>
-                )}
-              </details>
-            </section>
-          )}
-        </aside>
+              </div>
+              {supersede.error && (
+                <p role="alert" className="mt-2 text-sm text-risk-600">
+                  {supersede.error.message}
+                </p>
+              )}
+            </details>
+          </section>
+        )}
       </div>
     </div>
   );

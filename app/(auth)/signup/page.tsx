@@ -26,17 +26,12 @@ export default function SignupPage() {
   });
   return (
     <AuthFrame>
-      <div className="w-full max-w-[400px]">
-        <p className="eyebrow">Begin the shared record</p>
-        <h1 className="text-3xl font-semibold">
-          {setup.data?.local
-            ? "Set up your local account."
-            : "Create your workspace."}
-        </h1>
-        <p className="mb-7 mt-3 text-sm leading-6 text-ink-400">
+      <div className="w-full">
+        <h1 className="text-xl">{setup.data?.local ? "Set up your local account" : "Create a workspace"}</h1>
+        <p className="mb-6 mt-1 text-sm text-ink-400">
           {setup.data?.local
             ? "This account uses the same workspace as your CLI and agents."
-            : "Start a private workspace for your team's decisions."}
+            : "A private workspace for your team's decisions."}
         </p>
         {setup.isLoading ? (
           <p role="status" className="text-sm text-ink-400">
@@ -48,7 +43,7 @@ export default function SignupPage() {
           </p>
         ) : !setup.data?.available ? (
           <div className="card p-5">
-            <p className="text-sm leading-6 text-ink-400">
+            <p className="text-sm text-ink-400">
               Account registration is closed for this instance. Use an existing
               account or ask its administrator for access.
             </p>
@@ -129,13 +124,13 @@ export default function SignupPage() {
               </p>
             )}
             <button className="btn-primary w-full" disabled={signup.isPending}>
-              {signup.isPending ? "Creating account…" : "Create account →"}
+              {signup.isPending ? "Creating account…" : "Create account"}
             </button>
           </form>
         )}
         <p className="mt-6 text-xs text-ink-400">
           Already have an account?{" "}
-          <Link className="font-medium text-signal-600" href="/login">
+          <Link className="text-signal-600 underline" href="/login">
             Sign in
           </Link>
         </p>

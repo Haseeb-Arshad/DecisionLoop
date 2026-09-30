@@ -66,7 +66,7 @@ export default function ImpactPage({ params }: { params: Promise<{ id: string }>
   }
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="space-y-6">
       <div>
         <Link href={`/decisions/${id}`} className="text-xs text-ink-500 hover:underline">
           ← Decision

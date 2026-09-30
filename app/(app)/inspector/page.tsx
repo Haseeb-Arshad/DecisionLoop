@@ -15,7 +15,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 function scoreColor(score: number): string {
-  if (score >= 0.6) return "text-signal-400";
+  if (score >= 0.6) return "text-ink-100";
   if (score >= 0.35) return "text-amber-700";
   return "text-ink-500";
 }
@@ -31,17 +31,12 @@ function MemoryInspectorInner() {
   if (error) return <QueryState error={error} retry={refetch} />;
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="space-y-6">
       <PageHeader
-        eyebrow="Workspace operations"
         title="Memory Inspector"
         description={
           <>
-            Every AI action that touched memory, in order. Each trace shows the
-            exact SQL that ran, every candidate row with its real hybrid score,
-            which ones were used in reasoning, and the model&apos;s stated
-            conclusion — plus an independent cross-check via CockroachDB&apos;s
-            own Managed MCP Server. None of these numbers are illustrative.
+            Every action that read or wrote memory, in order: the query, each candidate with its score, which were used, and the conclusion.
             {decisionId && " Filtered to one decision."}
           </>
         }
@@ -70,17 +65,17 @@ function MemoryInspectorInner() {
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="pill bg-ink-700/60 text-ink-200">
+                  <span className="text-xs font-semibold text-ink-100">
                     {ACTION_LABELS[t.actionType] ?? t.actionType}
                   </span>
-                  <span className="text-[11px] text-ink-500">
+                  <span className="text-xs text-ink-500">
                     {new Date(t.createdAt).toLocaleTimeString()}
                   </span>
                 </div>
                 <p className="mt-1.5 line-clamp-2 text-xs text-ink-300">
                   {t.queryText ?? "(no query text)"}
                 </p>
-                <p className="mt-1 text-[11px] text-ink-500">
+                <p className="mt-1 text-xs text-ink-500">
                   {t.candidates.length} retrieved · {t.usedChunkIds.length} used
                   {t.retrievalLatencyMs !== null &&
                     ` · ${t.retrievalLatencyMs}ms`}
@@ -105,13 +100,13 @@ function TraceDetail({ trace }: { trace: MemoryTrace }) {
     <div className="space-y-4">
       <div className="card p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <span className="pill bg-ink-700/60 text-ink-200">
+          <span className="text-xs font-semibold text-ink-100">
             {ACTION_LABELS[trace.actionType] ?? trace.actionType}
           </span>
           <span className="text-xs text-ink-500">
             {new Date(trace.createdAt).toLocaleString()}
             {trace.agentRunId && (
-              <span className="ml-2 font-mono text-ink-600">
+              <span className="ml-2 font-mono text-ink-500">
                 run {trace.agentRunId.slice(0, 8)}…
               </span>
             )}
@@ -124,8 +119,8 @@ function TraceDetail({ trace }: { trace: MemoryTrace }) {
           </p>
         )}
         {trace.llmReasoning && (
-          <div className="rounded-lg border border-ink-700 bg-ink-900/50 p-3">
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-500">
+          <div className="rounded border border-ink-700 bg-ink-800 p-3">
+            <p className="mb-1 text-xs font-medium text-ink-500">
               Memory used in reasoning
             </p>
             <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink-200">
@@ -144,18 +139,16 @@ function TraceDetail({ trace }: { trace: MemoryTrace }) {
             <span>authority {trace.scoringWeights.authority}</span>
             <span>contextual {trace.scoringWeights.contextual}</span>
           </div>
-          <p className="mt-2 text-xs text-ink-600">
-            final = Σ(weight × component). Vector similarity alone would rank an
-            unimportant note from an unverified source above a load-bearing,
-            contract-backed assumption.
+          <p className="mt-2 text-xs text-ink-500">
+            final = sum of weight × component, so similarity alone cannot rank a weak note above an important, well-sourced assumption.
           </p>
         </div>
       )}
 
       {trace.renderedSql && (
         <div className="card p-5">
-          <p className="label !mb-2">Rendered SQL (CockroachDB)</p>
-          <pre className="overflow-x-auto rounded-lg bg-ink-950 p-3 font-mono text-xs leading-relaxed text-signal-400">
+          <p className="label !mb-2">Query that ran</p>
+          <pre className="overflow-x-auto rounded bg-ink-800 p-3 font-mono text-xs leading-relaxed text-ink-100">
             {trace.renderedSql}
           </pre>
         </div>
@@ -167,7 +160,7 @@ function TraceDetail({ trace }: { trace: MemoryTrace }) {
           <div className="overflow-x-auto">
             <table className="mt-3 w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-ink-700/60 text-xs uppercase tracking-wide text-ink-500">
+                <tr className="border-b border-ink-700/60 text-xs text-ink-500">
                   <th className="px-5 py-2 font-medium">Source</th>
                   <th className="px-2 py-2 font-medium">Similarity</th>
                   <th className="px-2 py-2 font-medium">Imp.</th>
@@ -188,7 +181,7 @@ function TraceDetail({ trace }: { trace: MemoryTrace }) {
                       {c.sourceType}
                       {c.crossSession && (
                         <span
-                          className="ml-1 text-signal-400"
+                          className="ml-1 text-ink-100"
                           title="Written by a different session than the one retrieving it"
                         >
                           ✦
@@ -217,11 +210,11 @@ function TraceDetail({ trace }: { trace: MemoryTrace }) {
                     </td>
                     <td className="px-5 py-2.5 align-top text-xs">
                       {trace.usedChunkIds.includes(c.chunkId) ? (
-                        <span className="text-signal-400">✓ used</span>
+                        <span className="text-ink-100">✓ used</span>
                       ) : c.selectedForContext ? (
                         <span className="text-ink-400">considered</span>
                       ) : (
-                        <span className="text-ink-600">—</span>
+                        <span className="text-ink-500">—</span>
                       )}
                     </td>
                   </tr>
@@ -229,10 +222,8 @@ function TraceDetail({ trace }: { trace: MemoryTrace }) {
               </tbody>
             </table>
           </div>
-          <p className="px-5 pb-4 pt-3 text-xs text-ink-600">
-            ✦ marks a memory written by a different session than the one that
-            retrieved it — the cross-session recall this product exists to
-            demonstrate.
+          <p className="px-5 pb-4 pt-3 text-xs text-ink-500">
+            ✦ marks a memory written by a different session than the one that retrieved it.
           </p>
         </div>
       )}
@@ -273,20 +264,20 @@ function McpVerificationPanel({
 }) {
   if (verification.error) {
     return (
-      <div className="rounded-lg border border-ink-700 bg-ink-900/50 p-3 text-sm text-ink-400">
+      <div className="rounded border border-ink-700 bg-ink-800 p-3 text-sm text-ink-400">
         {verification.error}
       </div>
     );
   }
   return (
     <div className="space-y-2">
-      <p className="text-sm text-signal-400">
+      <p className="text-sm text-ink-100">
         ✓ Verified via CockroachDB Managed MCP Server
       </p>
       {verification.toolCalls.map((call, i) => (
         <pre
           key={i}
-          className="overflow-x-auto rounded-lg bg-ink-950 p-3 font-mono text-xs leading-relaxed text-ink-300"
+          className="overflow-x-auto rounded bg-ink-800 p-3 font-mono text-xs leading-relaxed text-ink-300"
         >
           {JSON.stringify(call, null, 2)}
         </pre>

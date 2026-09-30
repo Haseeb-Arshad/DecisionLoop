@@ -81,6 +81,8 @@ async function loadRuntime(opts: { embedded: boolean; migrate?: boolean }) {
   const { createRuntime } = await import("@decisionloop/runtime");
   const cfg = loadConfig();
   if (cfg.project?.domain && !process.env.DECISIONLOOP_PRIMARY_DOMAIN) process.env.DECISIONLOOP_PRIMARY_DOMAIN = cfg.project.domain;
+  // The web control plane runs with the repository as its working directory; give every consumer an absolute path.
+  process.env.DECISIONLOOP_PROFILES_DIR ??= path.join(projectDir(), "profiles");
   return createRuntime({
     allowEmbedded: opts.embedded,
     dataDir: cfg.project?.dataDir ? path.resolve(cfg.project.dataDir) : path.join(projectDir(), "pgdata"),

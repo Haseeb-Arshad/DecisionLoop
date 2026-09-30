@@ -1,99 +1,69 @@
 import type { MemoryEvent, MemoryEventType } from "@/lib/types";
 
 /**
- * The decision timeline from §24. Every entry is a real `memory_events`
- * row — nothing here is reconstructed from timestamps on other tables, so
- * the timeline is a genuine audit of what happened to this decision's
- * memory rather than a plausible narrative.
+ * A decision's history. Every row is a real `memory_events` record, so this
+ * is an audit of what happened, not a story assembled from timestamps.
+ * `flag` marks the events a person would want to notice when scanning.
  */
-
-const EVENT_META: Record<
-  MemoryEventType,
-  { label: string; dot: string; emphasis?: boolean }
-> = {
-  MEMORY_CREATED: { label: "Memory created", dot: "bg-ink-500" },
-  MEMORY_RETRIEVED: { label: "Memory retrieved by agent", dot: "bg-ink-500" },
-  MEMORY_REFERENCED: { label: "Memory used in reasoning", dot: "bg-signal-500" },
-  DECISION_COMMITTED: { label: "Decision committed", dot: "bg-signal-500", emphasis: true },
-  EVIDENCE_ADDED: { label: "New evidence added", dot: "bg-ink-400" },
-  ASSUMPTION_CHALLENGED: { label: "Assumption challenged", dot: "bg-amber-500", emphasis: true },
-  ASSUMPTION_INVALIDATED: { label: "Assumption invalidated", dot: "bg-risk-500", emphasis: true },
-  DECISION_AT_RISK: { label: "Decision moved to AT RISK", dot: "bg-risk-500", emphasis: true },
-  DECISION_REOPENED: { label: "Decision reopened", dot: "bg-amber-400", emphasis: true },
-  DECISION_SUPERSEDED: { label: "Decision superseded", dot: "bg-ink-400", emphasis: true },
-  CONFLICT_DISMISSED: { label: "Conflict dismissed", dot: "bg-ink-400" },
-  CONFLICT_ACCEPTED: { label: "New evidence accepted", dot: "bg-risk-400" },
-  DECISION_PROPOSED: { label: "Decision proposed", dot: "bg-ink-400" },
-  DECISION_REJECTED: { label: "Proposal rejected", dot: "bg-ink-400" },
-  ASSUMPTION_SUPPORTED: { label: "Evidence supports assumption", dot: "bg-signal-500" },
-  ASSUMPTION_PROPOSED: { label: "Assumption proposed", dot: "bg-ink-400" },
-  CONSTRAINT_VIOLATION_SUSPECTED: { label: "Possible constraint violation", dot: "bg-amber-500", emphasis: true },
-  APPROVAL_REQUESTED: { label: "Human approval requested", dot: "bg-amber-400" },
-  APPROVAL_RESOLVED: { label: "Approval resolved", dot: "bg-ink-500" },
-  CONTEXT_PROVIDED: { label: "Provided to an agent as context", dot: "bg-signal-500" },
-  OUTCOME_RECORDED: { label: "Outcome recorded", dot: "bg-ink-500" },
-  VERIFICATION_CHECK_CONFIGURED: { label: "Verification workflow linked", dot: "bg-signal-500" },
+const EVENT_LABEL: Record<MemoryEventType, { label: string; flag?: "risk" | "warn" }> = {
+  MEMORY_CREATED: { label: "Memory created" },
+  MEMORY_RETRIEVED: { label: "Retrieved by an agent" },
+  MEMORY_REFERENCED: { label: "Used in reasoning" },
+  DECISION_COMMITTED: { label: "Decision committed" },
+  EVIDENCE_ADDED: { label: "Evidence added" },
+  ASSUMPTION_CHALLENGED: { label: "Assumption challenged", flag: "warn" },
+  ASSUMPTION_INVALIDATED: { label: "Assumption invalidated", flag: "risk" },
+  DECISION_AT_RISK: { label: "Decision marked at risk", flag: "risk" },
+  DECISION_REOPENED: { label: "Decision reopened", flag: "warn" },
+  DECISION_SUPERSEDED: { label: "Decision superseded" },
+  CONFLICT_DISMISSED: { label: "Conflict dismissed" },
+  CONFLICT_ACCEPTED: { label: "Evidence accepted" },
+  DECISION_PROPOSED: { label: "Decision proposed" },
+  DECISION_REJECTED: { label: "Proposal rejected" },
+  ASSUMPTION_SUPPORTED: { label: "Evidence supports assumption" },
+  ASSUMPTION_PROPOSED: { label: "Assumption proposed" },
+  CONSTRAINT_VIOLATION_SUSPECTED: { label: "Possible constraint violation", flag: "warn" },
+  APPROVAL_REQUESTED: { label: "Review requested", flag: "warn" },
+  APPROVAL_RESOLVED: { label: "Review resolved" },
+  CONTEXT_PROVIDED: { label: "Given to an agent as context" },
+  OUTCOME_RECORDED: { label: "Outcome recorded" },
+  VERIFICATION_CHECK_CONFIGURED: { label: "Verification workflow linked" },
 };
 
-function formatWhen(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const when = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+const by = (t: MemoryEvent["actorType"]) => (t === "USER" ? "person" : t === "AGENT" ? "DecisionLoop" : "system");
 
 export function MemoryTimeline({ events }: { events: MemoryEvent[] }) {
-  if (events.length === 0) {
-    return (
-      <p className="text-sm text-ink-500">
-        No memory events recorded for this decision yet.
-      </p>
-    );
-  }
+  if (events.length === 0) return <p className="text-sm text-ink-500">Nothing has happened to this decision yet.</p>;
 
   return (
-    <ol className="relative space-y-0">
-      <div
-        aria-hidden
-        className="absolute bottom-2 left-[5px] top-2 w-px bg-ink-700/70"
-      />
-      {events.map((event) => {
-        const meta = EVENT_META[event.eventType] ?? {
-          label: event.eventType,
-          dot: "bg-ink-500",
-        };
-        return (
-          <li key={event.id} className="relative flex gap-4 py-2.5 pl-0">
-            <span
-              className={`relative z-10 mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-ink-900 ${meta.dot}`}
-            />
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-baseline gap-x-2">
-                <span
-                  className={`text-sm ${
-                    meta.emphasis ? "font-medium text-ink-100" : "text-ink-300"
-                  }`}
-                >
+    <table className="w-full text-left text-sm">
+      <thead className="sr-only">
+        <tr>
+          <th>When</th>
+          <th>Event</th>
+          <th>By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {events.map((event) => {
+          const meta = EVENT_LABEL[event.eventType] ?? { label: event.eventType };
+          return (
+            <tr key={event.id} className="border-b border-ink-700/60 align-top last:border-0">
+              <td className="w-36 whitespace-nowrap py-2 pr-3 text-xs text-ink-400">{when(event.createdAt)}</td>
+              <td className="py-2 pr-3">
+                <span className={meta.flag === "risk" ? "font-medium text-risk-600" : meta.flag === "warn" ? "font-medium text-amber-700" : "font-medium"}>
                   {meta.label}
                 </span>
-                <span className="text-[11px] text-ink-500">{formatWhen(event.createdAt)}</span>
-                <span className="text-[11px] text-ink-600">
-                  {event.actorType === "AGENT"
-                    ? "· by DecisionLoop"
-                    : event.actorType === "USER"
-                      ? "· by a person"
-                      : "· system"}
-                </span>
-              </div>
-              {event.summary && (
-                <p className="mt-0.5 text-sm leading-relaxed text-ink-400">{event.summary}</p>
-              )}
-            </div>
-          </li>
-        );
-      })}
-    </ol>
+                {event.summary && <p className="mt-0.5 text-ink-400">{event.summary}</p>}
+              </td>
+              <td className="w-28 whitespace-nowrap py-2 text-xs text-ink-400">{by(event.actorType)}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }

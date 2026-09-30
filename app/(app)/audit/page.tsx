@@ -57,9 +57,8 @@ export default function AuditPage() {
   if (error) return <QueryState error={error} retry={refetch} />;
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="space-y-6">
       <PageHeader
-        eyebrow="Workspace operations"
         title="Audit log"
         description={
           <>

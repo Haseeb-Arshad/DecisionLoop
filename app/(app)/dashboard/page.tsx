@@ -1,238 +1,155 @@
 "use client";
 import Link from "next/link";
-import {
-  PageHeader,
-  EmptyState,
-  QueryState,
-  Icon,
-} from "@/components/Workspace";
+import { PageHeader, EmptyState, QueryState, When } from "@/components/Workspace";
 import { DecisionStatusBadge } from "@/components/StatusBadge";
+import { DecisionHealth } from "@/components/DecisionHealth";
+import { StatCard } from "@/components/StatCard";
 import { useWorkspace } from "@/lib/workspace";
 import { useObservability } from "@/lib/queries";
-import { timeAgo } from "@/lib/v1";
+
 export default function DashboardPage() {
   const workspace = useWorkspace();
   const activity = useObservability();
   const decisions = workspace.data?.decisions ?? [];
   const caps = workspace.data?.capabilities;
   const active = decisions.filter((d) => d.status === "ACTIVE");
-  const risk = decisions.filter(
-    (d) => d.status === "AT_RISK" || d.status === "REOPENED",
-  );
-  const assumptions = decisions.reduce((n, d) => n + d.assumptions.length, 0);
-  const workerHealthy = caps?.workerHealthy;
-  const metrics = [
-    [
-      "Recorded decisions",
-      decisions.length,
-      "Your team's choices, in one place",
-    ],
-    ["Active decisions", active.length, "Current choices and their rationale"],
-    ["Need attention", risk.length, "Challenged or reopened decisions"],
-    ["Assumptions", assumptions, "Conditions behind your choices"],
-  ] as const;
+  const attention = decisions.filter((d) => d.status === "AT_RISK" || d.status === "REOPENED");
+  // Drafts are proposals, not yet part of what the workspace relies on.
+  const assumptions = decisions.filter((d) => d.status !== "DRAFT").reduce((n, d) => n + d.assumptions.length, 0);
+
   return (
-    <div className="animate-fade-in">
+    <div>
       <PageHeader
-        eyebrow="The decision workspace"
-        title="Keep the why. Watch what changes."
-        description="Your decisions, the assumptions behind them, and the evidence that calls them into question."
+        title="Overview"
+        description="Recorded decisions, the assumptions they rely on, and what has changed."
         action={
           <Link className="btn-primary" href="/decisions/new">
-            + Record a decision
+            New decision
           </Link>
         }
       />
-      <QueryState
-        loading={workspace.isLoading}
-        error={workspace.error}
-        retry={workspace.refetch}
-      />
+      <QueryState loading={workspace.isLoading} error={workspace.error} retry={workspace.refetch} />
       {workspace.data && (
-        <>
+        <div className="space-y-8">
           <div className="metric-strip">
-            {metrics.map(([label, value, hint]) => (
-              <Link
-                href={label === "Need attention" ? "/at-risk" : "/decisions"}
-                key={label}
-                className="metric-cell"
-              >
-                <p>{label}</p>
-                <strong
-                  className={
-                    label === "Need attention" && value > 0
-                      ? "text-risk-600"
-                      : ""
-                  }
-                >
-                  {value}
-                </strong>
-                <small>{hint}</small>
+            <StatCard label="Decisions" value={decisions.length} href="/decisions" />
+            <StatCard label="Active" value={active.length} href="/decisions" />
+            <StatCard label="Need attention" value={attention.length} tone={attention.length ? "risk" : "neutral"} href="/at-risk" />
+            <StatCard label="Assumptions tracked" value={assumptions} />
+          </div>
+
+          <section>
+            <div className="mb-2 flex items-baseline justify-between">
+              <h2 className="section-label !mb-0">Needs attention ({attention.length})</h2>
+              <Link className="text-xs text-signal-600 underline" href="/at-risk">
+                Open queue
               </Link>
-            ))}
-          </div>
-          <div className="mt-8 grid gap-7 xl:grid-cols-[minmax(0,1.65fr)_minmax(260px,1fr)]">
-            <div className="space-y-8">
-              <section>
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="section-label !mb-0">
-                    Attention queue{" "}
-                    <span className="ml-2 rounded-full bg-ink-800 px-2 py-1 text-[10px] text-ink-400">
-                      {risk.length}
-                    </span>
-                  </h2>
-                  <Link className="text-xs text-signal-600" href="/at-risk">
-                    Open queue ↗
-                  </Link>
-                </div>
-                {risk.length ? (
-                  <div className="card">
-                    {risk.slice(0, 4).map((d) => (
-                      <Link
-                        className="record-row"
-                        key={d.id}
-                        href={`/decisions/${d.id}`}
-                      >
-                        <span className="rounded-lg bg-orange-50 p-2 text-risk-600">
-                          <Icon name="risk" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="record-title">{d.title}</p>
-                          <p className="record-subtitle line-clamp-2">
-                            {d.riskExplanation ??
-                              "This choice needs a human review."}
-                          </p>
-                        </div>
-                        <DecisionStatusBadge status={d.status} />
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState title="No decisions are waiting for review">
-                    No recorded conflicts currently need attention. New evidence
-                    can change this.
-                  </EmptyState>
-                )}
-              </section>
-              <section>
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="section-label !mb-0">Recent decisions</h2>
-                  <Link className="text-xs text-signal-600" href="/decisions">
-                    View register ↗
-                  </Link>
-                </div>
-                {decisions.length ? (
-                  <div className="card">
-                    {decisions.slice(0, 5).map((d) => (
-                      <Link
-                        className="record-row"
-                        key={d.id}
-                        href={`/decisions/${d.id}`}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="record-reference mb-1">
-                            {d.externalRef ?? d.id.slice(0, 8)}
-                          </p>
-                          <p className="record-title">{d.title}</p>
-                          <p className="record-subtitle">
-                            {d.options.find((o) => o.isChosen)?.name}
-                          </p>
-                        </div>
-                        <DecisionStatusBadge status={d.status} />
-                        <span className="hidden text-[10px] text-ink-500 sm:block">
-                          {timeAgo(d.updatedAt)}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState
-                    title="Start with a decision you already made"
-                    href="/decisions/new"
-                    action="Record your first decision"
-                  >
-                    Capture the choice, why it won, and what would make you
-                    reconsider it.
-                  </EmptyState>
-                )}
-              </section>
             </div>
-            <aside className="space-y-7">
-              <section className="card p-6">
-                <p className="eyebrow">Workspace status</p>
-                <h2 className="text-lg font-semibold">A living record</h2>
-                <p className="mt-2 text-xs leading-6 text-ink-400">
-                  Evidence is checked against the conditions you record. People
-                  decide how to respond.
-                </p>
-                <dl className="mt-5 divide-y divide-ink-800 text-xs">
-                  <div className="flex justify-between py-3">
-                    <dt className="text-ink-400">Background worker</dt>
-                    <dd
-                      className={
-                        workerHealthy ? "text-signal-600" : "text-risk-600"
-                      }
-                    >
-                      {workerHealthy ? "Running" : "No recent heartbeat"}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between py-3">
-                    <dt className="text-ink-400">Queued work</dt>
-                    <dd>{caps?.pendingJobs ?? "—"}</dd>
-                  </div>
-                  <div className="flex justify-between py-3">
-                    <dt className="text-ink-400">Reasoning</dt>
-                    <dd
-                      className="max-w-[140px] truncate"
-                      title={caps?.reasoning}
-                    >
-                      {caps?.reasoning === "none"
-                        ? "Manual + deterministic"
-                        : caps?.reasoning}
-                    </dd>
-                  </div>
-                </dl>
-                <Link
-                  href="/system"
-                  className="mt-4 inline-block text-xs text-signal-600"
-                >
-                  View system health →
-                </Link>
-              </section>
-              <section>
-                <h2 className="section-label">Recent activity</h2>
-                <QueryState
-                  loading={activity.isLoading}
-                  error={activity.error}
-                />
-                {activity.data?.memoryEvents.length ? (
-                  <div className="space-y-5">
-                    {activity.data.memoryEvents.slice(0, 5).map((e) => (
-                      <div className="flex gap-3" key={e.id}>
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-signal-600" />
-                        <div>
-                          <p className="text-xs leading-5">
-                            {e.summary ??
-                              e.eventType.replaceAll("_", " ").toLowerCase()}
-                          </p>
-                          <p className="mt-1 text-[10px] text-ink-500">
-                            {timeAgo(e.createdAt)}
-                          </p>
-                        </div>
-                      </div>
+            {attention.length ? (
+              <div className="card">
+                {attention.slice(0, 5).map((d) => (
+                  <Link className="record-row" key={d.id} href={`/decisions/${d.id}`}>
+                    <div className="min-w-0 flex-1">
+                      <p className="record-title">
+                        {d.externalRef && <span className="record-reference mr-2">{d.externalRef}</span>}
+                        {d.title}
+                      </p>
+                      <p className="record-subtitle line-clamp-2">{d.riskExplanation ?? "Evidence has challenged an assumption. A person needs to review it."}</p>
+                    </div>
+                    <DecisionStatusBadge status={d.status} />
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="Nothing needs attention">No recorded assumption is currently contradicted by evidence.</EmptyState>
+            )}
+          </section>
+
+          <section>
+            <div className="mb-2 flex items-baseline justify-between">
+              <h2 className="section-label !mb-0">Recent decisions</h2>
+              <Link className="text-xs text-signal-600 underline" href="/decisions">
+                All decisions
+              </Link>
+            </div>
+            {decisions.length ? (
+              <div className="overflow-x-auto rounded border border-ink-700">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-ink-800 text-xs text-ink-400">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Decision</th>
+                      <th className="px-3 py-2 font-medium">Chosen</th>
+                      <th className="px-3 py-2 font-medium">Status</th>
+                      <th className="px-3 py-2 font-medium">Updated</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {decisions.slice(0, 8).map((d) => (
+                      <tr key={d.id} className="border-t border-ink-700/60 hover:bg-ink-800">
+                        <td className="px-3 py-2">
+                          <Link href={`/decisions/${d.id}`} className="font-medium hover:underline">
+                            {d.externalRef && <span className="record-reference mr-2">{d.externalRef}</span>}
+                            {d.title}
+                          </Link>
+                        </td>
+                        <td className="px-3 py-2 text-ink-300">{d.options.find((o) => o.isChosen)?.name ?? "—"}</td>
+                        <td className="px-3 py-2">
+                          <DecisionStatusBadge status={d.status} />
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          <When iso={d.updatedAt} />
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                ) : (
-                  !activity.isLoading && (
-                    <p className="text-xs leading-6 text-ink-400">
-                      Your record begins when you commit the first decision.
-                    </p>
-                  )
-                )}
-              </section>
-            </aside>
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyState title="No decisions yet" href="/decisions/new" action="Record a decision">
+                Record a decision you have already made: what was chosen, what was rejected, and what has to stay true.
+              </EmptyState>
+            )}
+          </section>
+
+          <DecisionHealth />
+
+          <div className="grid gap-8 md:grid-cols-2">
+            <section>
+              <h2 className="section-label">Recent activity</h2>
+              <QueryState loading={activity.isLoading} error={activity.error} />
+              {activity.data?.memoryEvents.length ? (
+                <table className="w-full text-left text-sm">
+                  <tbody>
+                    {activity.data.memoryEvents.slice(0, 8).map((e) => (
+                      <tr key={e.id} className="border-b border-ink-700/60 align-top last:border-0">
+                        <td className="py-2 pr-3">{e.summary ?? e.eventType.replaceAll("_", " ").toLowerCase()}</td>
+                        <td className="w-20 py-2 text-right text-xs">
+                          <When iso={e.createdAt} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                !activity.isLoading && <p className="text-sm text-ink-500">Activity appears here once a decision is recorded.</p>
+              )}
+            </section>
+            <section>
+              <h2 className="section-label">System</h2>
+              <dl className="kv">
+                <dt>Background worker</dt>
+                <dd className={caps?.workerHealthy ? "" : "text-risk-600"}>{caps?.workerHealthy ? "Running" : "No recent heartbeat"}</dd>
+                <dt>Queued jobs</dt>
+                <dd>{caps?.pendingJobs ?? "—"}</dd>
+                <dt>Reasoning model</dt>
+                <dd>{caps?.reasoning === "none" ? "None (comparison only)" : (caps?.reasoning ?? "—")}</dd>
+              </dl>
+              <Link href="/system" className="mt-3 inline-block text-xs text-signal-600 underline">
+                Health details
+              </Link>
+            </section>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

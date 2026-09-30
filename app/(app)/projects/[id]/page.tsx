@@ -28,7 +28,7 @@ export default function ProjectDetailPage() {
   const atRisk = decisions.filter((d) => d.status === "AT_RISK");
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="space-y-6">
       <div>
         <Link href="/projects" className="text-xs text-ink-400 hover:text-ink-200">
           ← All projects

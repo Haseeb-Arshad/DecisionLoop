@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+/** One figure with its label. A missing value is a dash, never a made-up zero. */
 export function StatCard({
   label,
   value,
@@ -13,30 +14,19 @@ export function StatCard({
   tone?: "neutral" | "signal" | "risk" | "warn";
   href?: string;
 }) {
-  const toneClasses = {
-    neutral: "text-ink-50",
-    signal: "text-signal-400",
-    risk: "text-risk-600",
-    warn: "text-amber-700",
-  }[tone];
-
+  const color = { neutral: "", signal: "", risk: "text-risk-600", warn: "text-amber-700" }[tone];
   const body = (
-    <div className="card h-full p-4 transition hover:border-ink-600">
-      <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{label}</p>
-      <p className={`mt-2 text-2xl font-semibold tabular-nums ${toneClasses}`}>
-        {/* A metric with no data shows an em dash, never a fabricated 0 that
-            reads as a real measurement (§32). */}
-        {value === null || value === undefined ? "—" : value}
-      </p>
-      {hint && <p className="mt-1 text-xs text-ink-500">{hint}</p>}
-    </div>
+    <>
+      <p>{label}</p>
+      <strong className={color}>{value === null || value === undefined ? "—" : value}</strong>
+      {hint && <small>{hint}</small>}
+    </>
   );
-
   return href ? (
-    <Link href={href} className="block">
+    <Link href={href} className="metric-cell block">
       {body}
     </Link>
   ) : (
-    body
+    <div className="metric-cell">{body}</div>
   );
 }

@@ -21,9 +21,8 @@ export default function ProjectsPage() {
     }
   }
   return (
-    <div className="animate-fade-in">
+    <div>
       <PageHeader
-        eyebrow="Organize the record"
         title="Projects"
         description="Browse the work behind your decisions and their supporting source documents."
         action={
