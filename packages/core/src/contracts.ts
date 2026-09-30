@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { assumptionSpecSchema } from "./assumptions/model";
+import { assumptionSpecSchema, OPERATORS, VALUE_TYPES } from "./assumptions/model";
 import { factSchema } from "./assumptions/facts";
 import { EVIDENCE_KINDS } from "./events/event";
 import { resourceRefSchema } from "./resources/resources";
@@ -18,6 +18,16 @@ const constraintRuleSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("dependency_present"), subject: z.string().min(1) }),
   z.object({ kind: z.literal("dependency_absent"), subject: z.string().min(1) }),
   z.object({ kind: z.literal("path_protected"), paths: z.array(z.string().min(1)).min(1), repository: z.string().nullish() }),
+  z.object({
+    kind: z.literal("fact_bound"),
+    subject: z.string().max(200).nullish(),
+    predicate: z.string().min(1).max(200),
+    operator: z.enum(OPERATORS),
+    value: z.union([z.number(), z.boolean(), z.string(), z.array(z.string())]),
+    unit: z.string().max(60).nullish(),
+    valueType: z.enum(VALUE_TYPES).optional(),
+  }),
+  z.object({ kind: z.literal("resource_protected"), resources: z.array(z.string().min(1).max(500)).min(1).max(100) }),
   z.object({ kind: z.literal("manual") }),
 ]);
 
@@ -58,7 +68,8 @@ export const decisionDraftSchema = z.object({
   verificationChecks: z.array(decisionVerificationCheckSchema).max(20).default([]),
   resources: z.array(resourceInputSchema).max(200).default([]),
   repository: z.string().max(200).nullish(),
-  domain: z.string().max(60).default("engineering"),
+  /** Defaults to the deployment's primary domain (engineering unless configured). */
+  domain: z.string().max(60).optional(),
   scope: z.string().max(200).nullish(),
   externalRef: z.string().max(100).nullish(),
   tags: z.array(z.string().max(60)).max(30).default([]),
@@ -104,6 +115,44 @@ export const contextRequestSchema = z.object({
   agentSessionId: z.string().max(200).nullish(),
 });
 export type ContextRequestInput = z.input<typeof contextRequestSchema>;
+
+/**
+ * A dry run before an action with side effects (a refund, a purchase order, an
+ * email, a contract): which standing decisions govern it, and would the
+ * values it is about to use break a constraint? Writes no evidence.
+ */
+export const actionCheckSchema = z.object({
+  /** What the agent intends to do, in a sentence. */
+  action: z.string().min(1).max(2000),
+  /** The things the action touches: `customer:acme`, `policy:refunds`, `vendor:signalforge`. */
+  resources: z.array(resourceInputSchema).max(200).default([]),
+  /** Values the action would use or create, e.g. a refund amount. Compared with constraints by code. */
+  facts: z.array(factSchema).max(100).default([]),
+  repository: z.string().max(200).nullish(),
+  maxDecisions: z.number().int().min(1).max(20).default(5),
+  agent: z.string().max(60).nullish(),
+  agentSessionId: z.string().max(200).nullish(),
+});
+export type ActionCheckInput = z.input<typeof actionCheckSchema>;
+
+/**
+ * An event from a source system (ERP, billing, helpdesk, analytics) sent with
+ * an integration key bound to that source. The source and its trust come
+ * from the key and the domain profile — never from this body.
+ */
+export const sourceEventSchema = z.object({
+  type: z.string().min(1).max(120),
+  externalId: z.string().min(1).max(300),
+  occurredAt: z.string().datetime({ offset: true }).nullish(),
+  subject: z.string().max(200).nullish(),
+  text: z.string().max(50_000).nullish(),
+  kind: z.enum(EVIDENCE_KINDS).default("OBSERVATION"),
+  facts: z.array(factSchema).max(200).default([]),
+  resources: z.array(resourceInputSchema).max(200).default([]),
+  payload: z.record(z.unknown()).default({}),
+  sourceRef: z.string().max(2000).nullish(),
+});
+export type SourceEventInput = z.input<typeof sourceEventSchema>;
 
 export const searchRequestSchema = z.object({
   query: z.string().min(1).max(2000),

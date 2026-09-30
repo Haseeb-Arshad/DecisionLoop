@@ -26,7 +26,15 @@ export type ResourceRef = z.infer<typeof resourceRefSchema>;
  */
 const PACKAGE_ECOSYSTEMS = new Set(["npm", "pypi", "go", "cargo", "maven", "gem", "nuget", "composer"]);
 
-export function parseResource(input: string | ResourceRef, repository?: string | null): ResourceRef {
+export interface ParseResourceOptions {
+  /**
+   * Type for a bare name such as "Acme Corp" or "refund-policy" (no `type:` prefix).
+   * Unset keeps the engineering behaviour: a bare name is a file path.
+   */
+  bareType?: string | null;
+}
+
+export function parseResource(input: string | ResourceRef, repository?: string | null, opts: ParseResourceOptions = {}): ResourceRef {
   if (typeof input !== "string") {
     return { ...input, repository: input.repository ?? repository ?? null };
   }
@@ -45,6 +53,9 @@ export function parseResource(input: string | ResourceRef, repository?: string |
       return { type: "path", key: normalizePath(rest), repository: repository ?? null };
     }
     return { type: prefix, key: rest.toLowerCase(), repository: null };
+  }
+  if (opts.bareType && opts.bareType !== "path") {
+    return { type: opts.bareType, key: raw.toLowerCase().replace(/\s+/g, "_"), repository: null };
   }
   return { type: "path", key: normalizePath(raw), repository: repository ?? null };
 }
@@ -123,7 +134,14 @@ export function resourceMatchScore(recorded: ResourceRef, requested: ResourceRef
   if (recorded.type !== requested.type) return 0;
 
   if (recorded.type !== "path") {
-    return recorded.key.toLowerCase() === requested.key.toLowerCase() ? 1 : 0;
+    const a = recorded.key.toLowerCase();
+    const b = requested.key.toLowerCase();
+    if (a === b) return 1;
+    // Wildcards work for every resource type (`vendor:*`, `customer:enterprise/**`),
+    // but only where a key actually contains one: plain keys stay exact-match.
+    if (isGlob(a) && !isGlob(b) && globToRegExp(a).test(b)) return 0.9;
+    if (isGlob(b) && !isGlob(a) && globToRegExp(b).test(a)) return 0.9;
+    return 0;
   }
 
   const a = normalizePath(recorded.key);

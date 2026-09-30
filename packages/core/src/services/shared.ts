@@ -3,6 +3,7 @@ import type { PolicyRule } from "../policy/policy";
 import type { EmbeddingProvider, ReasoningProvider } from "../ports/providers";
 import type { DecisionStore } from "../ports/store";
 import type { AgentIntent, AgentRun, DecisionWithDetails } from "../types/domain";
+import { parseResource, type ResourceRef } from "../resources/resources";
 import type { Actor } from "../types/records";
 
 export interface Logger {
@@ -81,6 +82,12 @@ export async function withRun<T>(
       .catch(() => undefined);
     throw err;
   }
+}
+
+/** Parses resources the way this deployment's primary domain writes them ("Acme Corp" is a customer, not a file). */
+export function resourceParser(deps: ServiceDeps): (input: string | ResourceRef, repository?: string | null) => ResourceRef {
+  const bareType = deps.domains.primary()?.defaultResourceType ?? null;
+  return (input, repository) => parseResource(input, repository, { bareType });
 }
 
 export function sessionOf(actor: Actor): string {

@@ -1,9 +1,10 @@
-import type { ContextRequestInput, DecisionDraftInput, EvidenceSubmissionInput } from "./contracts";
+import type { ActionCheckInput, ContextRequestInput, DecisionDraftInput, EvidenceSubmissionInput, SourceEventInput } from "./contracts";
+import type { PackGuidance } from "./domain-packs/guidance";
 import type { DecisionVerificationCheck } from "./types/domain";
 import { ApprovalRequiredError, NotFoundError, requireScope } from "./errors";
 import type { StoredEvent } from "./events/event";
 import type { ApprovalService } from "./services/approvals";
-import type { ConstraintMatch, ContextResponse } from "./services/context";
+import type { ActionCheck, ConstraintMatch, ContextResponse } from "./services/context";
 import type { DecisionService, RelatedDecision } from "./services/decisions";
 import type { BlastRadius } from "./services/graph";
 import type { DecisionLoop } from "./services/index";
@@ -30,11 +31,24 @@ import type {
  * MCP tools are written against this interface once.
  */
 export interface DecisionLoopOperations {
-  whoami(): Promise<{ workspaceId: string; actor: string; type: Actor["type"]; scopes: string[]; agentSessionId: string | null }>;
+  whoami(): Promise<{
+    workspaceId: string;
+    actor: string;
+    type: Actor["type"];
+    scopes: string[];
+    agentSessionId: string | null;
+    /** The deployment's primary domain and how agents are addressed in it. */
+    domain?: { id: string; label: string; guidance: PackGuidance };
+    /** Set on source-bound integration keys. */
+    eventSource?: string | null;
+  }>;
   getContext(input: ContextRequestInput): Promise<ContextResponse>;
   searchDecisions(input: { query: string; statuses?: DecisionStatus[]; limit?: number }): Promise<Array<{ decision: DecisionWithDetails; score: number }>>;
   getDecision(idOrRef: string): Promise<Awaited<ReturnType<DecisionService["history"]>>>;
   explainDecision(idOrRef: string): Promise<Awaited<ReturnType<DecisionService["explain"]>>>;
+  checkAction(input: ActionCheckInput): Promise<ActionCheck>;
+  /** An event from a source system; needs an integration key bound to that source. */
+  submitEvent(input: SourceEventInput): Promise<{ eventId: string; created: boolean; jobId: string | null; status: string }>;
   getConstraints(input: { resources: Array<string | ResourceRef>; repository?: string | null }): Promise<ConstraintMatch[]>;
   listAtRisk(limit?: number): Promise<Awaited<ReturnType<DecisionService["listAtRisk"]>>>;
   getConflicts(input: { decisionId?: string | null; includeResolved?: boolean }): Promise<ConflictEvent[]>;
@@ -72,6 +86,11 @@ export function bindOperations(loop: DecisionLoop, initialActor: Actor): Decisio
         type: actor.type,
         scopes: actor.scopes,
         agentSessionId: actor.agentSessionId ?? null,
+        domain: (() => {
+          const primary = loop.deps.domains.primary();
+          return primary ? { id: primary.id, label: primary.label, guidance: loop.deps.domains.guidance() } : undefined;
+        })(),
+        eventSource: actor.eventSource ?? null,
       };
     },
     async getContext(input) {
@@ -91,6 +110,11 @@ export function bindOperations(loop: DecisionLoop, initialActor: Actor): Decisio
     getDecision: (id) => loop.decisions.history(actor, id),
     explainDecision: (id) => loop.decisions.explain(actor, id),
     getConstraints: (input) => loop.context.getConstraints(actor, input),
+    checkAction: (input) => loop.context.checkAction(actor, input),
+    async submitEvent(input) {
+      const r = await loop.evidence.submitEvent(actor, input);
+      return { eventId: r.event.id, created: r.created, jobId: r.jobId, status: r.event.status };
+    },
     listAtRisk: (limit) => loop.decisions.listAtRisk(actor, limit),
     async getConflicts(input) {
       requireScope(actor, "read");

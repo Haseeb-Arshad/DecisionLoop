@@ -2,8 +2,8 @@ import crypto from "node:crypto";
 import { evaluateAssumption, type DeterministicEvaluation } from "../assumptions/evaluate";
 import { factSchema, type Fact } from "../assumptions/facts";
 import { canonicalForm, normalizeKey } from "../assumptions/model";
-import { evidenceSubmissionSchema } from "../contracts";
-import { NotFoundError, requireScope } from "../errors";
+import { evidenceSubmissionSchema, sourceEventSchema } from "../contracts";
+import { InvalidRequestError, NotFoundError, requireScope } from "../errors";
 import { inboundEventSchema, type EmittedEvent, type InboundEventInput, type StoredEvent } from "../events/event";
 import { resolveEvaluationOutcome, type EvaluationOutcome } from "../lifecycle/outcome";
 import { mergePolicies } from "../policy/policy";
@@ -12,7 +12,7 @@ import { matchDecisionsByResources, parseResource, type ResourceRef } from "../r
 import { scoreCandidates } from "../retrieval/scoring";
 import type { Assumption, DecisionStatus, DecisionWithDetails, EvidenceRelation, ScoredMemoryCandidate } from "../types/domain";
 import type { Actor, EvaluationMethod, EvidenceItem } from "../types/records";
-import { withRun, type RunContext, type ServiceDeps } from "./shared";
+import { resourceParser, withRun, type RunContext, type ServiceDeps } from "./shared";
 
 const LIVE: DecisionStatus[] = ["ACTIVE", "AT_RISK", "REOPENED"];
 const LIVE_VALIDITY = new Set(["VALID", "UNCERTAIN", "CHALLENGED"]);
@@ -87,7 +87,8 @@ export class EvidenceService {
   async submit(actor: Actor, input: unknown, opts: { receivedVia?: string } = {}) {
     requireScope(actor, "propose");
     const req = evidenceSubmissionSchema.parse(input);
-    const resources = req.resources.map((r) => parseResource(r, req.repository ?? null));
+    const parse = resourceParser(this.deps);
+    const resources = req.resources.map((r) => parse(r, req.repository ?? null));
     const text = [req.statement, req.text].filter(Boolean).join("\n\n");
     const source = actor.type === "agent" ? "agent" : actor.type === "user" ? "human" : "api";
     const externalId =
@@ -115,6 +116,36 @@ export class EvidenceService {
         // Authority is set here, by the authenticated surface — never by the payload.
         authority: actor.type === "agent" ? AGENT_AUTHORITY_CAP : (SOURCE_AUTHORITY[source] ?? 0.6),
       },
+    });
+    return this.ingest(actor.tenantId, event);
+  }
+
+  /**
+   * An event from a source system, sent with an integration key bound to that
+   * source. The source comes from the key and the authority from the domain
+   * profile, so a payload cannot claim to be more trusted than its sender.
+   */
+  async submitEvent(actor: Actor, input: unknown) {
+    requireScope(actor, "propose");
+    if (actor.type !== "integration" || !actor.eventSource) {
+      throw new InvalidRequestError("Events need an integration key bound to a source. Create one with `decisionloop key create --source <name>`.");
+    }
+    const req = sourceEventSchema.parse(input);
+    if (JSON.stringify(req.payload).length > 200_000) throw new InvalidRequestError("Event payload exceeds 200 KB.");
+    const parse = resourceParser(this.deps);
+    const event = inboundEventSchema.parse({
+      source: actor.eventSource,
+      externalId: req.externalId,
+      type: req.type,
+      occurredAt: req.occurredAt ?? new Date().toISOString(),
+      actor: { type: "integration", id: actor.apiKeyId ?? null, label: actor.label },
+      resources: req.resources.map((r) => parse(r, null)),
+      facts: req.facts.map((f) => ({ ...f, extractor: f.extractor ?? `${actor.eventSource}-supplied` })),
+      text: req.text ?? null,
+      subject: req.subject ?? null,
+      evidenceKind: req.kind,
+      payload: req.payload,
+      provenance: { receivedVia: "api", url: req.sourceRef ?? null },
     });
     return this.ingest(actor.tenantId, event);
   }
@@ -219,7 +250,14 @@ export class TriggerEngine {
     const tenantId = event.workspaceId;
     const reasoningLog: string[] = [];
     const emitted: EmittedEvent[] = [];
-    const evalOptions = domains.evaluateOptions();
+    const baseOptions = domains.evaluateOptions();
+    // What people approved about how this workspace names things: a learned
+    // alias turns a check that used to need a model into plain comparison.
+    const learned: Record<string, string> = {};
+    for (const o of await store.listProfileOverrides(tenantId)) {
+      if (o.kind === "predicate_alias" && typeof o.value.canonical === "string") learned[o.key] = o.value.canonical;
+    }
+    const evalOptions = { ...baseOptions, predicateAliases: { ...baseOptions.predicateAliases, ...learned } };
 
     // ── 1. Normalize: deterministic facts and resources from the payload ──
     const packOut = domains.extract(event);
@@ -424,9 +462,30 @@ export class TriggerEngine {
     // ── 8. Constraints the evidence may violate ────────────────────────────
     const findings: TriggerResult["constraintFindings"] = [];
     const constraintDecisions = new Set<string>([...resourceMatched.keys(), ...predicateHits.map((a) => a.decisionId)]);
+    // A bound like "no vendor above $50k/year" governs whatever its subject glob names,
+    // so facts about a subject also find decisions by that subject — but only for
+    // fact_bound constraints; other rules keep the matching they always had.
+    const factBoundOnly = new Set<string>();
+    const factSubjects = Array.from(new Set(facts.map((f) => f.subject).filter((s): s is string => Boolean(s))));
+    if (factSubjects.length > 0) {
+      const recorded = await store.listResourcesForMatching(tenantId, { statuses: LIVE });
+      const matched = matchDecisionsByResources(recorded, factSubjects.map((s) => parseResource(s)), MIN_RESOURCE_MATCH);
+      const missing = Array.from(matched.keys()).filter((id) => !decisionsById.has(id));
+      if (missing.length > 0) {
+        for (const d of await store.listDecisions(tenantId, { ids: missing, statuses: LIVE })) decisionsById.set(d.id, d);
+      }
+      for (const id of matched.keys()) {
+        if (constraintDecisions.has(id)) continue;
+        if (decisionsById.get(id)?.constraints?.some((c) => c.rule.kind === "fact_bound")) {
+          constraintDecisions.add(id);
+          factBoundOnly.add(id);
+        }
+      }
+    }
     for (const decisionId of constraintDecisions) {
       const d = decisionsById.get(decisionId);
       for (const constraint of d?.constraints ?? []) {
+        if (factBoundOnly.has(decisionId) && constraint.rule.kind !== "fact_bound") continue;
         const check = domains.evaluateConstraint(constraint, { facts, resources });
         if (!check?.violated) continue;
         const finding = await store.transaction(async (tx) => {

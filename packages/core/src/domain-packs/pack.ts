@@ -4,6 +4,8 @@ import type { InboundEvent } from "../events/event";
 import type { PolicyRule } from "../policy/policy";
 import type { ResourceRef } from "../resources/resources";
 import type { DecisionConstraint } from "../types/domain";
+import { evaluateGenericConstraint } from "./constraints";
+import { ENGINEERING_GUIDANCE, type PackGuidance } from "./guidance";
 
 /**
  * Domain packs (spec §29–§30) carry everything vertical-specific: resource
@@ -37,10 +39,30 @@ export interface DomainPack {
   ): ConstraintCheck | null;
   policyTemplates?: PolicyRule[];
   vocabulary?: Record<string, string>;
+  /** What agents are told in this domain. Omitted = the engineering wording. */
+  guidance?: PackGuidance;
+  /** Type given to a bare name such as "Acme Corp" (default: a file path, as in engineering). */
+  defaultResourceType?: string;
 }
 
 export class DomainRegistry {
-  constructor(readonly packs: DomainPack[]) {}
+  /**
+   * @param primaryId the domain whose wording agents hear and whose defaults
+   *   (new-decision domain, bare resource names) apply. Defaults to
+   *   engineering when registered, otherwise the first pack.
+   */
+  constructor(
+    readonly packs: DomainPack[],
+    readonly primaryId?: string,
+  ) {}
+
+  primary(): DomainPack | undefined {
+    return (this.primaryId ? this.get(this.primaryId) : undefined) ?? this.get("engineering") ?? this.packs[0];
+  }
+
+  guidance(): PackGuidance {
+    return this.primary()?.guidance ?? ENGINEERING_GUIDANCE;
+  }
 
   /** Policy templates shipped by packs, applied after the core defaults. */
   policyTemplates(): PolicyRule[] {
@@ -87,6 +109,8 @@ export class DomainRegistry {
     constraint: DecisionConstraint,
     observed: { facts: Fact[]; resources: ResourceRef[] },
   ): ConstraintCheck | null {
+    const generic = evaluateGenericConstraint(constraint, observed, this.evaluateOptions());
+    if (generic) return generic;
     for (const pack of this.packs) {
       const r = pack.evaluateConstraint(constraint, observed);
       if (r) return r;

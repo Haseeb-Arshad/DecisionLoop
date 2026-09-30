@@ -299,6 +299,18 @@ export type ConstraintRule =
   | { kind: "dependency_present"; subject: string }
   | { kind: "dependency_absent"; subject: string }
   | { kind: "path_protected"; paths: string[]; repository?: string | null }
+  /** A predicate (for subjects matching `subject`, globs allowed) must satisfy `operator value`. */
+  | {
+      kind: "fact_bound";
+      subject?: string | null;
+      predicate: string;
+      operator: Operator;
+      value: number | boolean | string | string[];
+      unit?: string | null;
+      valueType?: ValueType;
+    }
+  /** Touching any of these resources (`type:key`, globs allowed) violates the constraint. */
+  | { kind: "resource_protected"; resources: string[] }
   | { kind: "manual" };
 
 export interface DecisionWithDetails extends Decision {

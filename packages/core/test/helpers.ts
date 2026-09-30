@@ -7,6 +7,7 @@ import { NoReasoningProvider, type ReasoningProvider, type SemanticJudgment } fr
 import type { Actor, Scope } from "@decisionloop/core/types/records";
 import { drainJobs } from "@decisionloop/core/services/worker";
 import type { DecisionDraftInput } from "@decisionloop/core/contracts";
+import type { DomainRegistry } from "@decisionloop/core/domain-packs/pack";
 
 export interface TestEnv {
   sql: Sql;
@@ -16,12 +17,17 @@ export interface TestEnv {
   close(): Promise<void>;
 }
 
-export async function createTestEnv(reasoning: ReasoningProvider = new NoReasoningProvider()): Promise<TestEnv> {
+export async function createTestEnv(
+  reasoning: ReasoningProvider = new NoReasoningProvider(),
+  opts: { domains?: DomainRegistry; primaryDomain?: string } = {},
+): Promise<TestEnv> {
   const sql = createSql(process.env.DATABASE_URL!, { max: 1 });
   const loop = createDecisionLoop({
     store: new SqlDecisionStore(sql),
     embeddings: new LexicalEmbeddingProvider(),
     reasoning,
+    domains: opts.domains,
+    primaryDomain: opts.primaryDomain,
   });
   const worker = loop.createWorker({ workerId: `test-${Math.random().toString(36).slice(2, 8)}`, batchSize: 10 });
   const tenantIds: string[] = [];

@@ -28,6 +28,7 @@ import type {
   AssumptionEvaluation,
   ConstraintFinding,
   Job,
+  ProfileOverride,
   Scope,
 } from "@decisionloop/core/types/records";
 import type { Sql } from "./connection";
@@ -52,6 +53,7 @@ import {
   mapVerificationRun,
   mapJob,
   mapMemoryEvent,
+  mapProfileOverride,
   mapRun,
   mapSession,
 } from "./recordMappers";
@@ -119,9 +121,9 @@ export class SqlDecisionStore implements DecisionStore {
 
   async createApiKey(input: Parameters<DecisionStore["createApiKey"]>[0]) {
     const [row] = await this.q`
-      INSERT INTO api_keys (tenant_id, name, key_prefix, key_hash, scopes, actor_type, created_by)
+      INSERT INTO api_keys (tenant_id, name, key_prefix, key_hash, scopes, actor_type, created_by, event_source)
       VALUES (${input.tenantId}, ${input.name}, ${input.keyPrefix}, ${input.keyHash},
-              ${input.scopes}::text[], ${input.actorType}, ${input.createdBy ?? null})
+              ${input.scopes}::text[], ${input.actorType}, ${input.createdBy ?? null}, ${input.eventSource ?? null})
       RETURNING *
     `;
     return mapApiKey(row!);
@@ -1280,6 +1282,21 @@ export class SqlDecisionStore implements DecisionStore {
       if (parsed.success) rules.push(parsed.data);
     }
     return rules;
+  }
+
+  async listProfileOverrides(tenantId: string): Promise<ProfileOverride[]> {
+    const rows = await this.q`SELECT * FROM profile_overrides WHERE tenant_id = ${tenantId} ORDER BY created_at`;
+    return rows.map(mapProfileOverride);
+  }
+
+  async upsertProfileOverride(input: Parameters<DecisionStore["upsertProfileOverride"]>[0]): Promise<ProfileOverride> {
+    await this.q`
+      INSERT INTO profile_overrides (tenant_id, kind, key, value, approval_id, created_by)
+      VALUES (${input.tenantId}, ${input.kind}, ${input.key}, ${j(input.value)}::jsonb, ${input.approvalId ?? null}, ${input.createdBy ?? null})
+      ON CONFLICT (tenant_id, kind, key) DO UPDATE SET value = EXCLUDED.value, approval_id = EXCLUDED.approval_id, created_by = EXCLUDED.created_by
+    `;
+    const all = await this.listProfileOverrides(input.tenantId);
+    return all.find((o) => o.kind === input.kind && o.key === input.key)!;
   }
 
   async findRepositoryBinding(provider: string, repository: string) {

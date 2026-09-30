@@ -1,6 +1,7 @@
 import { createDecisionLoop, type DecisionLoop } from "@decisionloop/core/services/index";
 import { selectEmbeddingProvider, selectReasoningProvider } from "@decisionloop/providers";
 import { SqlDecisionStore } from "@decisionloop/storage-sql/store";
+import { loadDomainRegistry } from "@decisionloop/runtime/profiles";
 import { sql } from "@/db/client";
 import { childLogger } from "@/lib/logger";
 
@@ -22,6 +23,7 @@ export function getDecisionLoop(): DecisionLoop {
     store: new SqlDecisionStore(sql),
     embeddings: selectEmbeddingProvider(),
     reasoning: selectReasoningProvider(),
+    domains: loadDomainRegistry(),
     logger: {
       info: (o, m) => log.info(o, m),
       warn: (o, m) => log.warn(o, m),

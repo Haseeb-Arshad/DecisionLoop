@@ -1,6 +1,5 @@
 import { DomainRegistry } from "../domain-packs/pack";
-import { engineeringPack } from "../domain-packs/engineering";
-import { financePack, procurementPack, productPack } from "../domain-packs/business";
+import { BUILTIN_PACKS } from "../domain-packs/builtin";
 import { DEFAULT_POLICIES, mergePolicies } from "../policy/policy";
 import type { EmbeddingProvider, ReasoningProvider } from "../ports/providers";
 import type { DecisionStore } from "../ports/store";
@@ -32,9 +31,11 @@ export function createDecisionLoop(input: {
   embeddings: EmbeddingProvider;
   reasoning: ReasoningProvider;
   domains?: DomainRegistry;
+  /** Domain whose wording and defaults apply. Default: engineering. */
+  primaryDomain?: string;
   logger?: Logger;
 }) {
-  const domains = input.domains ?? new DomainRegistry([engineeringPack, procurementPack, productPack, financePack]);
+  const domains = input.domains ?? new DomainRegistry(BUILTIN_PACKS, input.primaryDomain);
   const deps: ServiceDeps = {
     store: input.store,
     embeddings: input.embeddings,

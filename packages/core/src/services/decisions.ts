@@ -17,7 +17,7 @@ import {
   requireScope,
 } from "../errors";
 import type { NewDecisionRecord } from "../ports/store";
-import { matchDecisionsByResources, parseResource, type ResourceRef } from "../resources/resources";
+import { matchDecisionsByResources, type ResourceRef } from "../resources/resources";
 import { scoreCandidates } from "../retrieval/scoring";
 import type { DecisionStatus, DecisionWithDetails } from "../types/domain";
 import type { Actor, ApprovalRequest } from "../types/records";
@@ -26,6 +26,7 @@ import {
   assumptionMemoryText,
   decisionMemoryText,
   namesMatch,
+  resourceParser,
   sessionOf,
   silentLogger,
   type ServiceDeps,
@@ -52,7 +53,8 @@ export class DecisionService {
   }
 
   private toRecord(actor: Actor, draft: DecisionDraft, status: DecisionStatus, projectId: string): NewDecisionRecord {
-    const resources: ResourceRef[] = draft.resources.map((r) => parseResource(r, draft.repository ?? null));
+    const parse = resourceParser(this.deps);
+    const resources: ResourceRef[] = draft.resources.map((r) => parse(r, draft.repository ?? null));
     if (draft.repository && !resources.some((r) => r.type === "repository")) {
       resources.push({ type: "repository", key: draft.repository.toLowerCase(), repository: null });
     }
@@ -60,8 +62,20 @@ export class DecisionService {
     // affected resource so a change to the package finds this decision.
     for (const c of draft.constraints) {
       if (c.rule.kind === "dependency_present" || c.rule.kind === "dependency_absent") {
-        const ref = parseResource(c.rule.subject.replace(/^package:/i, ""));
+        const ref = parse(c.rule.subject.replace(/^package:/i, ""));
         if (!resources.some((r) => r.type === ref.type && r.key === ref.key)) resources.push(ref);
+      }
+      // A spending cap or exclusion list is about what it names: record it so
+      // evidence touching those things finds this decision.
+      if (c.rule.kind === "fact_bound" && c.rule.subject && c.rule.subject.includes(":")) {
+        const ref = parse(c.rule.subject);
+        if (!resources.some((r) => r.type === ref.type && r.key === ref.key)) resources.push(ref);
+      }
+      if (c.rule.kind === "resource_protected") {
+        for (const raw of c.rule.resources) {
+          const ref = parse(raw);
+          if (!resources.some((r) => r.type === ref.type && r.key === ref.key)) resources.push(ref);
+        }
       }
     }
     return {
@@ -73,7 +87,7 @@ export class DecisionService {
       status,
       confidence: draft.confidence,
       importance: draft.importance,
-      domain: draft.domain,
+      domain: draft.domain ?? this.deps.domains.primary()?.id ?? "engineering",
       scope: draft.scope ?? null,
       origin: actor.type === "user" ? "HUMAN" : actor.type === "agent" ? "AGENT" : "INTEGRATION",
       decidedByType: actor.type === "user" ? "USER" : actor.type === "agent" ? "AGENT" : "SYSTEM",
@@ -114,7 +128,8 @@ export class DecisionService {
       reasons.get(id)!.add(reason);
     };
 
-    const requested = draft.resources.map((r) => parseResource(r, draft.repository ?? null));
+    const parse = resourceParser(this.deps);
+    const requested = draft.resources.map((r) => parse(r, draft.repository ?? null));
     if (requested.length > 0) {
       const recorded = await this.store.listResourcesForMatching(tenantId, { statuses: LIVE });
       for (const [id, m] of matchDecisionsByResources(recorded, requested)) {

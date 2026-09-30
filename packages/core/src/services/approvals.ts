@@ -1,3 +1,4 @@
+import { normalizeKey, normalizeUnit } from "../assumptions/model";
 import { approvalResolutionSchema, conflictResolutionSchema } from "../contracts";
 import { InvalidRequestError, NotFoundError, requireHuman, requireScope } from "../errors";
 import type { DecisionStore } from "../ports/store";
@@ -24,6 +25,7 @@ export class ConflictService {
       await tx.resolveConflict(actor.tenantId, conflictId, "ACCEPTED", { userId: actor.userId, label: actor.label, note });
       await tx.setAssumptionValidity(actor.tenantId, conflict.assumptionId, "INVALIDATED");
       await closeReviewApprovals(tx, actor, conflictId, "APPROVED", note);
+      await this.suggestAlias(tx, actor, conflict);
       await tx.recordMemoryEvent({
         tenantId: actor.tenantId,
         entityType: "assumption",
@@ -44,6 +46,48 @@ export class ConflictService {
         entityId: conflictId,
       });
       return tx.getDecision(actor.tenantId, conflict.decisionId);
+    });
+  }
+
+  /**
+   * The model had to be asked because the evidence and the assumption named one
+   * thing two ways ("dispute_rate" vs "chargeback_rate_pct"). A person just
+   * confirmed the model was right, so offer to make that an exact rule: the
+   * next check is plain comparison — no model, no cost, same answer every time.
+   * Nothing changes until a person approves the suggestion.
+   */
+  private async suggestAlias(tx: DecisionStore, actor: Actor, conflict: { id: string; decisionId: string; assumptionId: string }) {
+    const evaluation = (await tx.listEvaluations(actor.tenantId, { decisionId: conflict.decisionId, limit: 50 })).find(
+      (e) => e.assumptionId === conflict.assumptionId && e.method === "SEMANTIC" && e.fact,
+    );
+    const fact = evaluation?.fact;
+    const assumption = await tx.getAssumption(actor.tenantId, conflict.assumptionId);
+    if (!evaluation || !fact || !assumption?.predicate || assumption.valueType === "TEXT") return;
+
+    const alias = normalizeKey(fact.predicate);
+    const canonical = normalizeKey(assumption.predicate);
+    if (!alias || !canonical || alias === canonical) return;
+    if (fact.valueType !== assumption.valueType || fact.operator !== "=") return;
+    const factUnit = normalizeUnit(fact.unit);
+    const assumedUnit = normalizeUnit(assumption.unit);
+    if (factUnit && assumedUnit && factUnit !== assumedUnit) return;
+    const factSubject = normalizeKey(fact.subject);
+    const assumedSubject = normalizeKey(assumption.subject);
+    if (factSubject && assumedSubject && factSubject !== assumedSubject) return;
+
+    const known = (await tx.listProfileOverrides(actor.tenantId)).some((o) => o.kind === "predicate_alias" && o.key === alias);
+    if (known || this.deps.domains.evaluateOptions().predicateAliases?.[alias] === canonical) return;
+
+    await tx.insertApproval({
+      tenantId: actor.tenantId,
+      kind: "PROFILE_SUGGESTION",
+      decisionId: conflict.decisionId,
+      conflictId: conflict.id,
+      payload: { suggestion: "predicate_alias", alias, canonical, evaluationId: evaluation.id, subject: assumedSubject ?? factSubject },
+      reason: `You confirmed a conflict that a model had to judge because two records name one thing differently: "${alias}" and "${canonical}". Treat them as the same from now on so this comparison is exact, free and repeatable.`,
+      requestedByType: "system",
+      requestedByLabel: "profile-learning",
+      dedupeKey: `alias:${alias}:${canonical}`,
     });
   }
 
@@ -243,6 +287,35 @@ export class ApprovalService {
         }
         if (req.action === "reject") return store.resolveApproval(actor.tenantId, approvalId, "REJECTED", by);
         break;
+      }
+      case "PROFILE_SUGGESTION": {
+        if (req.action === "reject") return store.resolveApproval(actor.tenantId, approvalId, "REJECTED", by);
+        if (req.action !== "approve") break;
+        const suggestion = approval.payload as { suggestion?: string; alias?: string; canonical?: string } | null;
+        if (suggestion?.suggestion !== "predicate_alias" || !suggestion.alias || !suggestion.canonical) {
+          throw new InvalidRequestError("This suggestion has no alias to apply.");
+        }
+        const { alias, canonical } = suggestion;
+        return store.transaction(async (tx) => {
+          await tx.upsertProfileOverride({
+            tenantId: actor.tenantId,
+            kind: "predicate_alias",
+            key: alias,
+            value: { canonical },
+            approvalId,
+            createdBy: actor.label,
+          });
+          await tx.recordAudit({
+            tenantId: actor.tenantId,
+            actorUserId: actor.userId,
+            actorLabel: actor.label,
+            action: "profile.alias_approved",
+            entityType: "approval",
+            entityId: approvalId,
+            metadata: { alias, canonical },
+          });
+          return tx.resolveApproval(actor.tenantId, approvalId, "APPROVED", by);
+        });
       }
       case "SUPERSEDE_DECISION":
         break;

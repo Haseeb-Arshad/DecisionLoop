@@ -6,8 +6,10 @@ import { createSql, type Sql } from "@decisionloop/storage-sql/connection";
 import { startEmbeddedDatabase, type EmbeddedDatabase } from "@decisionloop/storage-sql/embedded";
 import { runMigrations } from "@decisionloop/storage-sql/migrate";
 import { SqlDecisionStore } from "@decisionloop/storage-sql/store";
+import { loadDomainRegistry } from "./profiles";
 
 export * from "./apiKeys";
+export * from "./profiles";
 
 /**
  * Wires a DecisionLoop instance from configuration. Every process — the
@@ -75,6 +77,7 @@ export async function createRuntime(opts: RuntimeOptions = {}): Promise<Runtime>
     store: new SqlDecisionStore(sql),
     embeddings: selectEmbeddingProvider(env),
     reasoning: selectReasoningProvider(env),
+    domains: loadDomainRegistry(env),
     logger: opts.logger,
   });
 

@@ -14,6 +14,8 @@ export interface ApiKeyRecord {
   keyPrefix: string;
   scopes: Scope[];
   actorType: "user" | "agent" | "integration";
+  /** Integration keys only: the source system every event sent with this key is attributed to. */
+  eventSource: string | null;
   createdAt: string;
   lastUsedAt: string | null;
   revokedAt: string | null;
@@ -68,7 +70,19 @@ export interface AssumptionEvaluation {
   createdAt: string;
 }
 
-export type ApprovalKind = "COMMIT_DECISION" | "ADD_ASSUMPTION" | "REVIEW_CONFLICT" | "SUPERSEDE_DECISION";
+export type ApprovalKind = "COMMIT_DECISION" | "ADD_ASSUMPTION" | "REVIEW_CONFLICT" | "SUPERSEDE_DECISION" | "PROFILE_SUGGESTION";
+
+/** What a person approved about how this workspace reads its domain. */
+export interface ProfileOverride {
+  id: string;
+  tenantId: string;
+  kind: "predicate_alias";
+  key: string;
+  value: Record<string, unknown>;
+  approvalId: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
 export type ApprovalStatus =
   | "PENDING"
   | "APPROVED"
@@ -199,6 +213,8 @@ export interface Actor {
   label: string;
   scopes: Scope[];
   apiKeyId?: string | null;
+  /** Set for source-bound integration keys (see ApiKeyRecord.eventSource). */
+  eventSource?: string | null;
   agentSessionId?: string | null;
   /** Stable id of the conversation/session doing the work (cross-session provenance). */
   sessionId?: string | null;

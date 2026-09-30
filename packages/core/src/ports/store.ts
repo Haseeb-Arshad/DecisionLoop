@@ -30,6 +30,7 @@ import type {
 import type {
   AgentSession,
   ApiKeyRecord,
+  ProfileOverride,
   ApprovalKind,
   ApprovalRequest,
   ApprovalStatus,
@@ -68,6 +69,7 @@ export interface DecisionStore {
     keyHash: string;
     scopes: Scope[];
     actorType: ApiKeyRecord["actorType"];
+    eventSource?: string | null;
     createdBy?: string | null;
   }): Promise<ApiKeyRecord>;
   findApiKeyByHash(keyHash: string): Promise<ApiKeyRecord | null>;
@@ -377,6 +379,15 @@ export interface DecisionStore {
 
   // ── Configuration ────────────────────────────────────────────────────────
   listWorkspacePolicies(tenantId: string): Promise<PolicyRule[]>;
+  listProfileOverrides(tenantId: string): Promise<ProfileOverride[]>;
+  upsertProfileOverride(input: {
+    tenantId: string;
+    kind: ProfileOverride["kind"];
+    key: string;
+    value: Record<string, unknown>;
+    approvalId?: string | null;
+    createdBy?: string | null;
+  }): Promise<ProfileOverride>;
   findRepositoryBinding(provider: string, repository: string): Promise<RepositoryBinding | null>;
   upsertRepositoryBinding(input: {
     tenantId: string;

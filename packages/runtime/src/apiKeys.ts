@@ -25,7 +25,7 @@ export function generateApiKey(): { raw: string; prefix: string; hash: string } 
 
 export async function issueApiKey(
   store: DecisionStore,
-  input: { tenantId: string; name: string; scopes: Scope[]; actorType: ApiKeyRecord["actorType"]; createdBy?: string | null },
+  input: { tenantId: string; name: string; scopes: Scope[]; actorType: ApiKeyRecord["actorType"]; createdBy?: string | null; eventSource?: string | null },
 ): Promise<{ key: string; record: ApiKeyRecord }> {
   const { raw, prefix, hash } = generateApiKey();
   const record = await store.createApiKey({ ...input, keyPrefix: prefix, keyHash: hash });
@@ -46,6 +46,7 @@ export async function authenticateApiKey(store: DecisionStore, raw: string | nul
     label: record.name,
     scopes: record.scopes,
     apiKeyId: record.id,
+    eventSource: record.eventSource,
     sessionId: `key:${record.id}`,
   };
 }

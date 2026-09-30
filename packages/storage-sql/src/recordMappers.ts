@@ -18,6 +18,7 @@ import type {
   DecisionDependency,
   EvidenceItem,
   Job,
+  ProfileOverride,
   RepositoryBinding,
   Scope,
 } from "@decisionloop/core/types/records";
@@ -59,9 +60,23 @@ export function mapApiKey(row: Row): ApiKeyRecord {
     keyPrefix: row.key_prefix as string,
     scopes: textArray(row.scopes) as Scope[],
     actorType: row.actor_type as ApiKeyRecord["actorType"],
+    eventSource: (row.event_source as string | null | undefined) ?? null,
     createdAt: iso(row.created_at)!,
     lastUsedAt: iso(row.last_used_at),
     revokedAt: iso(row.revoked_at),
+  };
+}
+
+export function mapProfileOverride(row: Row): ProfileOverride {
+  return {
+    id: row.id as string,
+    tenantId: row.tenant_id as string,
+    kind: row.kind as ProfileOverride["kind"],
+    key: row.key as string,
+    value: json<Record<string, unknown>>(row.value, {}),
+    approvalId: (row.approval_id as string | null) ?? null,
+    createdBy: (row.created_by as string | null) ?? null,
+    createdAt: iso(row.created_at)!,
   };
 }
 

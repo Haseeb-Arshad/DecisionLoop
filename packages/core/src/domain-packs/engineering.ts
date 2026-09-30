@@ -2,6 +2,7 @@ import { factSchema, type Fact } from "../assumptions/facts";
 import { normalizeKey } from "../assumptions/model";
 import type { InboundEvent } from "../events/event";
 import { globToRegExp, normalizePath, type ResourceRef } from "../resources/resources";
+import { ENGINEERING_GUIDANCE } from "./guidance";
 import type { ConstraintCheck, DomainPack } from "./pack";
 
 /**
@@ -200,6 +201,7 @@ export const engineeringPack: DomainPack = {
     }
   },
   vocabulary: { decision: "architecture decision", assumption: "assumption", resource: "component" },
+  guidance: ENGINEERING_GUIDANCE,
 };
 
 /**
