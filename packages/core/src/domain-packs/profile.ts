@@ -199,7 +199,8 @@ export function packFromProfile(input: DomainProfileInput | DomainProfile): Doma
     authorityFor: (event) => authorityTable[`${event.source}:${event.type}`] ?? authorityTable[`${event.source}:*`] ?? null,
     extract(event) {
       const fromRecords = recordFacts(event, p.records, `${p.id}/records`);
-      const metrics = p.acceptMetrics ? metricFacts(event, `${p.id}/metrics`) : [];
+      // The metrics shape is shared by every profile, so its facts carry a neutral extractor name.
+      const metrics = p.acceptMetrics ? metricFacts(event, "payload/metrics") : [];
       // Metrics first, then records: the order the built-in procurement pack always used.
       return { facts: [...metrics, ...fromRecords.facts], resources: fromRecords.resources };
     },

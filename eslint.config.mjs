@@ -10,5 +10,6 @@ export default defineConfig([
     "test-results/**",
     ".playwright-cli/**",
     "video/**",
+    "video-v2/**",
   ]),
 ]);

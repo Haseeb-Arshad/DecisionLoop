@@ -58,3 +58,10 @@ evals/reports/
 /video/node_modules/
 /video/out/
 /video/public/sfx-*.wav
+
+# film build outputs (the rendered deliverables live in public/demo)
+/video-v2/**/node_modules/
+/video-v2/**/output/
+/video-v2/**/renders/
+/video-v2/**/*.test.mp4
+/video-v2/hyperframes/test.mp4

@@ -94,13 +94,31 @@ export class DomainRegistry {
     return null;
   }
 
+  /**
+   * Facts and resources from every pack that understands the payload. Several
+   * packs can read the same shared shape (for example `payload.metrics`), so
+   * identical facts and resources are kept once: one observation is one fact,
+   * whichever pack noticed it first.
+   */
   extract(event: InboundEvent): { facts: Fact[]; resources: ResourceRef[] } {
     const facts: Fact[] = [];
     const resources: ResourceRef[] = [];
+    const seenFacts = new Set<string>();
+    const seenResources = new Set<string>();
     for (const pack of this.packs) {
       const out = pack.extract(event);
-      facts.push(...out.facts);
-      resources.push(...out.resources);
+      for (const f of out.facts) {
+        const key = JSON.stringify([f.subject ?? null, f.predicate, f.operator, f.value, f.unit ?? null, f.statement]);
+        if (seenFacts.has(key)) continue;
+        seenFacts.add(key);
+        facts.push(f);
+      }
+      for (const r of out.resources) {
+        const key = `${r.type}|${r.key}|${r.repository ?? ""}`;
+        if (seenResources.has(key)) continue;
+        seenResources.add(key);
+        resources.push(r);
+      }
     }
     return { facts, resources };
   }

@@ -1,0 +1,36 @@
+{
+  "id": "planning",
+  "label": "Public planning",
+  "description": "Siting, permitting, infrastructure and emergency-planning decisions, checked against studies, sensors and inspections.",
+  "vocabulary": {
+    "decision": "planning decision",
+    "assumption": "assumption",
+    "resource": "district, site, asset or route",
+    "action": "approve a permit, site a building, or change an emergency plan"
+  },
+  "defaultResourceType": "site",
+  "resourceTypes": ["zone", "site", "river", "asset", "route", "facility"],
+  "predicateAliases": {
+    "hundred_year_flood_m": "flood_level_100yr_m",
+    "flood_level_1_in_100_m": "flood_level_100yr_m",
+    "design_flood_level_m": "flood_level_100yr_m"
+  },
+  "authority": {
+    "hydrology:study.published": 0.95,
+    "hydrology:*": 0.9,
+    "sensor:reading": 0.85,
+    "inspection:report.approved": 0.9,
+    "forum:*": 0.3,
+    "news:*": 0.5
+  },
+  "acceptMetrics": true,
+  "policies": [
+    {
+      "scope": "evaluation",
+      "name": "public_safety_review",
+      "description": "Any change to a planning assumption is reviewed by a person, whatever the source.",
+      "when": { "domain": ["planning"], "proposedValidity": ["CHALLENGED", "INVALIDATED"] },
+      "actions": ["require_human_review", "notify_dashboard"]
+    }
+  ]
+}

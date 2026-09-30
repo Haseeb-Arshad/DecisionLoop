@@ -326,3 +326,18 @@ describe("profiles are validated, not trusted", () => {
     }
   });
 });
+
+describe("one observation is one fact", () => {
+  it("a metric read by several loaded profiles is recorded once, with a neutral extractor", async () => {
+    const erp = bindOperations(env.loop, integration("hydrology"));
+    const sent = await erp.submitEvent({
+      type: "study.published",
+      externalId: "dedupe-1",
+      payload: { metrics: [{ subject: "river:east_bank", metric: "flood_level_100yr_m", value: 3.1, unit: "m" }] },
+    });
+    await env.drain();
+    const facts = (await erp.getEventDetail(sent.eventId)).evidence[0]!.facts;
+    expect(facts).toHaveLength(1);
+    expect(facts[0]!.extractor).toBe("payload/metrics");
+  });
+});
