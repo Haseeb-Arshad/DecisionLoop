@@ -60,12 +60,7 @@ export default function AuditPage() {
     <div className="space-y-6">
       <PageHeader
         title="Audit log"
-        description={
-          <>
-            Every mutating action in this workspace — who (or what system
-            process) did it, and to what.
-          </>
-        }
+        description="Every change made in this workspace: who or what did it, and to what."
       />
       {isLoading ? (
         <div className="card px-6 py-12 text-center text-sm text-ink-400">

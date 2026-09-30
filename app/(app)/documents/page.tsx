@@ -88,8 +88,7 @@ export default function EvidencePage() {
           <form onSubmit={onSubmit} className="card form-section">
             <h2>Submit an observation</h2>
             <p className="form-hint">
-              Use the same subject, property, and unit as the condition you want
-              to check.
+              Use the same subject, property and unit as the assumption you want to check.
             </p>
             <label className="label">
               What did you observe?
@@ -98,7 +97,7 @@ export default function EvidencePage() {
                 maxLength={1000}
                 required
                 className="input mt-2"
-                placeholder="Redis p95 latency reached 30 ms in the load test."
+                placeholder="Finance reports consumer chargebacks at 1.2% for September."
                 value={statement}
                 onChange={(e) => setStatement(e.target.value)}
               />
@@ -119,7 +118,7 @@ export default function EvidencePage() {
                     required
                     maxLength={200}
                     className="input mt-2"
-                    placeholder="redis"
+                    placeholder="segment:consumer"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                   />
@@ -130,7 +129,7 @@ export default function EvidencePage() {
                     required
                     maxLength={200}
                     className="input mt-2"
-                    placeholder="p95_latency"
+                    placeholder="chargeback_rate_pct"
                     value={predicate}
                     onChange={(e) => setPredicate(e.target.value)}
                   />
@@ -189,7 +188,7 @@ export default function EvidencePage() {
                     <input
                       maxLength={60}
                       className="input mt-2"
-                      placeholder="ms"
+                      placeholder="%"
                       value={unit}
                       onChange={(e) => setUnit(e.target.value)}
                     />
@@ -209,7 +208,7 @@ export default function EvidencePage() {
               <input
                 maxLength={2000}
                 className="input mt-2"
-                placeholder="Report URL, file path, or test run identifier"
+                placeholder="Report URL, file path or ticket number"
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
               />
@@ -222,18 +221,18 @@ export default function EvidencePage() {
             {submit.data && (
               <div
                 role="status"
-                className="mt-4 rounded bg-ink-800 p-4 text-xs leading-6 text-signal-600"
+                className="mt-4 rounded bg-ink-800 p-3 text-sm"
               >
                 {submit.data.created
                   ? "Observation received. Background evaluation is queued."
                   : "This observation is already recorded."}{" "}
                 <Link className="underline" href="/triggers">
-                  Follow its evaluation →
+                  See how it was evaluated
                 </Link>
               </div>
             )}
             <button className="btn-primary mt-5" disabled={submit.isPending}>
-              {submit.isPending ? "Submitting…" : "Submit evidence →"}
+              {submit.isPending ? "Submitting…" : "Submit evidence"}
             </button>
           </form>
           <section className="mt-7">
@@ -257,7 +256,7 @@ export default function EvidencePage() {
                         </p>
                       </div>
                       <span
-                        className={`text-xs ${e.status === "FAILED" ? "text-risk-600" : "text-signal-600"}`}
+                        className={`text-xs ${e.status === "FAILED" ? "text-risk-600" : "text-ink-400"}`}
                       >
                         {e.status.toLowerCase()}
                       </span>
@@ -266,15 +265,13 @@ export default function EvidencePage() {
                 </div>
               ) : (
                 <EmptyState title="No observations received yet">
-                  Start with a fact that could support or challenge a recorded
-                  condition.
+                  Start with a fact that could support or challenge a recorded assumption.
                 </EmptyState>
               ))}
           </section>
         </div>
         <aside className="space-y-5">
           <section className="card form-section">
-            <p className="eyebrow">Document sources</p>
             <h2>Attach a source file</h2>
             <p className="form-hint">
               PDF, Markdown or plain text. Document storage uses your configured
@@ -361,11 +358,10 @@ export default function EvidencePage() {
           </section>
           <section className="rounded border border-ink-700 p-5">
             <h3 className="text-sm font-semibold">
-              Keep observations precise.
+              Be precise
             </h3>
             <p className="mt-3 text-xs leading-6 text-ink-400">
-              “Latency = 30 ms” can check “latency &lt; 20 ms.” A changed
-              subject or unit may require a different interpretation.
+              “Chargeback rate = 1.2 %” can check “chargeback rate &lt; 0.5 %”. If the subject or unit differs, the two are not compared.
             </p>
           </section>
         </aside>

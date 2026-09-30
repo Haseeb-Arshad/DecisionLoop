@@ -81,30 +81,24 @@ export function QueryState({
   return null;
 }
 
+/** "just now", "5m ago", "3h ago", "2d ago", else the date. A helper, not inline, so rendering stays pure. */
+function relativeTime(iso: string, now: number): string {
+  const seconds = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+  return new Date(iso).toISOString().slice(0, 10);
+}
+
+const currentTime = () => Date.now();
+
 /** Relative time, with the exact time on hover. */
 export function When({ iso }: { iso: string | null | undefined }) {
   if (!iso) return <span className="text-ink-500">—</span>;
-  const d = new Date(iso);
-  const seconds = Math.round((Date.now() - d.getTime()) / 1000);
-  const units: Array<[number, string]> = [
-    [60, "s"],
-    [3600, "m"],
-    [86400, "h"],
-    [604800, "d"],
-  ];
-  let text = d.toISOString().slice(0, 10);
-  if (seconds < 60) text = "just now";
-  else {
-    for (let i = 1; i < units.length; i++) {
-      if (seconds < units[i]![0]) {
-        text = `${Math.floor(seconds / units[i - 1]![0])}${units[i - 1]![1]} ago`;
-        break;
-      }
-    }
-  }
   return (
-    <time dateTime={iso} title={d.toLocaleString()} className="whitespace-nowrap text-ink-400">
-      {text}
+    <time dateTime={iso} title={new Date(iso).toLocaleString()} className="whitespace-nowrap text-ink-400" suppressHydrationWarning>
+      {relativeTime(iso, currentTime())}
     </time>
   );
 }

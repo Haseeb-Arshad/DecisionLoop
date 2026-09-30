@@ -508,3 +508,8 @@
 .auth-record {
   display: none;
 }
+
+/* Wide tables scroll inside their wrapper instead of squeezing columns on a phone. */
+.overflow-x-auto > table {
+  min-width: 640px;
+}

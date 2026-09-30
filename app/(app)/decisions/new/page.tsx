@@ -132,22 +132,22 @@ export default function NewDecisionPage() {
   }
   return (
     <div>
-      <Link href="/decisions" className="text-xs text-ink-400">
-        ← Decision register
+      <Link href="/decisions" className="text-xs text-ink-400 underline">
+        All decisions
       </Link>
-      <div className="mt-5">
+      <div className="mt-3">
         <PageHeader
-          title="Record the choice. Preserve the why."
-          description="Write the decision in your own words. Add conditions that new evidence can check. No AI model is required."
+          title="New decision"
+          description="Write the decision in your own words and add assumptions that evidence can be checked against. No model is required."
         />
       </div>
       <form
         onSubmit={submit}
-        className="grid items-start gap-7 xl:grid-cols-[minmax(0,1fr)_270px]"
+        className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_240px]"
       >
         <div className="space-y-5">
           <section className="card form-section">
-            <h2>01 / The decision</h2>
+            <h2>1. The decision</h2>
             <p className="form-hint">
               What problem did you solve, and what did you choose?
             </p>
@@ -200,7 +200,7 @@ export default function NewDecisionPage() {
             </div>
           </section>
           <section className="card form-section">
-            <h2>02 / Alternatives</h2>
+            <h2>2. Alternatives</h2>
             <p className="form-hint">
               A rejected option can become useful when circumstances change.
             </p>
@@ -264,11 +264,11 @@ export default function NewDecisionPage() {
                 ])
               }
             >
-              + Add an alternative
+              Add an alternative
             </button>
           </section>
           <section className="card form-section">
-            <h2>03 / Conditions to watch</h2>
+            <h2>3. Assumptions to watch</h2>
             <p className="form-hint">
               What must stay true for this choice to make sense?
             </p>
@@ -290,7 +290,7 @@ export default function NewDecisionPage() {
                   </button>
                 </div>
                 <label className="label">
-                  Condition
+                  Assumption
                   <input
                     required
                     maxLength={1000}
@@ -316,10 +316,10 @@ export default function NewDecisionPage() {
                     }
                   >
                     <option value="TEXT">
-                      Human review of a qualitative condition
+                      Qualitative statement (reviewed by a person or model)
                     </option>
                     <option value="NUMBER">Measured number</option>
-                    <option value="BOOLEAN">True / false condition</option>
+                    <option value="BOOLEAN">True or false</option>
                     <option value="CATEGORY">Category or named value</option>
                     <option value="DATE">Date</option>
                     <option value="VERSION">Version</option>
@@ -423,17 +423,16 @@ export default function NewDecisionPage() {
               disabled={assumptions.length >= 50}
               onClick={() => setAssumptions((v) => [...v, blank()])}
             >
-              + Add a condition
+              Add an assumption
             </button>
           </section>
           <section className="card form-section">
-            <h2>04 / Where it applies</h2>
+            <h2>4. What it governs</h2>
             <p className="form-hint">
-              Connect this decision to the files, dependencies or services it
-              governs.
+              Name the things it governs so agents that touch them are told about it: files, packages, customers, vendors, policies.
             </p>
             <label className="label">
-              Repository
+              Code repository (optional)
               <input
                 className="input mt-2"
                 maxLength={200}
@@ -447,18 +446,17 @@ export default function NewDecisionPage() {
               <textarea
                 rows={3}
                 className="input mt-2"
-                placeholder={"src/auth/**\nnpm:redis"}
+                placeholder={"src/auth/**\nnpm:redis\npolicy:refunds\nvendor:*"}
                 value={resources}
                 onChange={(e) => setResources(e.target.value)}
               />
             </label>
             <p className="mt-2 text-xs text-ink-400">
-              One resource per line. Paths and dependencies help agents retrieve
-              the right decision.
+              One per line, as <span className="font-mono">type:name</span> or a path. Wildcards such as <span className="font-mono">vendor:*</span> work for every type.
             </p>
             <details className="mt-6 border-t border-ink-700 pt-5">
               <summary className="cursor-pointer text-sm font-medium">
-                Attach a GitHub verification workflow
+                Link a GitHub Actions workflow (code decisions)
               </summary>
               <p className="mt-3 text-xs leading-6 text-ink-400">
                 Use the exact repository and Actions workflow name. Completed
@@ -501,25 +499,18 @@ export default function NewDecisionPage() {
               Cancel
             </Link>
             <button disabled={create.isPending} className="btn-primary">
-              {create.isPending ? "Recording…" : "Commit decision →"}
+              {create.isPending ? "Recording…" : "Commit decision"}
             </button>
           </div>
         </div>
         <aside className="card form-section xl:sticky xl:top-8">
-          <p className="eyebrow">Before you commit</p>
-          <h2>Make it useful later.</h2>
-          <p className="text-xs leading-6 text-ink-400">
-            A good record explains the tradeoff, names the alternatives, and
-            states what would change your mind.
-          </p>
-          <hr className="my-5 border-ink-700" />
-          <p className="text-xs leading-6 text-ink-400">
-            Committing adds this choice to shared memory. Its history stays
-            traceable when evidence changes.
-          </p>
-          <div className="mt-5 rounded bg-ink-800 p-3 text-xs text-signal-600">
-            You make the decision. The system keeps the record.
-          </div>
+          <h2>A useful record</h2>
+          <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-ink-300">
+            <li>Explains the tradeoff</li>
+            <li>Names what was rejected, and why</li>
+            <li>States what would change your mind</li>
+          </ul>
+          <p className="mt-3 text-sm text-ink-400">Committing makes the decision authoritative. Its history stays when evidence changes.</p>
         </aside>
       </form>
     </div>

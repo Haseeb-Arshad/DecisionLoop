@@ -24,13 +24,13 @@ export default function ProjectsPage() {
     <div>
       <PageHeader
         title="Projects"
-        description="Browse the work behind your decisions and their supporting source documents."
+        description="Groups of decisions and the documents behind them."
         action={
           <button
             className="btn-primary"
             onClick={() => setShowForm(!showForm)}
           >
-            {showForm ? "Cancel" : "+ New project"}
+            {showForm ? "Cancel" : "New project"}
           </button>
         }
       />
@@ -71,41 +71,37 @@ export default function ProjectsPage() {
       <QueryState loading={q.isLoading} error={q.error} retry={q.refetch} />
       {q.data &&
         (q.data.projects.length ? (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {q.data.projects.map((project) => (
-              <Link
-                href={`/projects/${project.id}`}
-                className="card form-section block transition hover:border-signal-600/40"
-                key={project.id}
-              >
-                <p className="record-reference mb-3">
-                  PROJECT / {project.name.slice(0, 3).toUpperCase()}
-                </p>
-                <h2>{project.name}</h2>
-                <p className="mt-3 min-h-[3rem] text-xs leading-6 text-ink-400">
-                  {project.description ??
-                    "A collection of decisions and source evidence."}
-                </p>
-                <div className="mt-5 flex justify-between border-t border-ink-700 pt-4 text-xs text-ink-400">
-                  <span>
-                    {project.decisionCount} decisions · {project.documentCount}{" "}
-                    sources
-                  </span>
-                  {project.atRiskCount > 0 ? (
-                    <span className="text-risk-600">
-                      {project.atRiskCount} at risk
-                    </span>
-                  ) : (
-                    <span>↗</span>
-                  )}
-                </div>
-              </Link>
-            ))}
+          <div className="overflow-x-auto rounded border border-ink-700">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-ink-800 text-xs text-ink-400">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Project</th>
+                  <th className="px-3 py-2 font-medium">Description</th>
+                  <th className="px-3 py-2 text-right font-medium">Decisions</th>
+                  <th className="px-3 py-2 text-right font-medium">Sources</th>
+                  <th className="px-3 py-2 text-right font-medium">At risk</th>
+                </tr>
+              </thead>
+              <tbody>
+                {q.data.projects.map((project) => (
+                  <tr key={project.id} className="border-t border-ink-700/60 hover:bg-ink-800">
+                    <td className="px-3 py-2 font-medium">
+                      <Link href={`/projects/${project.id}`} className="hover:underline">
+                        {project.name}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 text-ink-300">{project.description ?? "—"}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{project.decisionCount}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{project.documentCount}</td>
+                    <td className={`px-3 py-2 text-right tabular-nums ${project.atRiskCount > 0 ? "text-risk-600" : ""}`}>{project.atRiskCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : (
           <EmptyState title="No projects recorded">
-            Create a project to organize your source documents and browse its
-            decision history.
+            A project groups decisions and their source documents.
           </EmptyState>
         ))}
     </div>

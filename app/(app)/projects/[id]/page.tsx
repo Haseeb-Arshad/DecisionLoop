@@ -30,8 +30,8 @@ export default function ProjectDetailPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/projects" className="text-xs text-ink-400 hover:text-ink-200">
-          ← All projects
+        <Link href="/projects" className="text-xs text-ink-400 hover:underline">
+          All projects
         </Link>
         <h1 className="mt-2 text-xl font-semibold text-ink-50">{project.name}</h1>
         {project.description && (
@@ -51,8 +51,8 @@ export default function ProjectDetailPage() {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-ink-100">Decisions</h2>
-          <Link href="/decisions/new" className="text-xs text-signal-400 hover:text-signal-300">
-            + Commit a decision
+          <Link href="/decisions/new" className="text-xs text-signal-600 underline">
+            Commit a decision
           </Link>
         </div>
         {decisions.length === 0 ? (
@@ -85,8 +85,8 @@ export default function ProjectDetailPage() {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-ink-100">Evidence</h2>
-          <Link href="/documents" className="text-xs text-signal-400 hover:text-signal-300">
-            + Add evidence
+          <Link href="/documents" className="text-xs text-signal-600 underline">
+            Add evidence
           </Link>
         </div>
         {documents.length === 0 ? (
