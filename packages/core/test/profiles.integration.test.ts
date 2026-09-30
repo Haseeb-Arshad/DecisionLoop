@@ -341,3 +341,30 @@ describe("one observation is one fact", () => {
     expect(facts[0]!.extractor).toBe("payload/metrics");
   });
 });
+
+describe("the stated reason follows the strongest evidence", () => {
+  it("a study that invalidates replaces the reason a rumor gave when it only challenged", async () => {
+    const human = bindOperations(env.loop, ws.human);
+    const d = await human.createDecision({
+      title: "Keep the depot on the low meadow",
+      domain: "planning",
+      chosenOption: { name: "Low meadow depot" },
+      assumptions: [{ statement: "Meadow flood level stays below 1.5 m", subject: "river:meadow", predicate: "flood_level_100yr_m", valueType: "NUMBER", operator: "<", expected: 1.5, unit: "m", authority: 0.8 }],
+      resources: ["zone:meadow"],
+    });
+    const post = (source: string, id: string, value: number) =>
+      bindOperations(env.loop, integration(source)).submitEvent({
+        type: "report",
+        externalId: id,
+        payload: { metrics: [{ subject: "river:meadow", metric: "flood_level_100yr_m", value, unit: "m" }] },
+      });
+    await post("social", "rumor-meadow", 1.7); // authority 0.3 in the support profile: challenges only
+    await env.drain();
+    expect((await env.loop.store.getDecision(ws.id, d.id))!.riskExplanation).toContain("1.7");
+    await post("billing", "study-meadow", 2.2); // authority 0.85: invalidates
+    await env.drain();
+    const after = (await env.loop.store.getDecision(ws.id, d.id))!;
+    expect(after.assumptions[0]!.validityStatus).toBe("INVALIDATED");
+    expect(after.riskExplanation).toContain("2.2");
+  });
+});

@@ -793,6 +793,10 @@ export class TriggerEngine {
             metadata: { conflictId: conflict.id, eventId: event.id, evidenceId: evidence.id },
           });
           emitted.push({ type: "decision.at_risk", workspaceId: tenantId, decisionId: decision.id, conflictId: conflict.id, causedByEventId: event.id, summary: judged.explanation });
+        } else if (current?.status === "AT_RISK" && outcome.nextValidity === "INVALIDATED") {
+          // Already flagged, say by a weak source that could only challenge. The
+          // stated reason should be the strongest evidence, not the first.
+          await tx.updateDecisionStatus(tenantId, decision.id, "AT_RISK", { riskExplanation: judged.explanation });
         }
         flagged = true;
       }

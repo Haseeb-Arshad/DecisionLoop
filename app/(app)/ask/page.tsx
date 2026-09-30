@@ -126,6 +126,7 @@ function ActionForm() {
   const check = useV1Mutation<unknown, ActionCheck>((body) => v1("/actions/check", { body }));
 
   const numeric = value.trim() !== "" && !Number.isNaN(Number(value));
+  const yesNo = /^(true|false)$/i.test(value.trim());
 
   return (
     <section>
@@ -143,8 +144,8 @@ function ActionForm() {
                     {
                       subject: subject.trim() || null,
                       predicate: predicate.trim(),
-                      valueType: numeric ? "NUMBER" : "CATEGORY",
-                      value: numeric ? Number(value) : value.trim(),
+                      valueType: numeric ? "NUMBER" : yesNo ? "BOOLEAN" : "CATEGORY",
+                      value: numeric ? Number(value) : yesNo ? value.trim().toLowerCase() === "true" : value.trim(),
                       unit: unit.trim() || null,
                       statement: `${predicate.trim()} = ${value.trim()}${unit.trim() ? ` ${unit.trim()}` : ""}`,
                     },
@@ -165,7 +166,7 @@ function ActionForm() {
         <div className="mt-2 grid gap-3 sm:grid-cols-4">
           <input aria-label="Subject" className="input" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject, e.g. vendor:acme" />
           <input aria-label="Value name" className="input" value={predicate} onChange={(e) => setPredicate(e.target.value)} placeholder="Name, e.g. refund_amount_usd" />
-          <input aria-label="Value" className="input" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Value, e.g. 350" />
+          <input aria-label="Value" className="input" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Value: 350, true, EU" />
           <input aria-label="Unit" className="input" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="Unit, e.g. USD" />
         </div>
         <button className="btn-primary mt-4" disabled={check.isPending}>
