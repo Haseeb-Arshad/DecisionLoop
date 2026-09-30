@@ -19,6 +19,7 @@ describe("behavioural evaluation", () => {
     expect(m.conflictRecall).toBe(1);
     expect(m.falseAlertRate).toBe(0);
     expect(m.tenantLeaks).toBe(0);
+    expect(m.actionVerdictAccuracy).toBe(1);
     expect(m.contextTokensMax).toBeLessThan(1500);
   }, 120_000);
 });

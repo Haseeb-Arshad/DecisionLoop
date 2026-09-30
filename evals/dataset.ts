@@ -21,7 +21,9 @@ export type Category =
   | "H_superseded_inactive"
   | "I_tenant_isolation"
   | "J_agent_change_violates"
-  | "K_suspicious_but_unrelated";
+  | "K_suspicious_but_unrelated"
+  | "L_action_check"
+  | "M_other_domain_evidence";
 
 export interface ContextCase {
   kind: "context";
@@ -61,7 +63,20 @@ export interface EvidenceCase {
   expectSupports?: string[];
 }
 
-export type EvalCase = ContextCase | EvidenceCase;
+/** A dry-run check before an action with side effects (refund, purchase, message). */
+export interface ActionCase {
+  kind: "action";
+  id: string;
+  category: Category;
+  action: string;
+  resources: string[];
+  facts?: Array<{ subject?: string; predicate: string; valueType: "NUMBER" | "BOOLEAN" | "CATEGORY"; value: number | boolean | string; unit?: string; statement: string }>;
+  expectVerdict: "no_decision" | "clear" | "caution" | "stop";
+  /** Decisions the verdict must name as violated (by externalRef). */
+  expectViolations?: string[];
+}
+
+export type EvalCase = ContextCase | EvidenceCase | ActionCase;
 
 const REPO = "acme/platform";
 
@@ -168,6 +183,28 @@ export const DECISIONS: Array<DecisionDraftInput & { externalRef: string }> = [
     repository: REPO,
   },
   {
+    externalRef: "SUP-007",
+    title: "Auto-approve refunds up to $200",
+    domain: "support",
+    chosenOption: { name: "Auto-approve up to $200" },
+    alternatives: [{ name: "Escalate every refund to a person", rejectionReason: "Median resolution time tripled and satisfaction fell." }],
+    rationale: "Consumer chargebacks are rare, so small refunds are cheaper to grant than to review.",
+    assumptions: [
+      { statement: "Consumer chargeback rate stays under 0.5%", subject: "segment:consumer", predicate: "chargeback_rate_pct", valueType: "NUMBER", operator: "<", expected: 0.5, unit: "%", importance: 0.9, authority: 0.8 },
+    ],
+    constraints: [{ statement: "Refunds above $200 need a person", severity: "BLOCKING", rule: { kind: "fact_bound", predicate: "refund_amount_usd", operator: "<=", value: 200, unit: "USD" } }],
+    resources: ["policy:refunds", "segment:consumer"],
+    importance: 0.7,
+  },
+  {
+    externalRef: "PROC-012",
+    title: "No vendor above $100k a year without the CFO",
+    domain: "procurement",
+    chosenOption: { name: "Annual vendor spend cap" },
+    constraints: [{ statement: "Annual vendor cost stays at or under $100k", rule: { kind: "fact_bound", subject: "vendor:*", predicate: "annual_cost", operator: "<=", value: 100000, unit: "USD/year" } }],
+    importance: 0.6,
+  },
+  {
     externalRef: "PRD-012",
     title: "Defer the Android app",
     domain: "product",
@@ -206,10 +243,20 @@ export const CASES: EvalCase[] = [
   { kind: "context", id: "A5", category: "A_relevant_retrieved", intent: "Change how the GraphQL gateway resolves schemas", resources: ["src/api/graphql/schema.ts"], repository: REPO, expect: ["ADR-060"], expectFirst: "ADR-060" },
   { kind: "context", id: "A6", category: "A_relevant_retrieved", intent: "Increase Kafka partitions for ingestion", resources: ["services/ingest/consumer.ts"], repository: REPO, expect: ["ADR-050"], expectFirst: "ADR-050" },
 
+  { kind: "context", id: "A7", category: "A_relevant_retrieved", intent: "A customer asks for a $180 refund on a damaged order", resources: ["policy:refunds"], expect: ["SUP-007"], expectFirst: "SUP-007" },
+
   // ── B: similar but irrelevant must not dominate ─────────────────────────
   { kind: "context", id: "B1", category: "B_similar_not_dominant", intent: "Use Redis to cache session lookups", resources: ["src/session/store.ts"], repository: REPO, expect: ["ADR-018"], expectFirst: "ADR-018", forbid: ["ADR-031"] },
   { kind: "context", id: "B2", category: "B_similar_not_dominant", intent: "Tune Redis rate limits for billing", resources: ["src/billing/limiter.ts"], repository: REPO, expect: ["ADR-031"], expectFirst: "ADR-031", forbid: ["ADR-018"] },
   { kind: "context", id: "B3", category: "B_similar_not_dominant", intent: "Change the marketing landing page copy", resources: ["apps/marketing/index.tsx"], repository: REPO, expect: [], forbid: ["ADR-018", "ADR-040", "PROC-007"] },
+
+  { kind: "context", id: "B4", category: "B_similar_not_dominant", intent: "Order new office chairs for the Berlin team", resources: ["category:furniture"], expect: [], forbid: ["SUP-007", "PROC-012", "ADR-018"] },
+
+  // ── L: action checks, before anything happens (run while SUP-007 is ACTIVE) ──
+  { kind: "action", id: "L1", category: "L_action_check", action: "Refund order 1234 for $350", resources: ["policy:refunds"], facts: [{ predicate: "refund_amount_usd", valueType: "NUMBER", value: 350, unit: "USD", statement: "Refund of $350" }], expectVerdict: "stop", expectViolations: ["SUP-007"] },
+  { kind: "action", id: "L2", category: "L_action_check", action: "Refund order 1235 for $150", resources: ["policy:refunds"], facts: [{ predicate: "refund_amount_usd", valueType: "NUMBER", value: 150, unit: "USD", statement: "Refund of $150" }], expectVerdict: "clear" },
+  { kind: "action", id: "L3", category: "L_action_check", action: "Order new office chairs", resources: ["category:furniture"], expectVerdict: "no_decision" },
+  { kind: "action", id: "L4", category: "L_action_check", action: "Sign a three-year contract with Globex", resources: ["vendor:globex"], facts: [{ subject: "vendor:globex", predicate: "annual_cost", valueType: "NUMBER", value: 120000, unit: "USD/year", statement: "Globex annual cost $120,000" }], expectVerdict: "caution", expectViolations: ["PROC-012"] },
 
   // ── H: superseded decisions are not active context ─────────────────────
   { kind: "context", id: "H1", category: "H_superseded_inactive", intent: "Add a new feature flag", resources: ["src/flags/checkout.yaml"], repository: REPO, expect: [], forbid: ["ADR-007"] },
@@ -284,6 +331,26 @@ export const CASES: EvalCase[] = [
     event: github("delivery-pr-501", { changedFiles: [{ path: "src/auth/session.ts", status: "modified" }, { path: "package.json", status: "modified" }], dependencyChanges: [{ ecosystem: "npm", name: "redis", change: "removed", from: "^4.6.0" }, { ecosystem: "npm", name: "jsonwebtoken", change: "added", to: "^9.0.0" }] }, "pull_request.opened"),
     expectTransitions: {}, expectFindings: ["ADR-018"],
   },
+
+  // ── M: evidence from other domains' source systems, through profile extraction ──
+  {
+    kind: "evidence", id: "M1", category: "M_other_domain_evidence",
+    event: { source: "billing", externalId: "dispute-report-2026-09", type: "dispute.report", occurredAt: "2026-09-06T00:00:00.000Z", actor: { type: "integration", label: "billing" }, evidenceKind: "METRIC", payload: { dispute_report: { segment: "Consumer", chargebackRatePct: 1.2 } }, provenance: { receivedVia: "eval" } },
+    expectTransitions: { "SUP-007:chargeback_rate_pct": "INVALIDATED" }, expectAtRisk: ["SUP-007"],
+  },
+  {
+    kind: "evidence", id: "M2", category: "M_other_domain_evidence",
+    event: { source: "procurement", externalId: "quote-globex-big", type: "quote.received", occurredAt: "2026-09-07T00:00:00.000Z", actor: { type: "integration", label: "erp" }, evidenceKind: "OFFICIAL_SOURCE", payload: { quote: { vendor: "Globex", annualCost: 140000, currency: "usd" } }, provenance: { receivedVia: "eval" } },
+    expectTransitions: {}, expectFindings: ["PROC-012"],
+  },
+  {
+    kind: "evidence", id: "M3", category: "M_other_domain_evidence",
+    event: { source: "procurement", externalId: "quote-globex-fine", type: "quote.received", occurredAt: "2026-09-08T00:00:00.000Z", actor: { type: "integration", label: "erp" }, evidenceKind: "OFFICIAL_SOURCE", payload: { quote: { vendor: "Initech", annualCost: 70000 } }, provenance: { receivedVia: "eval" } },
+    expectTransitions: {}, expectUntouched: ["PROC-007:annual_cost"],
+  },
+
+  // ── L (continued): the same refund is now a caution, because SUP-007 is AT RISK ──
+  { kind: "action", id: "L5", category: "L_action_check", action: "Refund order 1236 for $120", resources: ["policy:refunds"], facts: [{ predicate: "refund_amount_usd", valueType: "NUMBER", value: 120, unit: "USD", statement: "Refund of $120" }], expectVerdict: "caution" },
 
   // ── K: looks suspicious but is unrelated ────────────────────────────────
   {

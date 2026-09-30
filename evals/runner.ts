@@ -1,5 +1,10 @@
 import { normalizeKey } from "@decisionloop/core/assumptions/model";
 import type { SemanticJudgment, ReasoningProvider } from "@decisionloop/core/ports/providers";
+import fs from "node:fs";
+import path from "node:path";
+import { BUILTIN_PACKS } from "@decisionloop/core/domain-packs/builtin";
+import { DomainRegistry } from "@decisionloop/core/domain-packs/pack";
+import { packFromProfile, parseProfile } from "@decisionloop/core/domain-packs/profile";
 import { createDecisionLoop, type DecisionLoop } from "@decisionloop/core/services/index";
 import { drainJobs } from "@decisionloop/core/services/worker";
 import type { Actor } from "@decisionloop/core/types/records";
@@ -7,7 +12,7 @@ import type { DecisionWithDetails } from "@decisionloop/core/types/domain";
 import { LexicalEmbeddingProvider, selectReasoningProvider } from "@decisionloop/providers";
 import { createSql } from "@decisionloop/storage-sql/connection";
 import { SqlDecisionStore } from "@decisionloop/storage-sql/store";
-import { CASES, DECISIONS, DEPENDENCIES, OTHER_TENANT_DECISION, SUPERSESSIONS, type ContextCase, type EvidenceCase } from "./dataset";
+import { CASES, DECISIONS, DEPENDENCIES, OTHER_TENANT_DECISION, SUPERSESSIONS, type ActionCase, type ContextCase, type EvidenceCase } from "./dataset";
 
 /**
  * Behavioural evaluation runner (spec §27). Seeds a realistic workspace,
@@ -52,6 +57,8 @@ export interface EvalReport {
     evidenceLatencyP50: number;
     evidenceLatencyP95: number;
     modelCallsPerEvidence: number;
+    /** Share of action checks that returned the expected verdict and named the expected violations. */
+    actionVerdictAccuracy: number;
     /** Needs human decisions from real use; see evals/dogfood. */
     approvalAcceptanceRate: null;
     humanOverrideRate: null;
@@ -108,7 +115,14 @@ export async function runEvaluation(opts: { databaseUrl: string; useConfiguredMo
   const sql = createSql(opts.databaseUrl, { max: 1 });
   const scripted = new ScriptedModel();
   const reasoning = opts.useConfiguredModel ? selectReasoningProvider() : scripted;
-  const loop = createDecisionLoop({ store: new SqlDecisionStore(sql), embeddings: new LexicalEmbeddingProvider(), reasoning });
+  // The support domain is a profile (profiles/support.json), loaded exactly as a deployment would load it.
+  const supportProfile = packFromProfile(parseProfile(JSON.parse(fs.readFileSync(path.join(process.cwd(), "profiles", "support.json"), "utf8"))));
+  const loop = createDecisionLoop({
+    store: new SqlDecisionStore(sql),
+    embeddings: new LexicalEmbeddingProvider(),
+    reasoning,
+    domains: new DomainRegistry([...BUILTIN_PACKS, supportProfile]),
+  });
   const worker = loop.createWorker({ workerId: "eval" });
   const tenant = await loop.store.createWorkspace("Eval Co");
   const other = await loop.store.createWorkspace("Other Co");
@@ -137,10 +151,40 @@ export async function runEvaluation(opts: { databaseUrl: string; useConfiguredMo
     const ctxLatency: number[] = [];
     const evLatency: number[] = [];
     const modelCalls: number[] = [];
+    const actions = { correct: 0, total: 0 };
 
     for (const c of CASES) {
       if (c.kind === "context") results.push(await runContext(c));
+      else if (c.kind === "action") results.push(await runAction(c));
       else results.push(await runEvidence(c));
+    }
+
+    async function runAction(c: ActionCase): Promise<CaseResult> {
+      const notes: string[] = [];
+      const started = Date.now();
+      const r = await loop.context.checkAction(actors(tenant.id).agent, { action: c.action, resources: c.resources, facts: c.facts ?? [] });
+      const latencyMs = Date.now() - started;
+      actions.total += 1;
+      let ok = true;
+      if (r.verdict !== c.expectVerdict) {
+        ok = false;
+        notes.push(`verdict was ${r.verdict}, expected ${c.expectVerdict}`);
+      }
+      const named = new Set(r.violations.map((v) => v.decision.externalRef));
+      for (const ref of c.expectViolations ?? []) {
+        if (!named.has(ref)) {
+          ok = false;
+          notes.push(`did not name a violation of ${ref}`);
+        }
+      }
+      for (const ref of named) {
+        if (!(c.expectViolations ?? []).includes(ref!)) {
+          ok = false;
+          notes.push(`unexpected violation of ${ref}`);
+        }
+      }
+      if (ok) actions.correct += 1;
+      return { id: c.id, category: c.category, pass: ok, notes, latencyMs };
     }
 
     async function runContext(c: ContextCase): Promise<CaseResult> {
@@ -297,6 +341,7 @@ export async function runEvaluation(opts: { databaseUrl: string; useConfiguredMo
         contextLatencyP95: pct(ctxLatency, 95),
         evidenceLatencyP50: pct(evLatency, 50),
         evidenceLatencyP95: pct(evLatency, 95),
+        actionVerdictAccuracy: ratio(actions.correct, actions.total),
         modelCallsPerEvidence: Number((modelCalls.reduce((a, b) => a + b, 0) / Math.max(1, modelCalls.length)).toFixed(2)),
         approvalAcceptanceRate: null,
         humanOverrideRate: null,
@@ -332,6 +377,7 @@ export function renderReport(r: EvalReport): string {
     `| Context latency p50 / p95 (ms) | ${m.contextLatencyP50} / ${m.contextLatencyP95} |`,
     `| Evidence end-to-end latency p50 / p95 (ms) | ${m.evidenceLatencyP50} / ${m.evidenceLatencyP95} |`,
     `| Model calls per evidence event | ${m.modelCallsPerEvidence} |`,
+    `| Action-check verdict accuracy | ${f(m.actionVerdictAccuracy)} |`,
     `| Approval acceptance / human override rate | not measurable offline — from dogfood data |`,
     ``,
     `| Case | Category | Result | Notes |`,
