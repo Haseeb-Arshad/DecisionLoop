@@ -404,6 +404,7 @@ Each phase leaves the existing app runnable and ends with tests green and a comm
 | 9 Evaluation | Done | `evals/`; gate test; alpha acceptance test (all 20 criteria) |
 | 10 Documentation / preview packaging | Docs done; npm publishing pending | README, `docs/v2/*`, `integrations/*`, `docker-compose.yml` |
 | Follow-ups | Done | expiry sweep (hourly, deduplicated); procurement/product/finance packs (PoC, finance review policy); decision-health overview; blast-radius view; `decisionloop watch` |
+| Domain profiles | Done (2026-10) | `packages/core/src/domain-packs/profile.ts`, `profiles/*.json`, action checks, source-bound events, alias learning; [domains.md](domains.md); `profiles.integration.test.ts`, eval cases A7, B4, L1-L5, M1-M3 |
 | Dogfooding | Not started | [dogfood.md](dogfood.md) |
 
 Deviations from this plan, with reasons:

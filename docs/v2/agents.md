@@ -1,7 +1,9 @@
-# Connecting coding agents
+# Connecting agents
 
 DecisionLoop is an MCP server. Any agent that speaks MCP can ask it for context before acting and
-propose decisions afterwards. Configuration files for each client live in
+propose decisions afterwards. Coding agents are the reference integration below; agents in other domains
+(support, sales, procurement, operations) connect the same way and are addressed in their domain's words: see
+[domains](domains.md). Configuration files for each client live in
 [`integrations/`](../../integrations).
 
 Give agents the **`local-agents`** key (read + propose) from `.decisionloop/credentials.json`, never the
@@ -41,6 +43,19 @@ Inspector groups calls by agent session. Agents can also pass `agent` + `agentSe
 
 Hooks never break the session: any failure (server down, timeout) exits silently.
 
+## Claude Desktop and other chat clients
+
+Copy [`integrations/claude-desktop/claude_desktop_config.json`](../../integrations/claude-desktop/claude_desktop_config.json)
+into Claude Desktop's configuration and fill in the agent key. It runs `decisionloop mcp` (stdio), which calls
+the HTTP API, so the client never holds database credentials. The wording the client sees comes from the
+workspace's primary domain (`decisionloop init --profile support`).
+
+## Your own agent
+
+Use the TypeScript SDK (`@decisionloop/sdk`) or the HTTP API directly. A minimal agent that checks a
+refund before issuing it is in
+[`integrations/custom-agent/check-before-acting.ts`](../../integrations/custom-agent/check-before-acting.ts).
+
 ## Codex
 
 Copy [`integrations/codex/config.toml`](../../integrations/codex/config.toml) into `~/.codex/config.toml`
@@ -73,5 +88,6 @@ Copy [`integrations/vscode-copilot/mcp.json`](../../integrations/vscode-copilot/
 | Tool | Scope |
 |---|---|
 | `decisionloop_get_context`, `_search_decisions`, `_get_decision`, `_explain`, `_get_constraints`, `_list_at_risk`, `_get_conflicts`, `_blast_radius`, `_get_evidence_status` | read |
+| `decisionloop_check_action` (only when the workspace's domain enables it; see [domains](domains.md)) | read |
 | `decisionloop_propose_decision`, `_propose_assumption`, `_add_evidence`, `_record_outcome` | propose |
 | `decisionloop_commit_decision`, `_accept_conflict`, `_dismiss_conflict`, `_supersede_decision` | people with write scope only |

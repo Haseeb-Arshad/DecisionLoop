@@ -1,178 +1,208 @@
 # DecisionLoop
 
-**Decision memory for humans and AI agents — and it knows when the reasons stop being true.**
+**Decision memory for people and the agents that work for them.**
 
-DecisionLoop records *why* a system is built the way it is: the decision, the alternatives that were
-rejected and why, the assumptions that made it reasonable, and the evidence behind it. Coding agents
-ask it before they change things. When new evidence contradicts an old assumption — a merged PR, a
-production metric, a vendor notice, a person's statement — DecisionLoop finds the affected decisions on
-its own, marks them **at risk**, and warns the next agent that touches that code.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Status: 2.0 alpha](https://img.shields.io/badge/status-2.0%20alpha-orange)
+![Node 20.9+](https://img.shields.io/badge/node-%E2%89%A520.9-339933)
 
-Git stores code history. Issue trackers store work history. Observability stores runtime history.
-**DecisionLoop stores reasoning history — and keeps checking it against reality.**
+DecisionLoop records **why** something was decided: the choice, the alternatives that were rejected, and the
+assumptions that made it reasonable. Before an agent acts, it can ask what governs the work. When new
+evidence contradicts an assumption, the decision is flagged **at risk** and a person reviews it.
 
-> Status: **2.0 alpha.** The core, MCP server, HTTP API, SDK, CLI, GitHub integration, agent hooks and
-> control plane work end to end and are covered by automated tests and a behavioural evaluation suite.
-> It has not yet been dogfooded on production repositories; see [what's not done](#whats-not-done-yet).
+It is not limited to code. The engine knows nothing about repositories; a coding agent asking *"what
+governs `src/auth/`?"* and a support agent asking *"what governs this refund?"* are the same question.
 
----
+[Quick start](#quick-start) · [One engine, any domain](#one-engine-any-domain) · [Connect an agent](#connect-an-agent) · [Domains guide](docs/v2/domains.md) · [Deployment](docs/deployment.md)
 
-## The story it exists for
+![Overview: decisions, what needs attention, and what agents were told](docs/media/overview.png)
 
-1. **Months ago, an agent (or a person) decided** to use Redis-backed sessions instead of stateless JWTs,
-   because customers need sessions revoked instantly. A person approved it. DecisionLoop recorded it as
-   `ADR-018` — with the rejected alternative, the reason, and structured assumptions like
-   `service:auth.immediate_revocation_required = true`.
-2. **Today, a different agent is asked to "refactor authentication."** Before touching `src/auth/`, it
-   calls `decisionloop_get_context`. It gets ~200 tokens: the decision, *why*, *"Rejected: Stateless JWT —
-   cannot revoke sessions immediately"*, and the constraint to keep sessions revocable. Not the whole
-   history — the part that governs these files.
-3. **The agent proposes switching to JWT anyway.** DecisionLoop flags that ADR-018 explicitly rejected
-   that option, and holds the proposal for a person. Agents can propose; only people make memory
-   authoritative.
-4. **Then reality changes.** A security review says revocation is no longer required. DecisionLoop is not
-   told which decision that affects. It finds ADR-018 by the fact's predicate, checks
-   `false ≠ true` deterministically (no model needed), invalidates the assumption, marks ADR-018
-   **AT RISK**, and opens a review because the decision is high-impact.
-5. **The next agent is warned automatically**, and the Inspector shows exactly which evidence, rules and
-   stored memories produced that warning — and what every agent was told, when.
+## What it does
 
-That whole flow is one automated test: [`tests/integration/alphaAcceptance.test.ts`](tests/integration/alphaAcceptance.test.ts).
+1. **Record.** A person commits a decision with its rationale, rejected alternatives, typed assumptions
+   (numbers, booleans, dates, versions, sets, or plain statements) and the things it governs. Agents can
+   only *propose*; nothing becomes authoritative without a person.
+2. **Ask before acting.** An agent gets a short, sourced answer: the governing decision, why, what was
+   rejected, what it assumes, and whether any of that is now in doubt.
+3. **Notice change.** Evidence arrives from people, agents, documents and source systems. DecisionLoop
+   finds the assumptions it bears on, compares values **by code**, weighs the source's authority, and only
+   asks a model when code cannot decide.
+4. **Keep the record.** Every check, the rule that produced it, and what each agent was told is stored and
+   inspectable.
 
-## How it differs from agent memory and RAG
+## One engine, any domain
 
-| | Chat/agent memory, RAG | DecisionLoop |
-|---|---|---|
-| Unit of memory | Text chunks | Structured decisions: options, rejection reasons, typed assumptions, constraints, affected resources |
-| Relevance | Embedding similarity | Structural first (the decision governs `src/auth/**`), semantic second |
-| Staleness | Silent | Assumptions are checked against every new piece of evidence |
-| Contradiction handling | None | Deterministic comparison first, model only when needed; authority-weighted; policy-driven |
-| Who can change history | Whoever writes | Agents propose; people approve; everything is append-only with provenance |
+| | Coding | Customer support | Procurement |
+|---|---|---|---|
+| A decision | Use Redis-backed sessions, not JWTs | Auto-approve refunds up to $200 | Select SignalForge as the analytics vendor |
+| Assumption | Immediate revocation is required | Chargeback rate stays under 0.5% | Annual cost stays under $25,000 |
+| Governs | `src/auth/**`, `npm:redis` | `policy:refunds`, `segment:consumer` | `vendor:signalforge` |
+| Evidence that contradicts it | A merged PR removes `redis` | Finance reports 1.2% | A signed quote says $42,000 |
+| The agent is warned | Before editing `src/auth/` | Before issuing a refund | Before renewing the contract |
 
-## Quick start (local, no cloud, ~5 minutes)
+The domain is a **profile**: a small JSON file (vocabulary, resource types, how much each source system is
+trusted, how to read its payloads). Engineering is one profile and the default; with no profile configured
+DecisionLoop behaves exactly as it always has, and a test pins the wording coding agents receive.
 
-Requirements: Node 20.9+ and git. No database to install — local mode embeds PostgreSQL (PGlite + pgvector).
+```bash
+decisionloop init --profile support       # or sales, operations, or your own JSON file
+```
+
+Agents can also **dry-run an action** before it happens. The values the action would use are compared with
+the decision's constraints by code:
+
+```text
+$ decisionloop act "Refund order 1234 for $350" --resource policy:refunds --fact '{"predicate":"refund_amount_usd","valueType":"NUMBER","value":350,"unit":"USD","statement":"Refund of $350"}'
+STOP
+STOP: this would break a blocking constraint. Do not proceed without a person's approval.
+- Breaks SUP-007 [BLOCKING]: Refund of $350; "Refunds above $200 need a person" requires refund_amount_usd <= 200 USD.
+- SUP-007 is AT RISK: the reasons behind it are in doubt. Confirm with a person before relying on it.
+...
+```
+
+![Checking an action against a decision](docs/media/check-action.png)
+
+Details, the profile format and what is not built yet: **[docs/v2/domains.md](docs/v2/domains.md)**.
+
+## Quick start
+
+Requires Node 20.9+. No database to install: local mode embeds PostgreSQL (PGlite with pgvector).
 
 ```bash
 git clone https://github.com/Haseeb-Arshad/DecisionLoop && cd DecisionLoop
 npm install
-npm link            # puts `decisionloop` on your PATH
+npm run build
+npm link                      # puts `decisionloop` on your PATH
 ```
 
-In the repository you want DecisionLoop to know about:
+In the folder you want it to know about (a code repository, or any folder):
 
 ```bash
-decisionloop init          # workspace, embedded database, scoped API keys in .decisionloop/
-decisionloop serve --web   # API + MCP + worker + control plane on http://127.0.0.1:4318
+decisionloop init                    # add --profile support for a non-coding domain
+decisionloop serve --web             # API + MCP + worker + web UI on http://127.0.0.1:4318
 ```
 
-Record a decision (JSON shape in [docs/v2/getting-started.md](docs/v2/getting-started.md)), then:
+Open `/signup` to create the first local account, then record a decision (JSON shape in
+[docs/v2/getting-started.md](docs/v2/getting-started.md)):
 
 ```bash
-decisionloop context src/auth/session.ts     # what governs these files?
-decisionloop check                           # do my local changes violate recorded constraints?
-decisionloop doctor                          # server, keys, MCP, providers
+decisionloop propose --commit --file adr-018.json
+decisionloop context src/auth/session.ts        # what governs this?
+decisionloop evidence add --statement "Security review: revocation is no longer required" \
+  --fact '{"subject":"service:auth","predicate":"immediate_revocation_required","valueType":"BOOLEAN","value":false,"statement":"No longer required"}'
+decisionloop decisions --at-risk                 # the decision is now flagged
 ```
 
-Connect your agent (Claude Code, Codex, Copilot, Cursor): **[docs/v2/agents.md](docs/v2/agents.md)**.
+![A decision flagged at risk, with its contradicted assumption](docs/media/decision.png)
 
-## Architecture
+## Connect an agent
 
+Give agents the **agent** key (read and propose) from `.decisionloop/credentials.json`. With it the server does
+not list the tools that commit, accept or supersede anything, and the services refuse them underneath anyway.
+
+| Client | Setup |
+|---|---|
+| Claude Code | [MCP config](integrations/claude-code/.mcp.json) and optional [hooks](integrations/claude-code/settings.json) |
+| Claude Desktop | [`claude_desktop_config.json`](integrations/claude-desktop/claude_desktop_config.json) |
+| Codex, Copilot (VS Code), Cursor | [`integrations/`](integrations) |
+| Your own agent | [`@decisionloop/sdk`](packages/sdk/src/index.ts): [example](integrations/custom-agent/check-before-acting.ts) |
+| Source systems (ERP, billing, helpdesk) | `POST /api/v1/events` with a key bound to one source: [guide](docs/v2/domains.md#feeding-it-from-source-systems) |
+| Anything else | MCP over HTTP (`/mcp`) or stdio (`decisionloop mcp`), or the HTTP API (`/api/v1`) |
+
+Full guide: [docs/v2/agents.md](docs/v2/agents.md).
+
+## How it works
+
+```text
+   Web UI              Agents and source systems (MCP, SDK, HTTP)              GitHub App
+      │                                   │                                        │
+      ▼                                   ▼                                        ▼
+   ┌─────────────── HTTP API /api/v1 · MCP /mcp · CLI · SDK ──────────────────────────┐
+   │                      DecisionLoopOperations (one contract)                        │
+   └───────────────────────────────────────┬───────────────────────────────────────────┘
+                                           ▼
+   ┌──────────────────────────────── @decisionloop/core ─────────────────────────────────┐
+   │ decisions · typed assumptions · evaluators · policies · trigger engine · approvals   │
+   │ context · action checks · blast radius · domain profiles (engineering is one)         │
+   └──────────────┬──────────────────────────┬───────────────────────────┬────────────────┘
+                  ▼                          ▼                           ▼
+        storage-sql (CockroachDB,     providers (Bedrock,        durable jobs + worker
+        PostgreSQL + pgvector, PGlite) OpenAI-compatible, offline)  (retries, dead letter)
 ```
-            Control plane (Next.js)          Agents: Claude Code · Codex · Copilot · Cursor · custom
-                     │                                     │ MCP (HTTP or stdio)
-                     ▼                                     ▼
-        ┌──────────── HTTP API /api/v1 · MCP /mcp · CLI · SDK ────────────┐
-        │                DecisionLoopOperations (one contract)            │
-        └──────────────────────────────┬──────────────────────────────────┘
-                                       ▼
-   ┌─────────────────────────── @decisionloop/core ───────────────────────────┐
-   │ decisions · typed assumptions · evaluators · policies · trigger engine   │
-   │ context · approvals · blast radius · domain packs (engineering first)    │
-   └───────────┬───────────────────────────┬──────────────────────┬──────────┘
-               ▼                           ▼                      ▼
-     storage-sql (CockroachDB,     providers (Bedrock,      durable jobs + worker
-     PostgreSQL+pgvector, PGlite)  OpenAI-compatible,       (SKIP LOCKED, backoff,
-                                   offline lexical)          dead letter)
-        ▲
-   GitHub App webhooks · evidence from people, agents, metrics, documents
-```
 
-- **Core is headless**: no framework, database or model SDK imports (enforced by a test). Every surface
-  calls the same services. See [docs/v2/00-audit-and-plan.md](docs/v2/00-audit-and-plan.md).
-- **Assumptions are typed**: numbers, booleans, categories, dates, versions, sets — and qualitative ones,
-  which are never forced into fake numbers.
-- **Deterministic before semantic**: arithmetic and comparisons never go to a model. Without a model
-  configured, qualitative checks are recorded as *unavailable*, not guessed.
-- **Evidence has authority**: a merged PR outranks an open one; an agent's own report can challenge an
-  assumption but never invalidate it; a contract outranks a blog post. Policies can only make outcomes
-  more conservative.
-- **Transactional provenance**: every state change commits in the same transaction as the evaluation
-  record that explains it.
-- **Storage**: CockroachDB remains first-class; PostgreSQL + pgvector and an embedded database work too.
+- **Headless core.** No framework, database or model SDK imports in `@decisionloop/core`; a test enforces it.
+- **Deterministic before semantic.** Numbers, booleans, dates, versions and sets are compared by code.
+  Without a model, qualitative checks are recorded as *unavailable*, never guessed.
+- **Evidence has authority.** A signed contract outranks a blog post; an agent's own report can challenge an
+  assumption but never invalidate it. Policies can only make outcomes more conservative.
+- **Transactional provenance.** A state change commits in the same transaction as the record explaining it.
+- **Tenant isolation** is enforced in every query and covered by the evaluation.
 
-## Surfaces
+## Compared with agent memory and RAG
 
-| Surface | Where | Notes |
+| | Chat memory, RAG | DecisionLoop |
 |---|---|---|
-| MCP server | `POST /mcp` (streamable HTTP) or `decisionloop mcp` (stdio) | Tools filtered by credential: agents never see commit/accept/dismiss/supersede |
-| HTTP API | `/api/v1/*` | API keys (`Authorization: Bearer dl_…`) or the control-plane session |
-| TypeScript SDK | [`packages/sdk`](packages/sdk/src/index.ts) | `dl.context.get(…)`, `dl.decisions.propose(…)` |
-| CLI | `decisionloop …` | init, serve, doctor, context, check, watch, decisions, show, explain, propose, evidence, approvals, hooks |
-| GitHub App | `POST /api/integrations/github/webhook` | Signed webhooks, advisory PR comments ([setup](docs/v2/github-app.md)) |
-| Control plane | `decisionloop serve --web` or `npm run dev` | Overview, decisions, at risk, approvals, triggers, agents, inspector |
+| Unit of memory | Text chunks | Decisions: options, rejection reasons, typed assumptions, constraints, governed resources |
+| Relevance | Embedding similarity | What the decision governs first, similarity second |
+| Staleness | Silent | Assumptions are checked against every new piece of evidence |
+| Contradictions | Not handled | Deterministic comparison, authority-weighted, policy-driven |
+| Who can change history | Whoever writes | Agents propose, people approve, everything append-only |
 
 ## Configuration
 
 | Variable | Purpose |
 |---|---|
-| `DATABASE_URL` | CockroachDB or PostgreSQL + pgvector. Unset → embedded database (local mode) |
-| `DECISIONLOOP_REASONING_PROVIDER` | `bedrock` \| `openai` \| `none` (default: `bedrock` if `AWS_REGION` is set, else `none`) |
-| `DECISIONLOOP_EMBEDDING_PROVIDER` | `bedrock` \| `openai` \| `lexical` (default: `bedrock` if `AWS_REGION`, else offline `lexical`) |
-| `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_REASONING_MODEL`, `OPENAI_EMBEDDING_MODEL` | Any OpenAI-compatible endpoint; used **only** when selected explicitly |
-| `GITHUB_WEBHOOK_SECRET`, `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY` (or `GITHUB_TOKEN` for local dev) | GitHub integration |
-| `SESSION_SECRET` | Control-plane cookie signing (generated automatically by `serve --web` locally) |
+| `DATABASE_URL` | CockroachDB or PostgreSQL with pgvector. Unset means the embedded database (local mode) |
+| `DECISIONLOOP_PRIMARY_DOMAIN`, `DECISIONLOOP_PROFILES_DIR` | Domain agents are addressed in; where profile JSON files live (set by `init --profile`) |
+| `DECISIONLOOP_REASONING_PROVIDER` | `bedrock`, `openai` or `none` (default `bedrock` when `AWS_REGION` is set, else `none`) |
+| `DECISIONLOOP_EMBEDDING_PROVIDER` | `bedrock`, `openai` or `lexical` (default `bedrock` when `AWS_REGION` is set, else offline `lexical`) |
+| `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_REASONING_MODEL`, `OPENAI_EMBEDDING_MODEL` | Any OpenAI-compatible endpoint; used only when selected |
+| `GITHUB_WEBHOOK_SECRET`, `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY` | GitHub integration |
+| `SESSION_SECRET` | Web session signing (generated automatically by `serve --web` locally) |
 
-Full list: [.env.example](.env.example). Production setup on CockroachDB + Bedrock: [docs/deployment.md](docs/deployment.md).
+Everything else: [.env.example](.env.example). Production on CockroachDB and Bedrock: [docs/deployment.md](docs/deployment.md).
 
-## Quality bar
+## Quality
 
 ```bash
-npm test          # unit + integration (embedded PostgreSQL; or your DATABASE_URL)
-npm run eval      # behavioural evaluation → evals/reports/latest.md
+npm test             # unit and integration tests, against embedded PostgreSQL (or your DATABASE_URL)
+npm run eval         # behavioural evaluation, written to evals/reports/latest.md
+npm run typecheck && npm run lint && npm run build
 ```
 
-The evaluation seeds a realistic workspace and scores cases A–K (relevant decision retrieved; similar but
-irrelevant decision doesn't dominate; supporting evidence; numeric and qualitative contradictions;
-low- vs high-authority evidence; superseded decisions; tenant isolation; agent changes that violate —
-or only look like they violate — a decision). Current dataset results: retrieval recall 1.00,
-governing decision ranked first 1.00, conflict precision/recall 1.00, false alerts 0, tenant leaks 0,
-~120-token average context. These are results on our dataset, not a claim about yours — dogfooding
-([plan](docs/v2/dogfood.md)) is what will say whether it is useful.
+The evaluation seeds a synthetic workspace spanning engineering, support and procurement and scores what the
+system actually does: the right decision retrieved and ranked first, lookalikes not dominating, numeric and
+qualitative contradictions, weak versus strong sources, superseded decisions, tenant isolation, agent
+changes that do or only look like they violate a decision, and action checks. On that dataset: retrieval
+recall 1.00, governing decision ranked first 1.00, conflict precision and recall 1.00, no false alerts, no
+tenant leaks, action-check accuracy 1.00, about 120 tokens of context per request. These are results on a
+**synthetic** dataset with a scripted stand-in for the model, not a claim about your data.
 
-## What's not done yet
+## Not done yet
 
-- **Dogfooding.** Not yet run across real repositories and weeks of agent work; approval-acceptance and
-  override rates can only come from that.
-- **Qualitative judgments need a model.** Without one, they're flagged, not evaluated. Model quality for
-  category E has not been measured on real data.
-- **Embedded database is single-connection.** Run everything in one `decisionloop serve` process, or use
-  PostgreSQL/CockroachDB for multiple processes.
-- **Packages are consumed from source** (tsconfig paths + a launcher); publishing built packages to npm is
-  part of the developer preview.
-- **GitHub integration** is advisory-only by design and has been tested against a fake GitHub API, not a
-  live App installation.
-- The 1.x web routes (`/api/decisions`, `/api/documents`, …) still use the 1.x repository layer over the
-  same tables; document uploads already go through the 2.0 trigger engine.
+- **No real-world use yet.** It has not run on production repositories or on real support, sales or
+  procurement work. Acceptance and override rates can only come from that ([plan](docs/v2/dogfood.md)).
+- **Qualitative statements need a model.** Without one they are flagged for a person. Model quality has not
+  been measured on real data.
+- **Learning is narrow.** Approved predicate aliases are learned; adjusting source authority from dismissed
+  conflicts and inferring a decision's domain are not built.
+- **One vocabulary per workspace.** Several domains can be loaded, but only the primary one sets how agents
+  are addressed.
+- **Embedded database is single-connection.** Run everything in one `decisionloop serve`, or use PostgreSQL or
+  CockroachDB for several processes.
+- **Packages are consumed from source**; publishing built packages to npm is not done.
+- **GitHub integration** is advisory only and was tested against a fake GitHub API, not a live App.
+- The older `/api/decisions`-style web routes still use the 1.x repository layer over the same tables.
 
 ## Documentation
 
-- [docs/v2/00-audit-and-plan.md](docs/v2/00-audit-and-plan.md) — audit, gap analysis, schemas, MCP contracts, phased plan
-- [docs/v2/getting-started.md](docs/v2/getting-started.md) — first decision, first contradiction
-- [docs/v2/agents.md](docs/v2/agents.md) — MCP + hooks for Claude Code, Codex, Copilot, Cursor
-- [docs/v2/github-app.md](docs/v2/github-app.md) — GitHub App setup (advisory PR checks)
-- [docs/v2/dogfood.md](docs/v2/dogfood.md) — how we will evaluate usefulness before announcing it
-- [docs/memory-model.md](docs/memory-model.md), [docs/security.md](docs/security.md), [docs/architecture.md](docs/architecture.md) — 1.x design, still accurate for the parts described
-- [docs/v1-README.md](docs/v1-README.md) — the original hackathon README
+- [Getting started](docs/v2/getting-started.md): first decision, first contradiction
+- [Domains](docs/v2/domains.md): profiles, constraints, action checks, source events
+- [Connecting agents](docs/v2/agents.md) and [GitHub App](docs/v2/github-app.md)
+- [Audit and plan](docs/v2/00-audit-and-plan.md): how 2.0 was derived, schemas, MCP contracts
+- [Deployment](docs/deployment.md), [security](docs/security.md), [architecture](docs/architecture.md), [memory model](docs/memory-model.md)
+- [Dogfooding plan](docs/v2/dogfood.md) · [the original hackathon README](docs/v1-README.md)
 
-MIT licensed.
+## License
+
+[MIT](LICENSE)

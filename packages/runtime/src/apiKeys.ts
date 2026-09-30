@@ -23,10 +23,23 @@ export function generateApiKey(): { raw: string; prefix: string; hash: string } 
   return { raw, prefix: `dl_${prefix}`, hash: hashApiKey(raw) };
 }
 
+/** Sources the platform itself uses; an integration key may not claim them or their trust. */
+export const RESERVED_EVENT_SOURCES = ["human", "agent", "api", "document", "github", "decisionloop", "system"];
+const SOURCE_RE = /^[a-z][a-z0-9_-]{1,39}$/;
+
+export function assertValidEventSource(source: string): void {
+  if (!SOURCE_RE.test(source)) throw new Error("A source name is 2-40 characters: lowercase letters, digits, - or _, starting with a letter.");
+  if (RESERVED_EVENT_SOURCES.includes(source)) throw new Error(`"${source}" is reserved for DecisionLoop itself; choose the name of your own system.`);
+}
+
 export async function issueApiKey(
   store: DecisionStore,
   input: { tenantId: string; name: string; scopes: Scope[]; actorType: ApiKeyRecord["actorType"]; createdBy?: string | null; eventSource?: string | null },
 ): Promise<{ key: string; record: ApiKeyRecord }> {
+  if (input.eventSource) {
+    if (input.actorType !== "integration") throw new Error("Only integration keys can be bound to a source.");
+    assertValidEventSource(input.eventSource);
+  }
   const { raw, prefix, hash } = generateApiKey();
   const record = await store.createApiKey({ ...input, keyPrefix: prefix, keyHash: hash });
   return { key: raw, record };

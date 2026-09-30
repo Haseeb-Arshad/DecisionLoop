@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "decisionloop": {
+      "command": "decisionloop",
+      "args": ["mcp"],
+      "env": {
+        "DECISIONLOOP_URL": "http://127.0.0.1:4318",
+        "DECISIONLOOP_AGENT_KEY": "<the local-agents key from .decisionloop/credentials.json>",
+        "DECISIONLOOP_AGENT": "claude-desktop"
+      }
+    }
+  }
+}
