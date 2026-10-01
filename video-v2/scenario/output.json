@@ -1,0 +1,3125 @@
+{
+  "decisions": [
+    {
+      "id": "64364286-60e1-4311-b852-478ddb8a864a",
+      "ref": "PLN-014",
+      "title": "Build the new Eastbank primary school on the river terrace",
+      "tag": "education"
+    },
+    {
+      "id": "aa55e474-8da6-418f-a236-1193644f91a5",
+      "ref": "HLT-006",
+      "title": "Keep Riverton General's backup generators on the ground floor",
+      "tag": "health"
+    },
+    {
+      "id": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+      "ref": "EMR-003",
+      "title": "Route the Eastbank evacuation over the Mill Street bridge",
+      "tag": "emergency"
+    },
+    {
+      "id": "90c06ee1-d153-464e-a947-ef453241ec58",
+      "ref": "PLN-021",
+      "title": "Approve homes on the east bank without an individual flood review",
+      "tag": "permits"
+    }
+  ],
+  "before": {
+    "contextRequestId": "04f7fcb7-351f-4d92-87c6-efdabad501bc",
+    "decisions": [
+      {
+        "id": "90c06ee1-d153-464e-a947-ef453241ec58",
+        "externalRef": "PLN-021",
+        "title": "Approve homes on the east bank without an individual flood review",
+        "status": "ACTIVE",
+        "relevance": 0.849,
+        "matchedBy": [
+          "resource: zone east_bank ↔ east_bank",
+          "embedding similarity: 0.62"
+        ],
+        "chosen": "Standard permits, no flood review",
+        "rationale": "Every east-bank plot sits above the 100-year flood level.",
+        "rejectedAlternatives": [
+          {
+            "name": "Flood review for every permit",
+            "reason": "Adds months to every application for a risk below the design level."
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "d27d8718-d09b-4779-9c76-0a7f252e9a07",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "validity": "VALID",
+            "structured": "river:east_bank.flood_level_100yr_m < 2.4 m"
+          }
+        ],
+        "constraints": [
+          {
+            "id": "919b68f3-57e3-4bbc-8d68-469e628980df",
+            "statement": "Care homes, schools and hospitals on the east bank need a flood review",
+            "severity": "BLOCKING"
+          }
+        ],
+        "verificationChecks": [],
+        "openConflicts": [],
+        "resources": [
+          "zone:east_bank"
+        ],
+        "decidedBy": "a person",
+        "decidedAt": "2026-10-01",
+        "sources": [],
+        "supersedes": []
+      },
+      {
+        "id": "aa55e474-8da6-418f-a236-1193644f91a5",
+        "externalRef": "HLT-006",
+        "title": "Keep Riverton General's backup generators on the ground floor",
+        "status": "ACTIVE",
+        "relevance": 0.829,
+        "matchedBy": [
+          "resource: zone east_bank ↔ east_bank",
+          "embedding similarity: 0.57"
+        ],
+        "chosen": "Ground-floor generator hall",
+        "rationale": "The ground floor is above the 100-year flood level, so relocating the generators was not justified.",
+        "rejectedAlternatives": [
+          {
+            "name": "Move generators to the roof",
+            "reason": "Structural work for a risk the flood study said we do not have."
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "7434bb95-d4d6-45f7-a4de-ce306ccf86fb",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "validity": "VALID",
+            "structured": "river:east_bank.flood_level_100yr_m < 2.4 m"
+          }
+        ],
+        "constraints": [],
+        "verificationChecks": [],
+        "openConflicts": [],
+        "resources": [
+          "facility:riverton_general",
+          "zone:east_bank"
+        ],
+        "decidedBy": "a person",
+        "decidedAt": "2026-10-01",
+        "sources": [],
+        "supersedes": []
+      },
+      {
+        "id": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+        "externalRef": "EMR-003",
+        "title": "Route the Eastbank evacuation over the Mill Street bridge",
+        "status": "ACTIVE",
+        "relevance": 0.827,
+        "matchedBy": [
+          "resource: zone east_bank ↔ east_bank",
+          "embedding similarity: 0.57"
+        ],
+        "chosen": "Mill Street bridge",
+        "rationale": "The fastest route out of Eastbank, and the bridge deck is clear of the 100-year flood.",
+        "rejectedAlternatives": [
+          {
+            "name": "Northern ring road",
+            "reason": "Adds eleven minutes; the bridge deck stays clear of a 100-year flood."
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "dd66d2d0-132a-4e58-ab23-32f11d496a18",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "validity": "VALID",
+            "structured": "river:east_bank.flood_level_100yr_m < 2.4 m"
+          }
+        ],
+        "constraints": [],
+        "verificationChecks": [],
+        "openConflicts": [],
+        "resources": [
+          "route:mill_street_bridge",
+          "zone:east_bank"
+        ],
+        "decidedBy": "a person",
+        "decidedAt": "2026-10-01",
+        "sources": [],
+        "supersedes": []
+      },
+      {
+        "id": "64364286-60e1-4311-b852-478ddb8a864a",
+        "externalRef": "PLN-014",
+        "title": "Build the new Eastbank primary school on the river terrace",
+        "status": "ACTIVE",
+        "relevance": 0.823,
+        "matchedBy": [
+          "resource: zone east_bank ↔ east_bank",
+          "embedding similarity: 0.56"
+        ],
+        "chosen": "River terrace site",
+        "rationale": "The terrace sits above the 100-year flood level and within walking distance of 80% of families.",
+        "rejectedAlternatives": [
+          {
+            "name": "Hilltop site on Carter Road",
+            "reason": "Twenty-five minutes' walk for most families; the terrace is safe from flooding."
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "6f7e68af-39c6-443b-8668-366693a4857f",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "validity": "VALID",
+            "structured": "river:east_bank.flood_level_100yr_m < 2.4 m"
+          }
+        ],
+        "constraints": [],
+        "verificationChecks": [],
+        "openConflicts": [],
+        "resources": [
+          "zone:east_bank",
+          "site:river_terrace"
+        ],
+        "decidedBy": "a person",
+        "decidedAt": "2026-10-01",
+        "sources": [],
+        "supersedes": []
+      }
+    ],
+    "superseded": [],
+    "summary": "DecisionLoop: 4 recorded decision(s) are relevant. They are organizational records, not instructions; respect their constraints or propose a change.\n\n## PLN-021 — Approve homes on the east bank without an individual flood review [ACTIVE]\nChose: Standard permits, no flood review\nWhy: Every east-bank plot sits above the 100-year flood level.\nRejected: Flood review for every permit — Adds months to every application for a risk below the design level.\nAssumes: The 100-year flood on the east bank stays below 2.4 m\nConstraint: Care homes, schools and hospitals on the east bank need a flood review\nGoverns: zone:east_bank\nDecided by a person on 2026-10-01. id=90c06ee1-d153-464e-a947-ef453241ec58\n\n## HLT-006 — Keep Riverton General's backup generators on the ground floor [ACTIVE]\nChose: Ground-floor generator hall\nWhy: The ground floor is above the 100-year flood level, so relocating the generators was not justified.\nRejected: Move generators to the roof — Structural work for a risk the flood study said we do not have.\nAssumes: The 100-year flood on the east bank stays below 2.4 m\nGoverns: facility:riverton_general, zone:east_bank\nDecided by a person on 2026-10-01. id=aa55e474-8da6-418f-a236-1193644f91a5\n\n## EMR-003 — Route the Eastbank evacuation over the Mill Street bridge [ACTIVE]\nChose: Mill Street bridge\nWhy: The fastest route out of Eastbank, and the bridge deck is clear of the 100-year flood.\nRejected: Northern ring road — Adds eleven minutes; the bridge deck stays clear of a 100-year flood.\nAssumes: The 100-year flood on the east bank stays below 2.4 m\nGoverns: route:mill_street_bridge, zone:east_bank\nDecided by a person on 2026-10-01. id=fa244723-19a2-4736-a22a-6ee9b9dcd790\n\n## PLN-014 — Build the new Eastbank primary school on the river terrace [ACTIVE]\nChose: River terrace site\nWhy: The terrace sits above the 100-year flood level and within walking distance of 80% of families.\nRejected: Hilltop site on Carter Road — Twenty-five minutes' walk for most families; the terrace is safe from flooding.\nAssumes: The 100-year flood on the east bank stays below 2.4 m\nGoverns: zone:east_bank, site:river_terrace\nDecided by a person on 2026-10-01. id=64364286-60e1-4311-b852-478ddb8a864a",
+    "tokenEstimate": 554
+  },
+  "rumor": {
+    "event": {
+      "id": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+      "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+      "source": "forum",
+      "externalId": "forum-thread-8812",
+      "type": "post.published",
+      "occurredAt": "2026-10-01T10:35:04.370Z",
+      "receivedAt": "2026-10-01T10:35:04.372Z",
+      "actor": {
+        "type": "integration",
+        "id": "f65eedbc-118a-49d4-829c-65b52047fbdc",
+        "label": "residents-forum"
+      },
+      "resources": [],
+      "facts": [],
+      "text": "Someone on the residents' forum says the river will reach 2.9 m in a big flood now.",
+      "subject": null,
+      "evidenceKind": "OBSERVATION",
+      "payload": {
+        "metrics": [
+          {
+            "subject": "river:east_bank",
+            "metric": "flood_level_100yr_m",
+            "value": 2.9,
+            "unit": "m",
+            "statement": "A forum post claims the 100-year flood reaches 2.9 m"
+          }
+        ]
+      },
+      "provenance": {
+        "url": null,
+        "receivedVia": "api"
+      },
+      "status": "PROCESSED",
+      "attempts": 1,
+      "lastError": null,
+      "processedAt": "2026-10-01T10:35:05.073Z",
+      "result": {
+        "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+        "evidenceId": "4a5bb627-a15e-4653-a9b0-c98e8f67d464",
+        "duplicateOfEvidenceId": null,
+        "authority": 0.3,
+        "facts": [
+          {
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "value": 2.9,
+            "operator": "=",
+            "unit": "m",
+            "statement": "A forum post claims the 100-year flood reaches 2.9 m",
+            "location": "forum:forum-thread-8812",
+            "extractor": "payload/metrics",
+            "confidence": 1
+          }
+        ],
+        "factsFromModel": 0,
+        "resources": [],
+        "candidatesConsidered": 4,
+        "evaluations": [
+          {
+            "assumptionId": "6f7e68af-39c6-443b-8668-366693a4857f",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "decisionTitle": "Build the new Eastbank primary school on the river terrace",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "method": "DETERMINISTIC",
+            "relation": "CONTRADICTS",
+            "previousValidity": "VALID",
+            "nextValidity": "CHALLENGED",
+            "via": "predicate",
+            "explanation": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "assumptionId": "7434bb95-d4d6-45f7-a4de-ce306ccf86fb",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "decisionTitle": "Keep Riverton General's backup generators on the ground floor",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "method": "DETERMINISTIC",
+            "relation": "CONTRADICTS",
+            "previousValidity": "VALID",
+            "nextValidity": "CHALLENGED",
+            "via": "predicate",
+            "explanation": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "assumptionId": "dd66d2d0-132a-4e58-ab23-32f11d496a18",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "decisionTitle": "Route the Eastbank evacuation over the Mill Street bridge",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "method": "DETERMINISTIC",
+            "relation": "CONTRADICTS",
+            "previousValidity": "VALID",
+            "nextValidity": "CHALLENGED",
+            "via": "predicate",
+            "explanation": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "assumptionId": "d27d8718-d09b-4779-9c76-0a7f252e9a07",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "decisionTitle": "Approve homes on the east bank without an individual flood review",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "method": "DETERMINISTIC",
+            "relation": "CONTRADICTS",
+            "previousValidity": "VALID",
+            "nextValidity": "CHALLENGED",
+            "via": "predicate",
+            "explanation": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          }
+        ],
+        "conflictIds": [
+          "1244d230-6257-4b16-9204-3cb626af3025",
+          "70660e7f-cf39-407f-85d9-c3098f3f9d8e",
+          "2e59f6f3-1992-47be-a3c4-607c36b792f7",
+          "3e2b768d-4da7-4d9e-b53b-2af86bfadfe3"
+        ],
+        "decisionsAtRisk": [
+          "64364286-60e1-4311-b852-478ddb8a864a",
+          "aa55e474-8da6-418f-a236-1193644f91a5",
+          "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+          "90c06ee1-d153-464e-a947-ef453241ec58"
+        ],
+        "approvalIds": [
+          "d64401b3-dcc3-41b4-8960-785eb1d56254",
+          "5ffd31f2-ccdf-4000-b70e-c5e27899f9c3",
+          "b66083af-875b-44d8-8011-0cd41fec7362",
+          "abce68ba-12ad-4731-9c55-10a04022911d"
+        ],
+        "constraintFindings": [],
+        "relatedDecisionIds": [
+          "64364286-60e1-4311-b852-478ddb8a864a",
+          "aa55e474-8da6-418f-a236-1193644f91a5",
+          "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+          "90c06ee1-d153-464e-a947-ef453241ec58"
+        ],
+        "emitted": [
+          {
+            "type": "assumption.challenged",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "assumptionId": "6f7e68af-39c6-443b-8668-366693a4857f",
+            "conflictId": "1244d230-6257-4b16-9204-3cb626af3025",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "decision.at_risk",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "conflictId": "1244d230-6257-4b16-9204-3cb626af3025",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "approval.required",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "approvalId": "d64401b3-dcc3-41b4-8960-785eb1d56254",
+            "conflictId": "1244d230-6257-4b16-9204-3cb626af3025",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "Evidence challenges \"The 100-year flood on the east bank stays below 2.4 m\" behind PLN-014: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "notification.requested",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "conflictId": "1244d230-6257-4b16-9204-3cb626af3025",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "[dashboard] PLN-014: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "assumption.challenged",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "assumptionId": "7434bb95-d4d6-45f7-a4de-ce306ccf86fb",
+            "conflictId": "70660e7f-cf39-407f-85d9-c3098f3f9d8e",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "decision.at_risk",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "conflictId": "70660e7f-cf39-407f-85d9-c3098f3f9d8e",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "approval.required",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "approvalId": "5ffd31f2-ccdf-4000-b70e-c5e27899f9c3",
+            "conflictId": "70660e7f-cf39-407f-85d9-c3098f3f9d8e",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "Evidence challenges \"The 100-year flood on the east bank stays below 2.4 m\" behind HLT-006: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "notification.requested",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "conflictId": "70660e7f-cf39-407f-85d9-c3098f3f9d8e",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "[dashboard] HLT-006: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "assumption.challenged",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "assumptionId": "dd66d2d0-132a-4e58-ab23-32f11d496a18",
+            "conflictId": "2e59f6f3-1992-47be-a3c4-607c36b792f7",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "decision.at_risk",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "conflictId": "2e59f6f3-1992-47be-a3c4-607c36b792f7",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "approval.required",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "approvalId": "b66083af-875b-44d8-8011-0cd41fec7362",
+            "conflictId": "2e59f6f3-1992-47be-a3c4-607c36b792f7",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "Evidence challenges \"The 100-year flood on the east bank stays below 2.4 m\" behind EMR-003: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "notification.requested",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "conflictId": "2e59f6f3-1992-47be-a3c4-607c36b792f7",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "[dashboard] EMR-003: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "assumption.challenged",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "assumptionId": "d27d8718-d09b-4779-9c76-0a7f252e9a07",
+            "conflictId": "3e2b768d-4da7-4d9e-b53b-2af86bfadfe3",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "decision.at_risk",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "conflictId": "3e2b768d-4da7-4d9e-b53b-2af86bfadfe3",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "approval.required",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "approvalId": "abce68ba-12ad-4731-9c55-10a04022911d",
+            "conflictId": "3e2b768d-4da7-4d9e-b53b-2af86bfadfe3",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "Evidence challenges \"The 100-year flood on the east bank stays below 2.4 m\" behind PLN-021: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "notification.requested",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "conflictId": "3e2b768d-4da7-4d9e-b53b-2af86bfadfe3",
+            "causedByEventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+            "summary": "[dashboard] PLN-021: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          }
+        ],
+        "memoryTraceId": "39406bf4-a56c-4f39-ae56-a25406fe9b14"
+      }
+    },
+    "evidence": [
+      {
+        "id": "4a5bb627-a15e-4653-a9b0-c98e8f67d464",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "projectId": null,
+        "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+        "documentId": null,
+        "kind": "OBSERVATION",
+        "source": "forum",
+        "sourceRef": "forum-thread-8812",
+        "subject": null,
+        "authority": 0.3,
+        "confidence": 1,
+        "occurredAt": "2026-10-01T10:35:04.370Z",
+        "ingestedAt": "2026-10-01T10:35:04.797Z",
+        "content": "Someone on the residents' forum says the river will reach 2.9 m in a big flood now.",
+        "contentHash": "44a86c9692b5d7f7005b9c9c26a072776447a4bf6bb9b75607bb62031b35cfaa",
+        "facts": [
+          {
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "value": 2.9,
+            "operator": "=",
+            "unit": "m",
+            "statement": "A forum post claims the 100-year flood reaches 2.9 m",
+            "location": "forum:forum-thread-8812",
+            "extractor": "payload/metrics",
+            "confidence": 1
+          }
+        ],
+        "resources": [],
+        "provenance": {
+          "url": null,
+          "receivedVia": "api",
+          "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+          "eventType": "post.published",
+          "externalId": "forum-thread-8812"
+        },
+        "actor": {
+          "type": "integration",
+          "id": "f65eedbc-118a-49d4-829c-65b52047fbdc",
+          "label": "residents-forum"
+        },
+        "supersedesEvidenceId": null
+      }
+    ],
+    "evaluations": [
+      {
+        "id": "af622b20-61ec-44eb-a9ca-3405420043b3",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "agentRunId": "0adb5a9b-afc6-43dc-90ec-600a77021a3b",
+        "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+        "evidenceItemId": "4a5bb627-a15e-4653-a9b0-c98e8f67d464",
+        "assumptionId": "d27d8718-d09b-4779-9c76-0a7f252e9a07",
+        "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+        "fact": {
+          "subject": "river:east_bank",
+          "predicate": "flood_level_100yr_m",
+          "valueType": "NUMBER",
+          "value": 2.9,
+          "operator": "=",
+          "unit": "m",
+          "statement": "A forum post claims the 100-year flood reaches 2.9 m",
+          "location": "forum:forum-thread-8812",
+          "extractor": "payload/metrics",
+          "confidence": 1
+        },
+        "method": "DETERMINISTIC",
+        "relation": "CONTRADICTS",
+        "confidence": 1,
+        "evidenceAuthority": 0.3,
+        "assumptionAuthority": 0.8,
+        "previousValidity": "VALID",
+        "nextValidity": "CHALLENGED",
+        "decisionFlagged": true,
+        "matchedPolicies": [
+          "low_authority_evidence",
+          "public_safety_review"
+        ],
+        "actions": [
+          "challenge_only",
+          "never_auto_invalidate",
+          "require_human_review",
+          "notify_dashboard"
+        ],
+        "explanation": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically. Evidence authority 0.30 is materially weaker than the assumption's 0.80; challenged rather than invalidated so a human decides. Policies matched: low_authority_evidence, public_safety_review → challenge_only, never_auto_invalidate, require_human_review, notify_dashboard.",
+        "retrievalScore": 1,
+        "createdAt": "2026-10-01T10:35:04.999Z"
+      },
+      {
+        "id": "79a8f136-f02f-4af6-bd18-bd0068a04f2f",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "agentRunId": "0adb5a9b-afc6-43dc-90ec-600a77021a3b",
+        "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+        "evidenceItemId": "4a5bb627-a15e-4653-a9b0-c98e8f67d464",
+        "assumptionId": "dd66d2d0-132a-4e58-ab23-32f11d496a18",
+        "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+        "fact": {
+          "subject": "river:east_bank",
+          "predicate": "flood_level_100yr_m",
+          "valueType": "NUMBER",
+          "value": 2.9,
+          "operator": "=",
+          "unit": "m",
+          "statement": "A forum post claims the 100-year flood reaches 2.9 m",
+          "location": "forum:forum-thread-8812",
+          "extractor": "payload/metrics",
+          "confidence": 1
+        },
+        "method": "DETERMINISTIC",
+        "relation": "CONTRADICTS",
+        "confidence": 1,
+        "evidenceAuthority": 0.3,
+        "assumptionAuthority": 0.8,
+        "previousValidity": "VALID",
+        "nextValidity": "CHALLENGED",
+        "decisionFlagged": true,
+        "matchedPolicies": [
+          "low_authority_evidence",
+          "public_safety_review"
+        ],
+        "actions": [
+          "challenge_only",
+          "never_auto_invalidate",
+          "require_human_review",
+          "notify_dashboard"
+        ],
+        "explanation": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically. Evidence authority 0.30 is materially weaker than the assumption's 0.80; challenged rather than invalidated so a human decides. Policies matched: low_authority_evidence, public_safety_review → challenge_only, never_auto_invalidate, require_human_review, notify_dashboard.",
+        "retrievalScore": 1,
+        "createdAt": "2026-10-01T10:35:04.961Z"
+      },
+      {
+        "id": "f87e6c82-1cd8-460e-8bd7-639d914c9ece",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "agentRunId": "0adb5a9b-afc6-43dc-90ec-600a77021a3b",
+        "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+        "evidenceItemId": "4a5bb627-a15e-4653-a9b0-c98e8f67d464",
+        "assumptionId": "7434bb95-d4d6-45f7-a4de-ce306ccf86fb",
+        "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+        "fact": {
+          "subject": "river:east_bank",
+          "predicate": "flood_level_100yr_m",
+          "valueType": "NUMBER",
+          "value": 2.9,
+          "operator": "=",
+          "unit": "m",
+          "statement": "A forum post claims the 100-year flood reaches 2.9 m",
+          "location": "forum:forum-thread-8812",
+          "extractor": "payload/metrics",
+          "confidence": 1
+        },
+        "method": "DETERMINISTIC",
+        "relation": "CONTRADICTS",
+        "confidence": 1,
+        "evidenceAuthority": 0.3,
+        "assumptionAuthority": 0.8,
+        "previousValidity": "VALID",
+        "nextValidity": "CHALLENGED",
+        "decisionFlagged": true,
+        "matchedPolicies": [
+          "low_authority_evidence",
+          "public_safety_review"
+        ],
+        "actions": [
+          "challenge_only",
+          "never_auto_invalidate",
+          "require_human_review",
+          "notify_dashboard"
+        ],
+        "explanation": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically. Evidence authority 0.30 is materially weaker than the assumption's 0.80; challenged rather than invalidated so a human decides. Policies matched: low_authority_evidence, public_safety_review → challenge_only, never_auto_invalidate, require_human_review, notify_dashboard.",
+        "retrievalScore": 1,
+        "createdAt": "2026-10-01T10:35:04.904Z"
+      },
+      {
+        "id": "950d4e40-af05-4e0b-9062-ea948cfdcfd4",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "agentRunId": "0adb5a9b-afc6-43dc-90ec-600a77021a3b",
+        "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+        "evidenceItemId": "4a5bb627-a15e-4653-a9b0-c98e8f67d464",
+        "assumptionId": "6f7e68af-39c6-443b-8668-366693a4857f",
+        "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+        "fact": {
+          "subject": "river:east_bank",
+          "predicate": "flood_level_100yr_m",
+          "valueType": "NUMBER",
+          "value": 2.9,
+          "operator": "=",
+          "unit": "m",
+          "statement": "A forum post claims the 100-year flood reaches 2.9 m",
+          "location": "forum:forum-thread-8812",
+          "extractor": "payload/metrics",
+          "confidence": 1
+        },
+        "method": "DETERMINISTIC",
+        "relation": "CONTRADICTS",
+        "confidence": 1,
+        "evidenceAuthority": 0.3,
+        "assumptionAuthority": 0.8,
+        "previousValidity": "VALID",
+        "nextValidity": "CHALLENGED",
+        "decisionFlagged": true,
+        "matchedPolicies": [
+          "low_authority_evidence",
+          "public_safety_review"
+        ],
+        "actions": [
+          "challenge_only",
+          "never_auto_invalidate",
+          "require_human_review",
+          "notify_dashboard"
+        ],
+        "explanation": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically. Evidence authority 0.30 is materially weaker than the assumption's 0.80; challenged rather than invalidated so a human decides. Policies matched: low_authority_evidence, public_safety_review → challenge_only, never_auto_invalidate, require_human_review, notify_dashboard.",
+        "retrievalScore": 1,
+        "createdAt": "2026-10-01T10:35:04.841Z"
+      }
+    ],
+    "findings": []
+  },
+  "study": {
+    "event": {
+      "id": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+      "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+      "source": "hydrology",
+      "externalId": "national-flood-study-2026",
+      "type": "study.published",
+      "occurredAt": "2026-10-01T10:35:05.596Z",
+      "receivedAt": "2026-10-01T10:35:05.599Z",
+      "actor": {
+        "type": "integration",
+        "id": "48fc6373-b5ee-423e-a6f1-55c1857d0048",
+        "label": "national-hydrology"
+      },
+      "resources": [],
+      "facts": [],
+      "text": "National Flood Study 2026: updated rainfall records put the 100-year flood level for the Riverton east bank at 3.1 m.",
+      "subject": null,
+      "evidenceKind": "OBSERVATION",
+      "payload": {
+        "metrics": [
+          {
+            "subject": "river:east_bank",
+            "metric": "flood_level_100yr_m",
+            "value": 3.1,
+            "unit": "m",
+            "statement": "The 100-year flood level for the east bank is now 3.1 m"
+          }
+        ]
+      },
+      "provenance": {
+        "url": "https://example.test/national-flood-study-2026",
+        "receivedVia": "api"
+      },
+      "status": "PROCESSED",
+      "attempts": 1,
+      "lastError": null,
+      "processedAt": "2026-10-01T10:35:06.312Z",
+      "result": {
+        "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+        "evidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+        "duplicateOfEvidenceId": null,
+        "authority": 0.95,
+        "facts": [
+          {
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "value": 3.1,
+            "operator": "=",
+            "unit": "m",
+            "statement": "The 100-year flood level for the east bank is now 3.1 m",
+            "location": "https://example.test/national-flood-study-2026",
+            "extractor": "payload/metrics",
+            "confidence": 1
+          }
+        ],
+        "factsFromModel": 0,
+        "resources": [],
+        "candidatesConsidered": 4,
+        "evaluations": [
+          {
+            "assumptionId": "6f7e68af-39c6-443b-8668-366693a4857f",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "decisionTitle": "Build the new Eastbank primary school on the river terrace",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "method": "DETERMINISTIC",
+            "relation": "CONTRADICTS",
+            "previousValidity": "CHALLENGED",
+            "nextValidity": "INVALIDATED",
+            "via": "predicate",
+            "explanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "assumptionId": "7434bb95-d4d6-45f7-a4de-ce306ccf86fb",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "decisionTitle": "Keep Riverton General's backup generators on the ground floor",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "method": "DETERMINISTIC",
+            "relation": "CONTRADICTS",
+            "previousValidity": "CHALLENGED",
+            "nextValidity": "INVALIDATED",
+            "via": "predicate",
+            "explanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "assumptionId": "dd66d2d0-132a-4e58-ab23-32f11d496a18",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "decisionTitle": "Route the Eastbank evacuation over the Mill Street bridge",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "method": "DETERMINISTIC",
+            "relation": "CONTRADICTS",
+            "previousValidity": "CHALLENGED",
+            "nextValidity": "INVALIDATED",
+            "via": "predicate",
+            "explanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "assumptionId": "d27d8718-d09b-4779-9c76-0a7f252e9a07",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "decisionTitle": "Approve homes on the east bank without an individual flood review",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "method": "DETERMINISTIC",
+            "relation": "CONTRADICTS",
+            "previousValidity": "CHALLENGED",
+            "nextValidity": "INVALIDATED",
+            "via": "predicate",
+            "explanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          }
+        ],
+        "conflictIds": [
+          "1f2fcc29-78ea-42d8-8e8b-363e53f9cbb8",
+          "62e65585-f4aa-4fe6-8bcd-179164d27caf",
+          "d58b7ab6-390a-433f-880b-15f75d41156c",
+          "b899964a-ca67-482b-a576-e873826a0fff"
+        ],
+        "decisionsAtRisk": [
+          "64364286-60e1-4311-b852-478ddb8a864a",
+          "aa55e474-8da6-418f-a236-1193644f91a5",
+          "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+          "90c06ee1-d153-464e-a947-ef453241ec58"
+        ],
+        "approvalIds": [
+          "13b5aa40-1eb9-4dd8-b1f9-1f1a08eeeffb",
+          "bf0fb4e9-0a30-4f08-94af-66424f0ad314",
+          "a7d48b6e-a51a-4359-83cc-d298cc1c583f",
+          "7e35ff80-2cd8-43a7-8ed4-635bf5b22e89"
+        ],
+        "constraintFindings": [],
+        "relatedDecisionIds": [
+          "64364286-60e1-4311-b852-478ddb8a864a",
+          "aa55e474-8da6-418f-a236-1193644f91a5",
+          "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+          "90c06ee1-d153-464e-a947-ef453241ec58"
+        ],
+        "emitted": [
+          {
+            "type": "assumption.invalidated",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "assumptionId": "6f7e68af-39c6-443b-8668-366693a4857f",
+            "conflictId": "1f2fcc29-78ea-42d8-8e8b-363e53f9cbb8",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "approval.required",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "approvalId": "13b5aa40-1eb9-4dd8-b1f9-1f1a08eeeffb",
+            "conflictId": "1f2fcc29-78ea-42d8-8e8b-363e53f9cbb8",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "Evidence invalidates \"The 100-year flood on the east bank stays below 2.4 m\" behind PLN-014: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "notification.requested",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "conflictId": "1f2fcc29-78ea-42d8-8e8b-363e53f9cbb8",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "[dashboard] PLN-014: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "notification.requested",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "conflictId": "1f2fcc29-78ea-42d8-8e8b-363e53f9cbb8",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "[github] PLN-014: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "assumption.invalidated",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "assumptionId": "7434bb95-d4d6-45f7-a4de-ce306ccf86fb",
+            "conflictId": "62e65585-f4aa-4fe6-8bcd-179164d27caf",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "approval.required",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "approvalId": "bf0fb4e9-0a30-4f08-94af-66424f0ad314",
+            "conflictId": "62e65585-f4aa-4fe6-8bcd-179164d27caf",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "Evidence invalidates \"The 100-year flood on the east bank stays below 2.4 m\" behind HLT-006: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "notification.requested",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "conflictId": "62e65585-f4aa-4fe6-8bcd-179164d27caf",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "[dashboard] HLT-006: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "notification.requested",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "conflictId": "62e65585-f4aa-4fe6-8bcd-179164d27caf",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "[github] HLT-006: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "assumption.invalidated",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "assumptionId": "dd66d2d0-132a-4e58-ab23-32f11d496a18",
+            "conflictId": "d58b7ab6-390a-433f-880b-15f75d41156c",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "approval.required",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "approvalId": "a7d48b6e-a51a-4359-83cc-d298cc1c583f",
+            "conflictId": "d58b7ab6-390a-433f-880b-15f75d41156c",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "Evidence invalidates \"The 100-year flood on the east bank stays below 2.4 m\" behind EMR-003: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "notification.requested",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "conflictId": "d58b7ab6-390a-433f-880b-15f75d41156c",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "[dashboard] EMR-003: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "notification.requested",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "conflictId": "d58b7ab6-390a-433f-880b-15f75d41156c",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "[github] EMR-003: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "assumption.invalidated",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "assumptionId": "d27d8718-d09b-4779-9c76-0a7f252e9a07",
+            "conflictId": "b899964a-ca67-482b-a576-e873826a0fff",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "approval.required",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "approvalId": "7e35ff80-2cd8-43a7-8ed4-635bf5b22e89",
+            "conflictId": "b899964a-ca67-482b-a576-e873826a0fff",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "Evidence invalidates \"The 100-year flood on the east bank stays below 2.4 m\" behind PLN-021: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "notification.requested",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "conflictId": "b899964a-ca67-482b-a576-e873826a0fff",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "[dashboard] PLN-021: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          },
+          {
+            "type": "notification.requested",
+            "workspaceId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "conflictId": "b899964a-ca67-482b-a576-e873826a0fff",
+            "causedByEventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+            "summary": "[github] PLN-021: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically."
+          }
+        ],
+        "memoryTraceId": "c4bd87d3-4bbb-4d84-a0e3-07798f7a9f33"
+      }
+    },
+    "evidence": [
+      {
+        "id": "ecfb36a0-d300-43a8-95fd-002f19426035",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "projectId": null,
+        "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+        "documentId": null,
+        "kind": "OBSERVATION",
+        "source": "hydrology",
+        "sourceRef": "https://example.test/national-flood-study-2026",
+        "subject": null,
+        "authority": 0.95,
+        "confidence": 1,
+        "occurredAt": "2026-10-01T10:35:05.596Z",
+        "ingestedAt": "2026-10-01T10:35:06.130Z",
+        "content": "National Flood Study 2026: updated rainfall records put the 100-year flood level for the Riverton east bank at 3.1 m.",
+        "contentHash": "9031949fcf7b504e7ad0207a6988537e5b8e47c736ef86b66408dc946ddb1f3f",
+        "facts": [
+          {
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "value": 3.1,
+            "operator": "=",
+            "unit": "m",
+            "statement": "The 100-year flood level for the east bank is now 3.1 m",
+            "location": "https://example.test/national-flood-study-2026",
+            "extractor": "payload/metrics",
+            "confidence": 1
+          }
+        ],
+        "resources": [],
+        "provenance": {
+          "url": "https://example.test/national-flood-study-2026",
+          "receivedVia": "api",
+          "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+          "eventType": "study.published",
+          "externalId": "national-flood-study-2026"
+        },
+        "actor": {
+          "type": "integration",
+          "id": "48fc6373-b5ee-423e-a6f1-55c1857d0048",
+          "label": "national-hydrology"
+        },
+        "supersedesEvidenceId": null
+      }
+    ],
+    "evaluations": [
+      {
+        "id": "50d0c6ab-b4a9-4b2e-9c64-7922717c0a4a",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "agentRunId": "ced3d20a-cb06-4183-a734-8806d0ea96d7",
+        "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+        "evidenceItemId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+        "assumptionId": "d27d8718-d09b-4779-9c76-0a7f252e9a07",
+        "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+        "fact": {
+          "subject": "river:east_bank",
+          "predicate": "flood_level_100yr_m",
+          "valueType": "NUMBER",
+          "value": 3.1,
+          "operator": "=",
+          "unit": "m",
+          "statement": "The 100-year flood level for the east bank is now 3.1 m",
+          "location": "https://example.test/national-flood-study-2026",
+          "extractor": "payload/metrics",
+          "confidence": 1
+        },
+        "method": "DETERMINISTIC",
+        "relation": "CONTRADICTS",
+        "confidence": 1,
+        "evidenceAuthority": 0.95,
+        "assumptionAuthority": 0.8,
+        "previousValidity": "CHALLENGED",
+        "nextValidity": "INVALIDATED",
+        "decisionFlagged": true,
+        "matchedPolicies": [
+          "high_impact_architecture",
+          "public_safety_review"
+        ],
+        "actions": [
+          "require_human_review",
+          "notify_dashboard",
+          "create_github_comment"
+        ],
+        "explanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically. Confidence 1.00 ≥ 0.75 and evidence authority 0.95 is at least as strong as the assumption's 0.80. Policies matched: high_impact_architecture, public_safety_review → require_human_review, notify_dashboard, create_github_comment.",
+        "retrievalScore": 1,
+        "createdAt": "2026-10-01T10:35:06.265Z"
+      },
+      {
+        "id": "3925c56e-7cdf-4de4-9721-f280d4b3cdac",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "agentRunId": "ced3d20a-cb06-4183-a734-8806d0ea96d7",
+        "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+        "evidenceItemId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+        "assumptionId": "dd66d2d0-132a-4e58-ab23-32f11d496a18",
+        "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+        "fact": {
+          "subject": "river:east_bank",
+          "predicate": "flood_level_100yr_m",
+          "valueType": "NUMBER",
+          "value": 3.1,
+          "operator": "=",
+          "unit": "m",
+          "statement": "The 100-year flood level for the east bank is now 3.1 m",
+          "location": "https://example.test/national-flood-study-2026",
+          "extractor": "payload/metrics",
+          "confidence": 1
+        },
+        "method": "DETERMINISTIC",
+        "relation": "CONTRADICTS",
+        "confidence": 1,
+        "evidenceAuthority": 0.95,
+        "assumptionAuthority": 0.8,
+        "previousValidity": "CHALLENGED",
+        "nextValidity": "INVALIDATED",
+        "decisionFlagged": true,
+        "matchedPolicies": [
+          "high_impact_architecture",
+          "public_safety_review"
+        ],
+        "actions": [
+          "require_human_review",
+          "notify_dashboard",
+          "create_github_comment"
+        ],
+        "explanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically. Confidence 1.00 ≥ 0.75 and evidence authority 0.95 is at least as strong as the assumption's 0.80. Policies matched: high_impact_architecture, public_safety_review → require_human_review, notify_dashboard, create_github_comment.",
+        "retrievalScore": 1,
+        "createdAt": "2026-10-01T10:35:06.232Z"
+      },
+      {
+        "id": "c666524a-5f0f-4359-b5d3-6745ccd0f334",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "agentRunId": "ced3d20a-cb06-4183-a734-8806d0ea96d7",
+        "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+        "evidenceItemId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+        "assumptionId": "7434bb95-d4d6-45f7-a4de-ce306ccf86fb",
+        "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+        "fact": {
+          "subject": "river:east_bank",
+          "predicate": "flood_level_100yr_m",
+          "valueType": "NUMBER",
+          "value": 3.1,
+          "operator": "=",
+          "unit": "m",
+          "statement": "The 100-year flood level for the east bank is now 3.1 m",
+          "location": "https://example.test/national-flood-study-2026",
+          "extractor": "payload/metrics",
+          "confidence": 1
+        },
+        "method": "DETERMINISTIC",
+        "relation": "CONTRADICTS",
+        "confidence": 1,
+        "evidenceAuthority": 0.95,
+        "assumptionAuthority": 0.8,
+        "previousValidity": "CHALLENGED",
+        "nextValidity": "INVALIDATED",
+        "decisionFlagged": true,
+        "matchedPolicies": [
+          "high_impact_architecture",
+          "public_safety_review"
+        ],
+        "actions": [
+          "require_human_review",
+          "notify_dashboard",
+          "create_github_comment"
+        ],
+        "explanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically. Confidence 1.00 ≥ 0.75 and evidence authority 0.95 is at least as strong as the assumption's 0.80. Policies matched: high_impact_architecture, public_safety_review → require_human_review, notify_dashboard, create_github_comment.",
+        "retrievalScore": 1,
+        "createdAt": "2026-10-01T10:35:06.193Z"
+      },
+      {
+        "id": "a8618514-ae83-4e7b-ae76-176f9079f418",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "agentRunId": "ced3d20a-cb06-4183-a734-8806d0ea96d7",
+        "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+        "evidenceItemId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+        "assumptionId": "6f7e68af-39c6-443b-8668-366693a4857f",
+        "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+        "fact": {
+          "subject": "river:east_bank",
+          "predicate": "flood_level_100yr_m",
+          "valueType": "NUMBER",
+          "value": 3.1,
+          "operator": "=",
+          "unit": "m",
+          "statement": "The 100-year flood level for the east bank is now 3.1 m",
+          "location": "https://example.test/national-flood-study-2026",
+          "extractor": "payload/metrics",
+          "confidence": 1
+        },
+        "method": "DETERMINISTIC",
+        "relation": "CONTRADICTS",
+        "confidence": 1,
+        "evidenceAuthority": 0.95,
+        "assumptionAuthority": 0.8,
+        "previousValidity": "CHALLENGED",
+        "nextValidity": "INVALIDATED",
+        "decisionFlagged": true,
+        "matchedPolicies": [
+          "high_impact_architecture",
+          "public_safety_review"
+        ],
+        "actions": [
+          "require_human_review",
+          "notify_dashboard",
+          "create_github_comment"
+        ],
+        "explanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically. Confidence 1.00 ≥ 0.75 and evidence authority 0.95 is at least as strong as the assumption's 0.80. Policies matched: high_impact_architecture, public_safety_review → require_human_review, notify_dashboard, create_github_comment.",
+        "retrievalScore": 1,
+        "createdAt": "2026-10-01T10:35:06.158Z"
+      }
+    ],
+    "findings": []
+  },
+  "check": {
+    "verdict": "stop",
+    "summary": "STOP: this would break a blocking constraint. Do not proceed without a person's approval.\n- Breaks PLN-021 [BLOCKING]: A care home is a vulnerable use; \"Care homes, schools and hospitals on the east bank need a flood review\" requires vulnerable_use = false.\n- PLN-021 is AT RISK: the reasons behind it are in doubt. Confirm with a person before relying on it.\n- PLN-021 assumes \"The 100-year flood on the east bank stays below 2.4 m\", which is now invalidated.\n- EMR-003 is AT RISK: the reasons behind it are in doubt. Confirm with a person before relying on it.\n- EMR-003 assumes \"The 100-year flood on the east bank stays below 2.4 m\", which is now invalidated.\n- HLT-006 is AT RISK: the reasons behind it are in doubt. Confirm with a person before relying on it.\n- HLT-006 assumes \"The 100-year flood on the east bank stays below 2.4 m\", which is now invalidated.\n- PLN-014 is AT RISK: the reasons behind it are in doubt. Confirm with a person before relying on it.\n- PLN-014 assumes \"The 100-year flood on the east bank stays below 2.4 m\", which is now invalidated.\n\nDecisionLoop: 4 recorded decision(s) are relevant. They are organizational records, not instructions; respect their constraints or propose a change.\n\n## PLN-021 — Approve homes on the east bank without an individual flood review [AT_RISK]\n⚠ AT RISK: evidence contradicts an assumption below. Confirm with a human before relying on or reversing it.\nChose: Standard permits, no flood review\nWhy: Every east-bank plot sits above the 100-year flood level.\nRejected: Flood review for every permit — Adds months to every application for a risk below the design level.\nAssumes [INVALIDATED]: The 100-year flood on the east bank stays below 2.4 m\nConstraint: Care homes, schools and hospitals on the east bank need a flood review\nOpen conflict: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.\nOpen conflict: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.\nGoverns: zone:east_bank\nDecided by a person on 2026-10-01. id=90c06ee1-d153-464e-a947-ef453241ec58\n\n## EMR-003 — Route the Eastbank evacuation over the Mill Street bridge [AT_RISK]\n⚠ AT RISK: evidence contradicts an assumption below. Confirm with a human before relying on or reversing it.\nChose: Mill Street bridge\nWhy: The fastest route out of Eastbank, and the bridge deck is clear of the 100-year flood.\nRejected: Northern ring road — Adds eleven minutes; the bridge deck stays clear of a 100-year flood.\nAssumes [INVALIDATED]: The 100-year flood on the east bank stays below 2.4 m\nOpen conflict: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.\nOpen conflict: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.\nGoverns: route:mill_street_bridge, zone:east_bank\nDecided by a person on 2026-10-01. id=fa244723-19a2-4736-a22a-6ee9b9dcd790\n\n## HLT-006 — Keep Riverton General's backup generators on the ground floor [AT_RISK]\n⚠ AT RISK: evidence contradicts an assumption below. Confirm with a human before relying on or reversing it.\nChose: Ground-floor generator hall\nWhy: The ground floor is above the 100-year flood level, so relocating the generators was not justified.\nRejected: Move generators to the roof — Structural work for a risk the flood study said we do not have.\nAssumes [INVALIDATED]: The 100-year flood on the east bank stays below 2.4 m\nOpen conflict: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.\nOpen conflict: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.\nGoverns: facility:riverton_general, zone:east_bank\nDecided by a person on 2026-10-01. id=aa55e474-8da6-418f-a236-1193644f91a5\n\n## PLN-014 — Build the new Eastbank primary school on the river terrace [AT_RISK]\n⚠ AT RISK: evidence contradicts an assumption below. Confirm with a human before relying on or reversing it.\nChose: River terrace site\nWhy: The terrace sits above the 100-year flood level and within walking distance of 80% of families.\nRejected: Hilltop site on Carter Road — Twenty-five minutes' walk for most families; the terrace is safe from flooding.\nAssumes [INVALIDATED]: The 100-year flood on the east bank stays below 2.4 m\nOpen conflict: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.\nOpen conflict: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.\nGoverns: zone:east_bank, site:river_terrace\nDecided by a person on 2026-10-01. id=64364286-60e1-4311-b852-478ddb8a864a",
+    "violations": [
+      {
+        "constraintId": "919b68f3-57e3-4bbc-8d68-469e628980df",
+        "statement": "Care homes, schools and hospitals on the east bank need a flood review",
+        "severity": "BLOCKING",
+        "explanation": "A care home is a vulnerable use; \"Care homes, schools and hospitals on the east bank need a flood review\" requires vulnerable_use = false.",
+        "decision": {
+          "id": "90c06ee1-d153-464e-a947-ef453241ec58",
+          "externalRef": "PLN-021",
+          "title": "Approve homes on the east bank without an individual flood review",
+          "status": "AT_RISK"
+        }
+      }
+    ],
+    "warnings": [
+      "PLN-021 is AT RISK: the reasons behind it are in doubt. Confirm with a person before relying on it.",
+      "PLN-021 assumes \"The 100-year flood on the east bank stays below 2.4 m\", which is now invalidated.",
+      "EMR-003 is AT RISK: the reasons behind it are in doubt. Confirm with a person before relying on it.",
+      "EMR-003 assumes \"The 100-year flood on the east bank stays below 2.4 m\", which is now invalidated.",
+      "HLT-006 is AT RISK: the reasons behind it are in doubt. Confirm with a person before relying on it.",
+      "HLT-006 assumes \"The 100-year flood on the east bank stays below 2.4 m\", which is now invalidated.",
+      "PLN-014 is AT RISK: the reasons behind it are in doubt. Confirm with a person before relying on it.",
+      "PLN-014 assumes \"The 100-year flood on the east bank stays below 2.4 m\", which is now invalidated."
+    ],
+    "decisionIds": [
+      "90c06ee1-d153-464e-a947-ef453241ec58",
+      "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+      "aa55e474-8da6-418f-a236-1193644f91a5",
+      "64364286-60e1-4311-b852-478ddb8a864a"
+    ],
+    "contextRequestId": "512bcf42-2ea4-4736-a095-1f0253245ebf"
+  },
+  "atRisk": [
+    {
+      "decision": {
+        "id": "90c06ee1-d153-464e-a947-ef453241ec58",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "projectId": "ec9d9f61-c788-4780-9e59-922b519b8381",
+        "title": "Approve homes on the east bank without an individual flood review",
+        "problemStatement": null,
+        "reasoning": "Every east-bank plot sits above the 100-year flood level.",
+        "status": "AT_RISK",
+        "memoryIndexStatus": "INDEXED",
+        "memoryIndexError": null,
+        "confidence": 0.7,
+        "importance": 0.85,
+        "riskExplanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "supersededByDecisionId": null,
+        "reopenedAt": null,
+        "closedAt": null,
+        "createdBy": null,
+        "createdInSession": "key:0e1d6423-0b02-4d09-94e2-d08f196ee061",
+        "createdAt": "2026-10-01T10:35:04.017Z",
+        "updatedAt": "2026-10-01T10:35:06.265Z",
+        "domain": "planning",
+        "scope": null,
+        "origin": "HUMAN",
+        "decidedByType": "USER",
+        "decidedByLabel": null,
+        "externalRef": "PLN-021",
+        "tags": [
+          "permits"
+        ],
+        "metadata": null,
+        "verificationChecks": [],
+        "sourceRefs": [],
+        "validFrom": "2026-10-01T10:35:04.019Z",
+        "reviewedAt": null,
+        "agentSessionId": null,
+        "options": [
+          {
+            "id": "cddc9d40-2c09-4d1b-b486-9ad3038d02fb",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "name": "Standard permits, no flood review",
+            "description": null,
+            "isChosen": true,
+            "rejectionReason": null,
+            "createdAt": "2026-10-01T10:35:04.024Z"
+          },
+          {
+            "id": "f1f3c3cb-789b-4663-9c04-f305269e2589",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "name": "Flood review for every permit",
+            "description": null,
+            "isChosen": false,
+            "rejectionReason": "Adds months to every application for a risk below the design level.",
+            "createdAt": "2026-10-01T10:35:04.026Z"
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "d27d8718-d09b-4779-9c76-0a7f252e9a07",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+            "assumptionType": "QUANTITATIVE",
+            "metric": "flood_level_100yr_m",
+            "operator": "<",
+            "value": 2.4,
+            "unit": "m",
+            "validityStatus": "INVALIDATED",
+            "importance": 0.95,
+            "confidence": 0.7,
+            "authorityScore": 0.8,
+            "validFrom": "2026-10-01T10:35:04.027Z",
+            "validUntil": null,
+            "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+            "challengedAt": "2026-10-01T10:35:04.999Z",
+            "invalidatedAt": "2026-10-01T10:35:06.265Z",
+            "createdAt": "2026-10-01T10:35:04.029Z",
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "operatorV2": "<",
+            "expected": 2.4,
+            "verificationPolicy": "DETERMINISTIC_FIRST",
+            "provenance": null,
+            "lastEvaluatedAt": "2026-10-01T10:35:06.265Z"
+          }
+        ],
+        "resources": [
+          {
+            "id": "326a2a35-3bb2-44a7-b774-aef8ed0b5dbd",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "resourceType": "zone",
+            "resourceKey": "east_bank",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:04.033Z"
+          }
+        ],
+        "constraints": [
+          {
+            "id": "919b68f3-57e3-4bbc-8d68-469e628980df",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "statement": "Care homes, schools and hospitals on the east bank need a flood review",
+            "rule": {
+              "kind": "fact_bound",
+              "predicate": "vulnerable_use",
+              "operator": "=",
+              "value": false
+            },
+            "severity": "BLOCKING",
+            "createdAt": "2026-10-01T10:35:04.035Z"
+          }
+        ]
+      },
+      "compromisedAssumptions": [
+        {
+          "id": "d27d8718-d09b-4779-9c76-0a7f252e9a07",
+          "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+          "statement": "The 100-year flood on the east bank stays below 2.4 m",
+          "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+          "assumptionType": "QUANTITATIVE",
+          "metric": "flood_level_100yr_m",
+          "operator": "<",
+          "value": 2.4,
+          "unit": "m",
+          "validityStatus": "INVALIDATED",
+          "importance": 0.95,
+          "confidence": 0.7,
+          "authorityScore": 0.8,
+          "validFrom": "2026-10-01T10:35:04.027Z",
+          "validUntil": null,
+          "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+          "challengedAt": "2026-10-01T10:35:04.999Z",
+          "invalidatedAt": "2026-10-01T10:35:06.265Z",
+          "createdAt": "2026-10-01T10:35:04.029Z",
+          "subject": "river:east_bank",
+          "predicate": "flood_level_100yr_m",
+          "valueType": "NUMBER",
+          "operatorV2": "<",
+          "expected": 2.4,
+          "verificationPolicy": "DETERMINISTIC_FIRST",
+          "provenance": null,
+          "lastEvaluatedAt": "2026-10-01T10:35:06.265Z"
+        }
+      ],
+      "openConflicts": [
+        {
+          "id": "b899964a-ca67-482b-a576-e873826a0fff",
+          "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+          "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+          "assumptionId": "d27d8718-d09b-4779-9c76-0a7f252e9a07",
+          "documentId": null,
+          "memoryChunkId": null,
+          "agentRunId": "ced3d20a-cb06-4183-a734-8806d0ea96d7",
+          "factStatement": "The 100-year flood level for the east bank is now 3.1 m",
+          "explanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+          "conflictType": "VALUE_CHANGED",
+          "relation": "CONTRADICTS",
+          "confidence": 1,
+          "oldValue": "< 2.4 m",
+          "newValue": "3.1 m",
+          "sourceQuote": null,
+          "detectionMethod": "DETERMINISTIC",
+          "suggestedOptionId": null,
+          "memoryTraceId": null,
+          "reviewedAt": null,
+          "resolution": null,
+          "resolvedBy": null,
+          "detectedAt": "2026-10-01T10:35:06.265Z",
+          "evidenceItemId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+          "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+          "evaluationId": "50d0c6ab-b4a9-4b2e-9c64-7922717c0a4a",
+          "resolutionNote": null,
+          "resolvedByLabel": null
+        },
+        {
+          "id": "3e2b768d-4da7-4d9e-b53b-2af86bfadfe3",
+          "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+          "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+          "assumptionId": "d27d8718-d09b-4779-9c76-0a7f252e9a07",
+          "documentId": null,
+          "memoryChunkId": null,
+          "agentRunId": "0adb5a9b-afc6-43dc-90ec-600a77021a3b",
+          "factStatement": "A forum post claims the 100-year flood reaches 2.9 m",
+          "explanation": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+          "conflictType": "VALUE_CHANGED",
+          "relation": "CONTRADICTS",
+          "confidence": 1,
+          "oldValue": "< 2.4 m",
+          "newValue": "2.9 m",
+          "sourceQuote": null,
+          "detectionMethod": "DETERMINISTIC",
+          "suggestedOptionId": null,
+          "memoryTraceId": null,
+          "reviewedAt": null,
+          "resolution": null,
+          "resolvedBy": null,
+          "detectedAt": "2026-10-01T10:35:04.999Z",
+          "evidenceItemId": "4a5bb627-a15e-4653-a9b0-c98e8f67d464",
+          "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+          "evaluationId": "af622b20-61ec-44eb-a9ca-3405420043b3",
+          "resolutionNote": null,
+          "resolvedByLabel": null
+        }
+      ]
+    },
+    {
+      "decision": {
+        "id": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "projectId": "ec9d9f61-c788-4780-9e59-922b519b8381",
+        "title": "Route the Eastbank evacuation over the Mill Street bridge",
+        "problemStatement": null,
+        "reasoning": "The fastest route out of Eastbank, and the bridge deck is clear of the 100-year flood.",
+        "status": "AT_RISK",
+        "memoryIndexStatus": "INDEXED",
+        "memoryIndexError": null,
+        "confidence": 0.7,
+        "importance": 0.9,
+        "riskExplanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "supersededByDecisionId": null,
+        "reopenedAt": null,
+        "closedAt": null,
+        "createdBy": null,
+        "createdInSession": "key:0e1d6423-0b02-4d09-94e2-d08f196ee061",
+        "createdAt": "2026-10-01T10:35:03.905Z",
+        "updatedAt": "2026-10-01T10:35:06.232Z",
+        "domain": "planning",
+        "scope": null,
+        "origin": "HUMAN",
+        "decidedByType": "USER",
+        "decidedByLabel": null,
+        "externalRef": "EMR-003",
+        "tags": [
+          "emergency"
+        ],
+        "metadata": null,
+        "verificationChecks": [],
+        "sourceRefs": [],
+        "validFrom": "2026-10-01T10:35:03.907Z",
+        "reviewedAt": null,
+        "agentSessionId": null,
+        "options": [
+          {
+            "id": "5a7920e1-b9cf-4888-bd4e-3828cf0d035b",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "name": "Mill Street bridge",
+            "description": null,
+            "isChosen": true,
+            "rejectionReason": null,
+            "createdAt": "2026-10-01T10:35:03.915Z"
+          },
+          {
+            "id": "a806f883-eb93-4cd4-a021-508eac4d0781",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "name": "Northern ring road",
+            "description": null,
+            "isChosen": false,
+            "rejectionReason": "Adds eleven minutes; the bridge deck stays clear of a 100-year flood.",
+            "createdAt": "2026-10-01T10:35:03.917Z"
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "dd66d2d0-132a-4e58-ab23-32f11d496a18",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+            "assumptionType": "QUANTITATIVE",
+            "metric": "flood_level_100yr_m",
+            "operator": "<",
+            "value": 2.4,
+            "unit": "m",
+            "validityStatus": "INVALIDATED",
+            "importance": 0.95,
+            "confidence": 0.7,
+            "authorityScore": 0.8,
+            "validFrom": "2026-10-01T10:35:03.918Z",
+            "validUntil": null,
+            "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+            "challengedAt": "2026-10-01T10:35:04.961Z",
+            "invalidatedAt": "2026-10-01T10:35:06.232Z",
+            "createdAt": "2026-10-01T10:35:03.920Z",
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "operatorV2": "<",
+            "expected": 2.4,
+            "verificationPolicy": "DETERMINISTIC_FIRST",
+            "provenance": null,
+            "lastEvaluatedAt": "2026-10-01T10:35:06.232Z"
+          }
+        ],
+        "resources": [
+          {
+            "id": "fa0c3ec9-5b73-4252-b4f6-f62569944377",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "resourceType": "route",
+            "resourceKey": "mill_street_bridge",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.922Z"
+          },
+          {
+            "id": "248af635-2166-4365-8051-09a1a4572296",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "resourceType": "zone",
+            "resourceKey": "east_bank",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.925Z"
+          }
+        ],
+        "constraints": []
+      },
+      "compromisedAssumptions": [
+        {
+          "id": "dd66d2d0-132a-4e58-ab23-32f11d496a18",
+          "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+          "statement": "The 100-year flood on the east bank stays below 2.4 m",
+          "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+          "assumptionType": "QUANTITATIVE",
+          "metric": "flood_level_100yr_m",
+          "operator": "<",
+          "value": 2.4,
+          "unit": "m",
+          "validityStatus": "INVALIDATED",
+          "importance": 0.95,
+          "confidence": 0.7,
+          "authorityScore": 0.8,
+          "validFrom": "2026-10-01T10:35:03.918Z",
+          "validUntil": null,
+          "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+          "challengedAt": "2026-10-01T10:35:04.961Z",
+          "invalidatedAt": "2026-10-01T10:35:06.232Z",
+          "createdAt": "2026-10-01T10:35:03.920Z",
+          "subject": "river:east_bank",
+          "predicate": "flood_level_100yr_m",
+          "valueType": "NUMBER",
+          "operatorV2": "<",
+          "expected": 2.4,
+          "verificationPolicy": "DETERMINISTIC_FIRST",
+          "provenance": null,
+          "lastEvaluatedAt": "2026-10-01T10:35:06.232Z"
+        }
+      ],
+      "openConflicts": [
+        {
+          "id": "d58b7ab6-390a-433f-880b-15f75d41156c",
+          "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+          "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+          "assumptionId": "dd66d2d0-132a-4e58-ab23-32f11d496a18",
+          "documentId": null,
+          "memoryChunkId": null,
+          "agentRunId": "ced3d20a-cb06-4183-a734-8806d0ea96d7",
+          "factStatement": "The 100-year flood level for the east bank is now 3.1 m",
+          "explanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+          "conflictType": "VALUE_CHANGED",
+          "relation": "CONTRADICTS",
+          "confidence": 1,
+          "oldValue": "< 2.4 m",
+          "newValue": "3.1 m",
+          "sourceQuote": null,
+          "detectionMethod": "DETERMINISTIC",
+          "suggestedOptionId": null,
+          "memoryTraceId": null,
+          "reviewedAt": null,
+          "resolution": null,
+          "resolvedBy": null,
+          "detectedAt": "2026-10-01T10:35:06.232Z",
+          "evidenceItemId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+          "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+          "evaluationId": "3925c56e-7cdf-4de4-9721-f280d4b3cdac",
+          "resolutionNote": null,
+          "resolvedByLabel": null
+        },
+        {
+          "id": "2e59f6f3-1992-47be-a3c4-607c36b792f7",
+          "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+          "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+          "assumptionId": "dd66d2d0-132a-4e58-ab23-32f11d496a18",
+          "documentId": null,
+          "memoryChunkId": null,
+          "agentRunId": "0adb5a9b-afc6-43dc-90ec-600a77021a3b",
+          "factStatement": "A forum post claims the 100-year flood reaches 2.9 m",
+          "explanation": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+          "conflictType": "VALUE_CHANGED",
+          "relation": "CONTRADICTS",
+          "confidence": 1,
+          "oldValue": "< 2.4 m",
+          "newValue": "2.9 m",
+          "sourceQuote": null,
+          "detectionMethod": "DETERMINISTIC",
+          "suggestedOptionId": null,
+          "memoryTraceId": null,
+          "reviewedAt": null,
+          "resolution": null,
+          "resolvedBy": null,
+          "detectedAt": "2026-10-01T10:35:04.961Z",
+          "evidenceItemId": "4a5bb627-a15e-4653-a9b0-c98e8f67d464",
+          "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+          "evaluationId": "79a8f136-f02f-4af6-bd18-bd0068a04f2f",
+          "resolutionNote": null,
+          "resolvedByLabel": null
+        }
+      ]
+    },
+    {
+      "decision": {
+        "id": "aa55e474-8da6-418f-a236-1193644f91a5",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "projectId": "ec9d9f61-c788-4780-9e59-922b519b8381",
+        "title": "Keep Riverton General's backup generators on the ground floor",
+        "problemStatement": null,
+        "reasoning": "The ground floor is above the 100-year flood level, so relocating the generators was not justified.",
+        "status": "AT_RISK",
+        "memoryIndexStatus": "INDEXED",
+        "memoryIndexError": null,
+        "confidence": 0.7,
+        "importance": 0.95,
+        "riskExplanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "supersededByDecisionId": null,
+        "reopenedAt": null,
+        "closedAt": null,
+        "createdBy": null,
+        "createdInSession": "key:0e1d6423-0b02-4d09-94e2-d08f196ee061",
+        "createdAt": "2026-10-01T10:35:03.809Z",
+        "updatedAt": "2026-10-01T10:35:06.193Z",
+        "domain": "planning",
+        "scope": null,
+        "origin": "HUMAN",
+        "decidedByType": "USER",
+        "decidedByLabel": null,
+        "externalRef": "HLT-006",
+        "tags": [
+          "health"
+        ],
+        "metadata": null,
+        "verificationChecks": [],
+        "sourceRefs": [],
+        "validFrom": "2026-10-01T10:35:03.811Z",
+        "reviewedAt": null,
+        "agentSessionId": null,
+        "options": [
+          {
+            "id": "4e7acb83-9a89-4fcf-bf91-1b49d3e05ca9",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "name": "Ground-floor generator hall",
+            "description": null,
+            "isChosen": true,
+            "rejectionReason": null,
+            "createdAt": "2026-10-01T10:35:03.816Z"
+          },
+          {
+            "id": "caaaaaf4-30be-47e8-91ba-2a7f7ff553ce",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "name": "Move generators to the roof",
+            "description": null,
+            "isChosen": false,
+            "rejectionReason": "Structural work for a risk the flood study said we do not have.",
+            "createdAt": "2026-10-01T10:35:03.819Z"
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "7434bb95-d4d6-45f7-a4de-ce306ccf86fb",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+            "assumptionType": "QUANTITATIVE",
+            "metric": "flood_level_100yr_m",
+            "operator": "<",
+            "value": 2.4,
+            "unit": "m",
+            "validityStatus": "INVALIDATED",
+            "importance": 0.95,
+            "confidence": 0.7,
+            "authorityScore": 0.8,
+            "validFrom": "2026-10-01T10:35:03.820Z",
+            "validUntil": null,
+            "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+            "challengedAt": "2026-10-01T10:35:04.904Z",
+            "invalidatedAt": "2026-10-01T10:35:06.193Z",
+            "createdAt": "2026-10-01T10:35:03.821Z",
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "operatorV2": "<",
+            "expected": 2.4,
+            "verificationPolicy": "DETERMINISTIC_FIRST",
+            "provenance": null,
+            "lastEvaluatedAt": "2026-10-01T10:35:06.193Z"
+          }
+        ],
+        "resources": [
+          {
+            "id": "49ecfbb9-e2a0-4269-85c2-ba68d66d7aa2",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "resourceType": "facility",
+            "resourceKey": "riverton_general",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.824Z"
+          },
+          {
+            "id": "c9e36d55-d6b4-4960-bc44-d087b85728d5",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "resourceType": "zone",
+            "resourceKey": "east_bank",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.826Z"
+          }
+        ],
+        "constraints": []
+      },
+      "compromisedAssumptions": [
+        {
+          "id": "7434bb95-d4d6-45f7-a4de-ce306ccf86fb",
+          "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+          "statement": "The 100-year flood on the east bank stays below 2.4 m",
+          "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+          "assumptionType": "QUANTITATIVE",
+          "metric": "flood_level_100yr_m",
+          "operator": "<",
+          "value": 2.4,
+          "unit": "m",
+          "validityStatus": "INVALIDATED",
+          "importance": 0.95,
+          "confidence": 0.7,
+          "authorityScore": 0.8,
+          "validFrom": "2026-10-01T10:35:03.820Z",
+          "validUntil": null,
+          "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+          "challengedAt": "2026-10-01T10:35:04.904Z",
+          "invalidatedAt": "2026-10-01T10:35:06.193Z",
+          "createdAt": "2026-10-01T10:35:03.821Z",
+          "subject": "river:east_bank",
+          "predicate": "flood_level_100yr_m",
+          "valueType": "NUMBER",
+          "operatorV2": "<",
+          "expected": 2.4,
+          "verificationPolicy": "DETERMINISTIC_FIRST",
+          "provenance": null,
+          "lastEvaluatedAt": "2026-10-01T10:35:06.193Z"
+        }
+      ],
+      "openConflicts": [
+        {
+          "id": "62e65585-f4aa-4fe6-8bcd-179164d27caf",
+          "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+          "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+          "assumptionId": "7434bb95-d4d6-45f7-a4de-ce306ccf86fb",
+          "documentId": null,
+          "memoryChunkId": null,
+          "agentRunId": "ced3d20a-cb06-4183-a734-8806d0ea96d7",
+          "factStatement": "The 100-year flood level for the east bank is now 3.1 m",
+          "explanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+          "conflictType": "VALUE_CHANGED",
+          "relation": "CONTRADICTS",
+          "confidence": 1,
+          "oldValue": "< 2.4 m",
+          "newValue": "3.1 m",
+          "sourceQuote": null,
+          "detectionMethod": "DETERMINISTIC",
+          "suggestedOptionId": null,
+          "memoryTraceId": null,
+          "reviewedAt": null,
+          "resolution": null,
+          "resolvedBy": null,
+          "detectedAt": "2026-10-01T10:35:06.193Z",
+          "evidenceItemId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+          "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+          "evaluationId": "c666524a-5f0f-4359-b5d3-6745ccd0f334",
+          "resolutionNote": null,
+          "resolvedByLabel": null
+        },
+        {
+          "id": "70660e7f-cf39-407f-85d9-c3098f3f9d8e",
+          "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+          "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+          "assumptionId": "7434bb95-d4d6-45f7-a4de-ce306ccf86fb",
+          "documentId": null,
+          "memoryChunkId": null,
+          "agentRunId": "0adb5a9b-afc6-43dc-90ec-600a77021a3b",
+          "factStatement": "A forum post claims the 100-year flood reaches 2.9 m",
+          "explanation": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+          "conflictType": "VALUE_CHANGED",
+          "relation": "CONTRADICTS",
+          "confidence": 1,
+          "oldValue": "< 2.4 m",
+          "newValue": "2.9 m",
+          "sourceQuote": null,
+          "detectionMethod": "DETERMINISTIC",
+          "suggestedOptionId": null,
+          "memoryTraceId": null,
+          "reviewedAt": null,
+          "resolution": null,
+          "resolvedBy": null,
+          "detectedAt": "2026-10-01T10:35:04.904Z",
+          "evidenceItemId": "4a5bb627-a15e-4653-a9b0-c98e8f67d464",
+          "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+          "evaluationId": "f87e6c82-1cd8-460e-8bd7-639d914c9ece",
+          "resolutionNote": null,
+          "resolvedByLabel": null
+        }
+      ]
+    },
+    {
+      "decision": {
+        "id": "64364286-60e1-4311-b852-478ddb8a864a",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "projectId": "ec9d9f61-c788-4780-9e59-922b519b8381",
+        "title": "Build the new Eastbank primary school on the river terrace",
+        "problemStatement": "Eastbank needs a primary school for 420 pupils within walking distance.",
+        "reasoning": "The terrace sits above the 100-year flood level and within walking distance of 80% of families.",
+        "status": "AT_RISK",
+        "memoryIndexStatus": "INDEXED",
+        "memoryIndexError": null,
+        "confidence": 0.7,
+        "importance": 0.9,
+        "riskExplanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "supersededByDecisionId": null,
+        "reopenedAt": null,
+        "closedAt": null,
+        "createdBy": null,
+        "createdInSession": "key:0e1d6423-0b02-4d09-94e2-d08f196ee061",
+        "createdAt": "2026-10-01T10:35:03.515Z",
+        "updatedAt": "2026-10-01T10:35:06.158Z",
+        "domain": "planning",
+        "scope": null,
+        "origin": "HUMAN",
+        "decidedByType": "USER",
+        "decidedByLabel": null,
+        "externalRef": "PLN-014",
+        "tags": [
+          "education"
+        ],
+        "metadata": null,
+        "verificationChecks": [],
+        "sourceRefs": [],
+        "validFrom": "2026-10-01T10:35:03.518Z",
+        "reviewedAt": null,
+        "agentSessionId": null,
+        "options": [
+          {
+            "id": "539e8c07-2b17-44c9-b7df-90af65842747",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "name": "River terrace site",
+            "description": null,
+            "isChosen": true,
+            "rejectionReason": null,
+            "createdAt": "2026-10-01T10:35:03.529Z"
+          },
+          {
+            "id": "b739e1ac-d633-4bc2-a228-0bddbfe26bf8",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "name": "Hilltop site on Carter Road",
+            "description": null,
+            "isChosen": false,
+            "rejectionReason": "Twenty-five minutes' walk for most families; the terrace is safe from flooding.",
+            "createdAt": "2026-10-01T10:35:03.537Z"
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "6f7e68af-39c6-443b-8668-366693a4857f",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+            "assumptionType": "QUANTITATIVE",
+            "metric": "flood_level_100yr_m",
+            "operator": "<",
+            "value": 2.4,
+            "unit": "m",
+            "validityStatus": "INVALIDATED",
+            "importance": 0.95,
+            "confidence": 0.7,
+            "authorityScore": 0.8,
+            "validFrom": "2026-10-01T10:35:03.539Z",
+            "validUntil": null,
+            "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+            "challengedAt": "2026-10-01T10:35:04.841Z",
+            "invalidatedAt": "2026-10-01T10:35:06.158Z",
+            "createdAt": "2026-10-01T10:35:03.541Z",
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "operatorV2": "<",
+            "expected": 2.4,
+            "verificationPolicy": "DETERMINISTIC_FIRST",
+            "provenance": null,
+            "lastEvaluatedAt": "2026-10-01T10:35:06.158Z"
+          }
+        ],
+        "resources": [
+          {
+            "id": "00ab059d-51f3-48b0-87bd-ccf7c7e4dec7",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "resourceType": "zone",
+            "resourceKey": "east_bank",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.546Z"
+          },
+          {
+            "id": "5ef09440-13db-479e-9fa9-234429bcd722",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "resourceType": "site",
+            "resourceKey": "river_terrace",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.558Z"
+          }
+        ],
+        "constraints": []
+      },
+      "compromisedAssumptions": [
+        {
+          "id": "6f7e68af-39c6-443b-8668-366693a4857f",
+          "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+          "statement": "The 100-year flood on the east bank stays below 2.4 m",
+          "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+          "assumptionType": "QUANTITATIVE",
+          "metric": "flood_level_100yr_m",
+          "operator": "<",
+          "value": 2.4,
+          "unit": "m",
+          "validityStatus": "INVALIDATED",
+          "importance": 0.95,
+          "confidence": 0.7,
+          "authorityScore": 0.8,
+          "validFrom": "2026-10-01T10:35:03.539Z",
+          "validUntil": null,
+          "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+          "challengedAt": "2026-10-01T10:35:04.841Z",
+          "invalidatedAt": "2026-10-01T10:35:06.158Z",
+          "createdAt": "2026-10-01T10:35:03.541Z",
+          "subject": "river:east_bank",
+          "predicate": "flood_level_100yr_m",
+          "valueType": "NUMBER",
+          "operatorV2": "<",
+          "expected": 2.4,
+          "verificationPolicy": "DETERMINISTIC_FIRST",
+          "provenance": null,
+          "lastEvaluatedAt": "2026-10-01T10:35:06.158Z"
+        }
+      ],
+      "openConflicts": [
+        {
+          "id": "1f2fcc29-78ea-42d8-8e8b-363e53f9cbb8",
+          "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+          "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+          "assumptionId": "6f7e68af-39c6-443b-8668-366693a4857f",
+          "documentId": null,
+          "memoryChunkId": null,
+          "agentRunId": "ced3d20a-cb06-4183-a734-8806d0ea96d7",
+          "factStatement": "The 100-year flood level for the east bank is now 3.1 m",
+          "explanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+          "conflictType": "VALUE_CHANGED",
+          "relation": "CONTRADICTS",
+          "confidence": 1,
+          "oldValue": "< 2.4 m",
+          "newValue": "3.1 m",
+          "sourceQuote": null,
+          "detectionMethod": "DETERMINISTIC",
+          "suggestedOptionId": null,
+          "memoryTraceId": null,
+          "reviewedAt": null,
+          "resolution": null,
+          "resolvedBy": null,
+          "detectedAt": "2026-10-01T10:35:06.158Z",
+          "evidenceItemId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+          "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2",
+          "evaluationId": "a8618514-ae83-4e7b-ae76-176f9079f418",
+          "resolutionNote": null,
+          "resolvedByLabel": null
+        },
+        {
+          "id": "1244d230-6257-4b16-9204-3cb626af3025",
+          "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+          "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+          "assumptionId": "6f7e68af-39c6-443b-8668-366693a4857f",
+          "documentId": null,
+          "memoryChunkId": null,
+          "agentRunId": "0adb5a9b-afc6-43dc-90ec-600a77021a3b",
+          "factStatement": "A forum post claims the 100-year flood reaches 2.9 m",
+          "explanation": "Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+          "conflictType": "VALUE_CHANGED",
+          "relation": "CONTRADICTS",
+          "confidence": 1,
+          "oldValue": "< 2.4 m",
+          "newValue": "2.9 m",
+          "sourceQuote": null,
+          "detectionMethod": "DETERMINISTIC",
+          "suggestedOptionId": null,
+          "memoryTraceId": null,
+          "reviewedAt": null,
+          "resolution": null,
+          "resolvedBy": null,
+          "detectedAt": "2026-10-01T10:35:04.841Z",
+          "evidenceItemId": "4a5bb627-a15e-4653-a9b0-c98e8f67d464",
+          "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6",
+          "evaluationId": "950d4e40-af05-4e0b-9062-ea948cfdcfd4",
+          "resolutionNote": null,
+          "resolvedByLabel": null
+        }
+      ]
+    }
+  ],
+  "reviews": [
+    {
+      "approval": {
+        "id": "7e35ff80-2cd8-43a7-8ed4-635bf5b22e89",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "kind": "REVIEW_CONFLICT",
+        "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+        "relatedDecisionIds": [],
+        "conflictId": "b899964a-ca67-482b-a576-e873826a0fff",
+        "payload": {
+          "policies": [
+            "high_impact_architecture",
+            "public_safety_review"
+          ],
+          "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2"
+        },
+        "reason": "Evidence invalidates \"The 100-year flood on the east bank stays below 2.4 m\" behind PLN-021: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "requestedByType": "system",
+        "requestedByLabel": "trigger-engine",
+        "agentSessionId": null,
+        "status": "PENDING",
+        "resolvedBy": null,
+        "resolvedByLabel": null,
+        "resolvedAt": null,
+        "resolutionNote": null,
+        "createdAt": "2026-10-01T10:35:06.265Z"
+      },
+      "decision": {
+        "id": "90c06ee1-d153-464e-a947-ef453241ec58",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "projectId": "ec9d9f61-c788-4780-9e59-922b519b8381",
+        "title": "Approve homes on the east bank without an individual flood review",
+        "problemStatement": null,
+        "reasoning": "Every east-bank plot sits above the 100-year flood level.",
+        "status": "AT_RISK",
+        "memoryIndexStatus": "INDEXED",
+        "memoryIndexError": null,
+        "confidence": 0.7,
+        "importance": 0.85,
+        "riskExplanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "supersededByDecisionId": null,
+        "reopenedAt": null,
+        "closedAt": null,
+        "createdBy": null,
+        "createdInSession": "key:0e1d6423-0b02-4d09-94e2-d08f196ee061",
+        "createdAt": "2026-10-01T10:35:04.017Z",
+        "updatedAt": "2026-10-01T10:35:06.265Z",
+        "domain": "planning",
+        "scope": null,
+        "origin": "HUMAN",
+        "decidedByType": "USER",
+        "decidedByLabel": null,
+        "externalRef": "PLN-021",
+        "tags": [
+          "permits"
+        ],
+        "metadata": null,
+        "verificationChecks": [],
+        "sourceRefs": [],
+        "validFrom": "2026-10-01T10:35:04.019Z",
+        "reviewedAt": null,
+        "agentSessionId": null,
+        "options": [
+          {
+            "id": "cddc9d40-2c09-4d1b-b486-9ad3038d02fb",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "name": "Standard permits, no flood review",
+            "description": null,
+            "isChosen": true,
+            "rejectionReason": null,
+            "createdAt": "2026-10-01T10:35:04.024Z"
+          },
+          {
+            "id": "f1f3c3cb-789b-4663-9c04-f305269e2589",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "name": "Flood review for every permit",
+            "description": null,
+            "isChosen": false,
+            "rejectionReason": "Adds months to every application for a risk below the design level.",
+            "createdAt": "2026-10-01T10:35:04.026Z"
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "d27d8718-d09b-4779-9c76-0a7f252e9a07",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+            "assumptionType": "QUANTITATIVE",
+            "metric": "flood_level_100yr_m",
+            "operator": "<",
+            "value": 2.4,
+            "unit": "m",
+            "validityStatus": "INVALIDATED",
+            "importance": 0.95,
+            "confidence": 0.7,
+            "authorityScore": 0.8,
+            "validFrom": "2026-10-01T10:35:04.027Z",
+            "validUntil": null,
+            "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+            "challengedAt": "2026-10-01T10:35:04.999Z",
+            "invalidatedAt": "2026-10-01T10:35:06.265Z",
+            "createdAt": "2026-10-01T10:35:04.029Z",
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "operatorV2": "<",
+            "expected": 2.4,
+            "verificationPolicy": "DETERMINISTIC_FIRST",
+            "provenance": null,
+            "lastEvaluatedAt": "2026-10-01T10:35:06.265Z"
+          }
+        ],
+        "resources": [
+          {
+            "id": "326a2a35-3bb2-44a7-b774-aef8ed0b5dbd",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "resourceType": "zone",
+            "resourceKey": "east_bank",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:04.033Z"
+          }
+        ],
+        "constraints": [
+          {
+            "id": "919b68f3-57e3-4bbc-8d68-469e628980df",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "statement": "Care homes, schools and hospitals on the east bank need a flood review",
+            "rule": {
+              "kind": "fact_bound",
+              "predicate": "vulnerable_use",
+              "operator": "=",
+              "value": false
+            },
+            "severity": "BLOCKING",
+            "createdAt": "2026-10-01T10:35:04.035Z"
+          }
+        ]
+      },
+      "related": []
+    },
+    {
+      "approval": {
+        "id": "a7d48b6e-a51a-4359-83cc-d298cc1c583f",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "kind": "REVIEW_CONFLICT",
+        "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+        "relatedDecisionIds": [],
+        "conflictId": "d58b7ab6-390a-433f-880b-15f75d41156c",
+        "payload": {
+          "policies": [
+            "high_impact_architecture",
+            "public_safety_review"
+          ],
+          "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2"
+        },
+        "reason": "Evidence invalidates \"The 100-year flood on the east bank stays below 2.4 m\" behind EMR-003: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "requestedByType": "system",
+        "requestedByLabel": "trigger-engine",
+        "agentSessionId": null,
+        "status": "PENDING",
+        "resolvedBy": null,
+        "resolvedByLabel": null,
+        "resolvedAt": null,
+        "resolutionNote": null,
+        "createdAt": "2026-10-01T10:35:06.232Z"
+      },
+      "decision": {
+        "id": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "projectId": "ec9d9f61-c788-4780-9e59-922b519b8381",
+        "title": "Route the Eastbank evacuation over the Mill Street bridge",
+        "problemStatement": null,
+        "reasoning": "The fastest route out of Eastbank, and the bridge deck is clear of the 100-year flood.",
+        "status": "AT_RISK",
+        "memoryIndexStatus": "INDEXED",
+        "memoryIndexError": null,
+        "confidence": 0.7,
+        "importance": 0.9,
+        "riskExplanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "supersededByDecisionId": null,
+        "reopenedAt": null,
+        "closedAt": null,
+        "createdBy": null,
+        "createdInSession": "key:0e1d6423-0b02-4d09-94e2-d08f196ee061",
+        "createdAt": "2026-10-01T10:35:03.905Z",
+        "updatedAt": "2026-10-01T10:35:06.232Z",
+        "domain": "planning",
+        "scope": null,
+        "origin": "HUMAN",
+        "decidedByType": "USER",
+        "decidedByLabel": null,
+        "externalRef": "EMR-003",
+        "tags": [
+          "emergency"
+        ],
+        "metadata": null,
+        "verificationChecks": [],
+        "sourceRefs": [],
+        "validFrom": "2026-10-01T10:35:03.907Z",
+        "reviewedAt": null,
+        "agentSessionId": null,
+        "options": [
+          {
+            "id": "5a7920e1-b9cf-4888-bd4e-3828cf0d035b",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "name": "Mill Street bridge",
+            "description": null,
+            "isChosen": true,
+            "rejectionReason": null,
+            "createdAt": "2026-10-01T10:35:03.915Z"
+          },
+          {
+            "id": "a806f883-eb93-4cd4-a021-508eac4d0781",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "name": "Northern ring road",
+            "description": null,
+            "isChosen": false,
+            "rejectionReason": "Adds eleven minutes; the bridge deck stays clear of a 100-year flood.",
+            "createdAt": "2026-10-01T10:35:03.917Z"
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "dd66d2d0-132a-4e58-ab23-32f11d496a18",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+            "assumptionType": "QUANTITATIVE",
+            "metric": "flood_level_100yr_m",
+            "operator": "<",
+            "value": 2.4,
+            "unit": "m",
+            "validityStatus": "INVALIDATED",
+            "importance": 0.95,
+            "confidence": 0.7,
+            "authorityScore": 0.8,
+            "validFrom": "2026-10-01T10:35:03.918Z",
+            "validUntil": null,
+            "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+            "challengedAt": "2026-10-01T10:35:04.961Z",
+            "invalidatedAt": "2026-10-01T10:35:06.232Z",
+            "createdAt": "2026-10-01T10:35:03.920Z",
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "operatorV2": "<",
+            "expected": 2.4,
+            "verificationPolicy": "DETERMINISTIC_FIRST",
+            "provenance": null,
+            "lastEvaluatedAt": "2026-10-01T10:35:06.232Z"
+          }
+        ],
+        "resources": [
+          {
+            "id": "fa0c3ec9-5b73-4252-b4f6-f62569944377",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "resourceType": "route",
+            "resourceKey": "mill_street_bridge",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.922Z"
+          },
+          {
+            "id": "248af635-2166-4365-8051-09a1a4572296",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "resourceType": "zone",
+            "resourceKey": "east_bank",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.925Z"
+          }
+        ],
+        "constraints": []
+      },
+      "related": []
+    },
+    {
+      "approval": {
+        "id": "bf0fb4e9-0a30-4f08-94af-66424f0ad314",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "kind": "REVIEW_CONFLICT",
+        "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+        "relatedDecisionIds": [],
+        "conflictId": "62e65585-f4aa-4fe6-8bcd-179164d27caf",
+        "payload": {
+          "policies": [
+            "high_impact_architecture",
+            "public_safety_review"
+          ],
+          "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2"
+        },
+        "reason": "Evidence invalidates \"The 100-year flood on the east bank stays below 2.4 m\" behind HLT-006: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "requestedByType": "system",
+        "requestedByLabel": "trigger-engine",
+        "agentSessionId": null,
+        "status": "PENDING",
+        "resolvedBy": null,
+        "resolvedByLabel": null,
+        "resolvedAt": null,
+        "resolutionNote": null,
+        "createdAt": "2026-10-01T10:35:06.193Z"
+      },
+      "decision": {
+        "id": "aa55e474-8da6-418f-a236-1193644f91a5",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "projectId": "ec9d9f61-c788-4780-9e59-922b519b8381",
+        "title": "Keep Riverton General's backup generators on the ground floor",
+        "problemStatement": null,
+        "reasoning": "The ground floor is above the 100-year flood level, so relocating the generators was not justified.",
+        "status": "AT_RISK",
+        "memoryIndexStatus": "INDEXED",
+        "memoryIndexError": null,
+        "confidence": 0.7,
+        "importance": 0.95,
+        "riskExplanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "supersededByDecisionId": null,
+        "reopenedAt": null,
+        "closedAt": null,
+        "createdBy": null,
+        "createdInSession": "key:0e1d6423-0b02-4d09-94e2-d08f196ee061",
+        "createdAt": "2026-10-01T10:35:03.809Z",
+        "updatedAt": "2026-10-01T10:35:06.193Z",
+        "domain": "planning",
+        "scope": null,
+        "origin": "HUMAN",
+        "decidedByType": "USER",
+        "decidedByLabel": null,
+        "externalRef": "HLT-006",
+        "tags": [
+          "health"
+        ],
+        "metadata": null,
+        "verificationChecks": [],
+        "sourceRefs": [],
+        "validFrom": "2026-10-01T10:35:03.811Z",
+        "reviewedAt": null,
+        "agentSessionId": null,
+        "options": [
+          {
+            "id": "4e7acb83-9a89-4fcf-bf91-1b49d3e05ca9",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "name": "Ground-floor generator hall",
+            "description": null,
+            "isChosen": true,
+            "rejectionReason": null,
+            "createdAt": "2026-10-01T10:35:03.816Z"
+          },
+          {
+            "id": "caaaaaf4-30be-47e8-91ba-2a7f7ff553ce",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "name": "Move generators to the roof",
+            "description": null,
+            "isChosen": false,
+            "rejectionReason": "Structural work for a risk the flood study said we do not have.",
+            "createdAt": "2026-10-01T10:35:03.819Z"
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "7434bb95-d4d6-45f7-a4de-ce306ccf86fb",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+            "assumptionType": "QUANTITATIVE",
+            "metric": "flood_level_100yr_m",
+            "operator": "<",
+            "value": 2.4,
+            "unit": "m",
+            "validityStatus": "INVALIDATED",
+            "importance": 0.95,
+            "confidence": 0.7,
+            "authorityScore": 0.8,
+            "validFrom": "2026-10-01T10:35:03.820Z",
+            "validUntil": null,
+            "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+            "challengedAt": "2026-10-01T10:35:04.904Z",
+            "invalidatedAt": "2026-10-01T10:35:06.193Z",
+            "createdAt": "2026-10-01T10:35:03.821Z",
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "operatorV2": "<",
+            "expected": 2.4,
+            "verificationPolicy": "DETERMINISTIC_FIRST",
+            "provenance": null,
+            "lastEvaluatedAt": "2026-10-01T10:35:06.193Z"
+          }
+        ],
+        "resources": [
+          {
+            "id": "49ecfbb9-e2a0-4269-85c2-ba68d66d7aa2",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "resourceType": "facility",
+            "resourceKey": "riverton_general",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.824Z"
+          },
+          {
+            "id": "c9e36d55-d6b4-4960-bc44-d087b85728d5",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "resourceType": "zone",
+            "resourceKey": "east_bank",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.826Z"
+          }
+        ],
+        "constraints": []
+      },
+      "related": []
+    },
+    {
+      "approval": {
+        "id": "13b5aa40-1eb9-4dd8-b1f9-1f1a08eeeffb",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "kind": "REVIEW_CONFLICT",
+        "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+        "relatedDecisionIds": [],
+        "conflictId": "1f2fcc29-78ea-42d8-8e8b-363e53f9cbb8",
+        "payload": {
+          "policies": [
+            "high_impact_architecture",
+            "public_safety_review"
+          ],
+          "eventId": "7b4b2063-57fe-4dad-bb38-a360ba02c7c2"
+        },
+        "reason": "Evidence invalidates \"The 100-year flood on the east bank stays below 2.4 m\" behind PLN-014: Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "requestedByType": "system",
+        "requestedByLabel": "trigger-engine",
+        "agentSessionId": null,
+        "status": "PENDING",
+        "resolvedBy": null,
+        "resolvedByLabel": null,
+        "resolvedAt": null,
+        "resolutionNote": null,
+        "createdAt": "2026-10-01T10:35:06.158Z"
+      },
+      "decision": {
+        "id": "64364286-60e1-4311-b852-478ddb8a864a",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "projectId": "ec9d9f61-c788-4780-9e59-922b519b8381",
+        "title": "Build the new Eastbank primary school on the river terrace",
+        "problemStatement": "Eastbank needs a primary school for 420 pupils within walking distance.",
+        "reasoning": "The terrace sits above the 100-year flood level and within walking distance of 80% of families.",
+        "status": "AT_RISK",
+        "memoryIndexStatus": "INDEXED",
+        "memoryIndexError": null,
+        "confidence": 0.7,
+        "importance": 0.9,
+        "riskExplanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "supersededByDecisionId": null,
+        "reopenedAt": null,
+        "closedAt": null,
+        "createdBy": null,
+        "createdInSession": "key:0e1d6423-0b02-4d09-94e2-d08f196ee061",
+        "createdAt": "2026-10-01T10:35:03.515Z",
+        "updatedAt": "2026-10-01T10:35:06.158Z",
+        "domain": "planning",
+        "scope": null,
+        "origin": "HUMAN",
+        "decidedByType": "USER",
+        "decidedByLabel": null,
+        "externalRef": "PLN-014",
+        "tags": [
+          "education"
+        ],
+        "metadata": null,
+        "verificationChecks": [],
+        "sourceRefs": [],
+        "validFrom": "2026-10-01T10:35:03.518Z",
+        "reviewedAt": null,
+        "agentSessionId": null,
+        "options": [
+          {
+            "id": "539e8c07-2b17-44c9-b7df-90af65842747",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "name": "River terrace site",
+            "description": null,
+            "isChosen": true,
+            "rejectionReason": null,
+            "createdAt": "2026-10-01T10:35:03.529Z"
+          },
+          {
+            "id": "b739e1ac-d633-4bc2-a228-0bddbfe26bf8",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "name": "Hilltop site on Carter Road",
+            "description": null,
+            "isChosen": false,
+            "rejectionReason": "Twenty-five minutes' walk for most families; the terrace is safe from flooding.",
+            "createdAt": "2026-10-01T10:35:03.537Z"
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "6f7e68af-39c6-443b-8668-366693a4857f",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+            "assumptionType": "QUANTITATIVE",
+            "metric": "flood_level_100yr_m",
+            "operator": "<",
+            "value": 2.4,
+            "unit": "m",
+            "validityStatus": "INVALIDATED",
+            "importance": 0.95,
+            "confidence": 0.7,
+            "authorityScore": 0.8,
+            "validFrom": "2026-10-01T10:35:03.539Z",
+            "validUntil": null,
+            "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+            "challengedAt": "2026-10-01T10:35:04.841Z",
+            "invalidatedAt": "2026-10-01T10:35:06.158Z",
+            "createdAt": "2026-10-01T10:35:03.541Z",
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "operatorV2": "<",
+            "expected": 2.4,
+            "verificationPolicy": "DETERMINISTIC_FIRST",
+            "provenance": null,
+            "lastEvaluatedAt": "2026-10-01T10:35:06.158Z"
+          }
+        ],
+        "resources": [
+          {
+            "id": "00ab059d-51f3-48b0-87bd-ccf7c7e4dec7",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "resourceType": "zone",
+            "resourceKey": "east_bank",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.546Z"
+          },
+          {
+            "id": "5ef09440-13db-479e-9fa9-234429bcd722",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "resourceType": "site",
+            "resourceKey": "river_terrace",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.558Z"
+          }
+        ],
+        "constraints": []
+      },
+      "related": []
+    },
+    {
+      "approval": {
+        "id": "abce68ba-12ad-4731-9c55-10a04022911d",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "kind": "REVIEW_CONFLICT",
+        "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+        "relatedDecisionIds": [],
+        "conflictId": "3e2b768d-4da7-4d9e-b53b-2af86bfadfe3",
+        "payload": {
+          "policies": [
+            "low_authority_evidence",
+            "public_safety_review"
+          ],
+          "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6"
+        },
+        "reason": "Evidence challenges \"The 100-year flood on the east bank stays below 2.4 m\" behind PLN-021: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "requestedByType": "system",
+        "requestedByLabel": "trigger-engine",
+        "agentSessionId": null,
+        "status": "PENDING",
+        "resolvedBy": null,
+        "resolvedByLabel": null,
+        "resolvedAt": null,
+        "resolutionNote": null,
+        "createdAt": "2026-10-01T10:35:04.999Z"
+      },
+      "decision": {
+        "id": "90c06ee1-d153-464e-a947-ef453241ec58",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "projectId": "ec9d9f61-c788-4780-9e59-922b519b8381",
+        "title": "Approve homes on the east bank without an individual flood review",
+        "problemStatement": null,
+        "reasoning": "Every east-bank plot sits above the 100-year flood level.",
+        "status": "AT_RISK",
+        "memoryIndexStatus": "INDEXED",
+        "memoryIndexError": null,
+        "confidence": 0.7,
+        "importance": 0.85,
+        "riskExplanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "supersededByDecisionId": null,
+        "reopenedAt": null,
+        "closedAt": null,
+        "createdBy": null,
+        "createdInSession": "key:0e1d6423-0b02-4d09-94e2-d08f196ee061",
+        "createdAt": "2026-10-01T10:35:04.017Z",
+        "updatedAt": "2026-10-01T10:35:06.265Z",
+        "domain": "planning",
+        "scope": null,
+        "origin": "HUMAN",
+        "decidedByType": "USER",
+        "decidedByLabel": null,
+        "externalRef": "PLN-021",
+        "tags": [
+          "permits"
+        ],
+        "metadata": null,
+        "verificationChecks": [],
+        "sourceRefs": [],
+        "validFrom": "2026-10-01T10:35:04.019Z",
+        "reviewedAt": null,
+        "agentSessionId": null,
+        "options": [
+          {
+            "id": "cddc9d40-2c09-4d1b-b486-9ad3038d02fb",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "name": "Standard permits, no flood review",
+            "description": null,
+            "isChosen": true,
+            "rejectionReason": null,
+            "createdAt": "2026-10-01T10:35:04.024Z"
+          },
+          {
+            "id": "f1f3c3cb-789b-4663-9c04-f305269e2589",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "name": "Flood review for every permit",
+            "description": null,
+            "isChosen": false,
+            "rejectionReason": "Adds months to every application for a risk below the design level.",
+            "createdAt": "2026-10-01T10:35:04.026Z"
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "d27d8718-d09b-4779-9c76-0a7f252e9a07",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+            "assumptionType": "QUANTITATIVE",
+            "metric": "flood_level_100yr_m",
+            "operator": "<",
+            "value": 2.4,
+            "unit": "m",
+            "validityStatus": "INVALIDATED",
+            "importance": 0.95,
+            "confidence": 0.7,
+            "authorityScore": 0.8,
+            "validFrom": "2026-10-01T10:35:04.027Z",
+            "validUntil": null,
+            "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+            "challengedAt": "2026-10-01T10:35:04.999Z",
+            "invalidatedAt": "2026-10-01T10:35:06.265Z",
+            "createdAt": "2026-10-01T10:35:04.029Z",
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "operatorV2": "<",
+            "expected": 2.4,
+            "verificationPolicy": "DETERMINISTIC_FIRST",
+            "provenance": null,
+            "lastEvaluatedAt": "2026-10-01T10:35:06.265Z"
+          }
+        ],
+        "resources": [
+          {
+            "id": "326a2a35-3bb2-44a7-b774-aef8ed0b5dbd",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "resourceType": "zone",
+            "resourceKey": "east_bank",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:04.033Z"
+          }
+        ],
+        "constraints": [
+          {
+            "id": "919b68f3-57e3-4bbc-8d68-469e628980df",
+            "decisionId": "90c06ee1-d153-464e-a947-ef453241ec58",
+            "statement": "Care homes, schools and hospitals on the east bank need a flood review",
+            "rule": {
+              "kind": "fact_bound",
+              "predicate": "vulnerable_use",
+              "operator": "=",
+              "value": false
+            },
+            "severity": "BLOCKING",
+            "createdAt": "2026-10-01T10:35:04.035Z"
+          }
+        ]
+      },
+      "related": []
+    },
+    {
+      "approval": {
+        "id": "b66083af-875b-44d8-8011-0cd41fec7362",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "kind": "REVIEW_CONFLICT",
+        "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+        "relatedDecisionIds": [],
+        "conflictId": "2e59f6f3-1992-47be-a3c4-607c36b792f7",
+        "payload": {
+          "policies": [
+            "low_authority_evidence",
+            "public_safety_review"
+          ],
+          "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6"
+        },
+        "reason": "Evidence challenges \"The 100-year flood on the east bank stays below 2.4 m\" behind EMR-003: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "requestedByType": "system",
+        "requestedByLabel": "trigger-engine",
+        "agentSessionId": null,
+        "status": "PENDING",
+        "resolvedBy": null,
+        "resolvedByLabel": null,
+        "resolvedAt": null,
+        "resolutionNote": null,
+        "createdAt": "2026-10-01T10:35:04.961Z"
+      },
+      "decision": {
+        "id": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "projectId": "ec9d9f61-c788-4780-9e59-922b519b8381",
+        "title": "Route the Eastbank evacuation over the Mill Street bridge",
+        "problemStatement": null,
+        "reasoning": "The fastest route out of Eastbank, and the bridge deck is clear of the 100-year flood.",
+        "status": "AT_RISK",
+        "memoryIndexStatus": "INDEXED",
+        "memoryIndexError": null,
+        "confidence": 0.7,
+        "importance": 0.9,
+        "riskExplanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "supersededByDecisionId": null,
+        "reopenedAt": null,
+        "closedAt": null,
+        "createdBy": null,
+        "createdInSession": "key:0e1d6423-0b02-4d09-94e2-d08f196ee061",
+        "createdAt": "2026-10-01T10:35:03.905Z",
+        "updatedAt": "2026-10-01T10:35:06.232Z",
+        "domain": "planning",
+        "scope": null,
+        "origin": "HUMAN",
+        "decidedByType": "USER",
+        "decidedByLabel": null,
+        "externalRef": "EMR-003",
+        "tags": [
+          "emergency"
+        ],
+        "metadata": null,
+        "verificationChecks": [],
+        "sourceRefs": [],
+        "validFrom": "2026-10-01T10:35:03.907Z",
+        "reviewedAt": null,
+        "agentSessionId": null,
+        "options": [
+          {
+            "id": "5a7920e1-b9cf-4888-bd4e-3828cf0d035b",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "name": "Mill Street bridge",
+            "description": null,
+            "isChosen": true,
+            "rejectionReason": null,
+            "createdAt": "2026-10-01T10:35:03.915Z"
+          },
+          {
+            "id": "a806f883-eb93-4cd4-a021-508eac4d0781",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "name": "Northern ring road",
+            "description": null,
+            "isChosen": false,
+            "rejectionReason": "Adds eleven minutes; the bridge deck stays clear of a 100-year flood.",
+            "createdAt": "2026-10-01T10:35:03.917Z"
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "dd66d2d0-132a-4e58-ab23-32f11d496a18",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+            "assumptionType": "QUANTITATIVE",
+            "metric": "flood_level_100yr_m",
+            "operator": "<",
+            "value": 2.4,
+            "unit": "m",
+            "validityStatus": "INVALIDATED",
+            "importance": 0.95,
+            "confidence": 0.7,
+            "authorityScore": 0.8,
+            "validFrom": "2026-10-01T10:35:03.918Z",
+            "validUntil": null,
+            "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+            "challengedAt": "2026-10-01T10:35:04.961Z",
+            "invalidatedAt": "2026-10-01T10:35:06.232Z",
+            "createdAt": "2026-10-01T10:35:03.920Z",
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "operatorV2": "<",
+            "expected": 2.4,
+            "verificationPolicy": "DETERMINISTIC_FIRST",
+            "provenance": null,
+            "lastEvaluatedAt": "2026-10-01T10:35:06.232Z"
+          }
+        ],
+        "resources": [
+          {
+            "id": "fa0c3ec9-5b73-4252-b4f6-f62569944377",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "resourceType": "route",
+            "resourceKey": "mill_street_bridge",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.922Z"
+          },
+          {
+            "id": "248af635-2166-4365-8051-09a1a4572296",
+            "decisionId": "fa244723-19a2-4736-a22a-6ee9b9dcd790",
+            "resourceType": "zone",
+            "resourceKey": "east_bank",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.925Z"
+          }
+        ],
+        "constraints": []
+      },
+      "related": []
+    },
+    {
+      "approval": {
+        "id": "5ffd31f2-ccdf-4000-b70e-c5e27899f9c3",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "kind": "REVIEW_CONFLICT",
+        "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+        "relatedDecisionIds": [],
+        "conflictId": "70660e7f-cf39-407f-85d9-c3098f3f9d8e",
+        "payload": {
+          "policies": [
+            "low_authority_evidence",
+            "public_safety_review"
+          ],
+          "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6"
+        },
+        "reason": "Evidence challenges \"The 100-year flood on the east bank stays below 2.4 m\" behind HLT-006: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "requestedByType": "system",
+        "requestedByLabel": "trigger-engine",
+        "agentSessionId": null,
+        "status": "PENDING",
+        "resolvedBy": null,
+        "resolvedByLabel": null,
+        "resolvedAt": null,
+        "resolutionNote": null,
+        "createdAt": "2026-10-01T10:35:04.904Z"
+      },
+      "decision": {
+        "id": "aa55e474-8da6-418f-a236-1193644f91a5",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "projectId": "ec9d9f61-c788-4780-9e59-922b519b8381",
+        "title": "Keep Riverton General's backup generators on the ground floor",
+        "problemStatement": null,
+        "reasoning": "The ground floor is above the 100-year flood level, so relocating the generators was not justified.",
+        "status": "AT_RISK",
+        "memoryIndexStatus": "INDEXED",
+        "memoryIndexError": null,
+        "confidence": 0.7,
+        "importance": 0.95,
+        "riskExplanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "supersededByDecisionId": null,
+        "reopenedAt": null,
+        "closedAt": null,
+        "createdBy": null,
+        "createdInSession": "key:0e1d6423-0b02-4d09-94e2-d08f196ee061",
+        "createdAt": "2026-10-01T10:35:03.809Z",
+        "updatedAt": "2026-10-01T10:35:06.193Z",
+        "domain": "planning",
+        "scope": null,
+        "origin": "HUMAN",
+        "decidedByType": "USER",
+        "decidedByLabel": null,
+        "externalRef": "HLT-006",
+        "tags": [
+          "health"
+        ],
+        "metadata": null,
+        "verificationChecks": [],
+        "sourceRefs": [],
+        "validFrom": "2026-10-01T10:35:03.811Z",
+        "reviewedAt": null,
+        "agentSessionId": null,
+        "options": [
+          {
+            "id": "4e7acb83-9a89-4fcf-bf91-1b49d3e05ca9",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "name": "Ground-floor generator hall",
+            "description": null,
+            "isChosen": true,
+            "rejectionReason": null,
+            "createdAt": "2026-10-01T10:35:03.816Z"
+          },
+          {
+            "id": "caaaaaf4-30be-47e8-91ba-2a7f7ff553ce",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "name": "Move generators to the roof",
+            "description": null,
+            "isChosen": false,
+            "rejectionReason": "Structural work for a risk the flood study said we do not have.",
+            "createdAt": "2026-10-01T10:35:03.819Z"
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "7434bb95-d4d6-45f7-a4de-ce306ccf86fb",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+            "assumptionType": "QUANTITATIVE",
+            "metric": "flood_level_100yr_m",
+            "operator": "<",
+            "value": 2.4,
+            "unit": "m",
+            "validityStatus": "INVALIDATED",
+            "importance": 0.95,
+            "confidence": 0.7,
+            "authorityScore": 0.8,
+            "validFrom": "2026-10-01T10:35:03.820Z",
+            "validUntil": null,
+            "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+            "challengedAt": "2026-10-01T10:35:04.904Z",
+            "invalidatedAt": "2026-10-01T10:35:06.193Z",
+            "createdAt": "2026-10-01T10:35:03.821Z",
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "operatorV2": "<",
+            "expected": 2.4,
+            "verificationPolicy": "DETERMINISTIC_FIRST",
+            "provenance": null,
+            "lastEvaluatedAt": "2026-10-01T10:35:06.193Z"
+          }
+        ],
+        "resources": [
+          {
+            "id": "49ecfbb9-e2a0-4269-85c2-ba68d66d7aa2",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "resourceType": "facility",
+            "resourceKey": "riverton_general",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.824Z"
+          },
+          {
+            "id": "c9e36d55-d6b4-4960-bc44-d087b85728d5",
+            "decisionId": "aa55e474-8da6-418f-a236-1193644f91a5",
+            "resourceType": "zone",
+            "resourceKey": "east_bank",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.826Z"
+          }
+        ],
+        "constraints": []
+      },
+      "related": []
+    },
+    {
+      "approval": {
+        "id": "d64401b3-dcc3-41b4-8960-785eb1d56254",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "kind": "REVIEW_CONFLICT",
+        "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+        "relatedDecisionIds": [],
+        "conflictId": "1244d230-6257-4b16-9204-3cb626af3025",
+        "payload": {
+          "policies": [
+            "low_authority_evidence",
+            "public_safety_review"
+          ],
+          "eventId": "08957e3a-6014-4e1b-8dcf-d1a1e2be93d6"
+        },
+        "reason": "Evidence challenges \"The 100-year flood on the east bank stays below 2.4 m\" behind PLN-014: Observed river:east_bank.flood_level_100yr_m = 2.9 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "requestedByType": "system",
+        "requestedByLabel": "trigger-engine",
+        "agentSessionId": null,
+        "status": "PENDING",
+        "resolvedBy": null,
+        "resolvedByLabel": null,
+        "resolvedAt": null,
+        "resolutionNote": null,
+        "createdAt": "2026-10-01T10:35:04.841Z"
+      },
+      "decision": {
+        "id": "64364286-60e1-4311-b852-478ddb8a864a",
+        "tenantId": "deb3d193-10c7-4641-a973-8c5cc535e326",
+        "projectId": "ec9d9f61-c788-4780-9e59-922b519b8381",
+        "title": "Build the new Eastbank primary school on the river terrace",
+        "problemStatement": "Eastbank needs a primary school for 420 pupils within walking distance.",
+        "reasoning": "The terrace sits above the 100-year flood level and within walking distance of 80% of families.",
+        "status": "AT_RISK",
+        "memoryIndexStatus": "INDEXED",
+        "memoryIndexError": null,
+        "confidence": 0.7,
+        "importance": 0.9,
+        "riskExplanation": "Observed river:east_bank.flood_level_100yr_m = 3.1 m, which violates \"< 2.4 m\" behind \"The 100-year flood on the east bank stays below 2.4 m\". Checked deterministically.",
+        "supersededByDecisionId": null,
+        "reopenedAt": null,
+        "closedAt": null,
+        "createdBy": null,
+        "createdInSession": "key:0e1d6423-0b02-4d09-94e2-d08f196ee061",
+        "createdAt": "2026-10-01T10:35:03.515Z",
+        "updatedAt": "2026-10-01T10:35:06.158Z",
+        "domain": "planning",
+        "scope": null,
+        "origin": "HUMAN",
+        "decidedByType": "USER",
+        "decidedByLabel": null,
+        "externalRef": "PLN-014",
+        "tags": [
+          "education"
+        ],
+        "metadata": null,
+        "verificationChecks": [],
+        "sourceRefs": [],
+        "validFrom": "2026-10-01T10:35:03.518Z",
+        "reviewedAt": null,
+        "agentSessionId": null,
+        "options": [
+          {
+            "id": "539e8c07-2b17-44c9-b7df-90af65842747",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "name": "River terrace site",
+            "description": null,
+            "isChosen": true,
+            "rejectionReason": null,
+            "createdAt": "2026-10-01T10:35:03.529Z"
+          },
+          {
+            "id": "b739e1ac-d633-4bc2-a228-0bddbfe26bf8",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "name": "Hilltop site on Carter Road",
+            "description": null,
+            "isChosen": false,
+            "rejectionReason": "Twenty-five minutes' walk for most families; the terrace is safe from flooding.",
+            "createdAt": "2026-10-01T10:35:03.537Z"
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "6f7e68af-39c6-443b-8668-366693a4857f",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "statement": "The 100-year flood on the east bank stays below 2.4 m",
+            "normalizedStatement": "river:east_bank.flood_level_100yr_m < 2.4 m",
+            "assumptionType": "QUANTITATIVE",
+            "metric": "flood_level_100yr_m",
+            "operator": "<",
+            "value": 2.4,
+            "unit": "m",
+            "validityStatus": "INVALIDATED",
+            "importance": 0.95,
+            "confidence": 0.7,
+            "authorityScore": 0.8,
+            "validFrom": "2026-10-01T10:35:03.539Z",
+            "validUntil": null,
+            "invalidatedByEvidenceId": "ecfb36a0-d300-43a8-95fd-002f19426035",
+            "challengedAt": "2026-10-01T10:35:04.841Z",
+            "invalidatedAt": "2026-10-01T10:35:06.158Z",
+            "createdAt": "2026-10-01T10:35:03.541Z",
+            "subject": "river:east_bank",
+            "predicate": "flood_level_100yr_m",
+            "valueType": "NUMBER",
+            "operatorV2": "<",
+            "expected": 2.4,
+            "verificationPolicy": "DETERMINISTIC_FIRST",
+            "provenance": null,
+            "lastEvaluatedAt": "2026-10-01T10:35:06.158Z"
+          }
+        ],
+        "resources": [
+          {
+            "id": "00ab059d-51f3-48b0-87bd-ccf7c7e4dec7",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "resourceType": "zone",
+            "resourceKey": "east_bank",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.546Z"
+          },
+          {
+            "id": "5ef09440-13db-479e-9fa9-234429bcd722",
+            "decisionId": "64364286-60e1-4311-b852-478ddb8a864a",
+            "resourceType": "site",
+            "resourceKey": "river_terrace",
+            "repository": null,
+            "relationship": "AFFECTS",
+            "createdAt": "2026-10-01T10:35:03.558Z"
+          }
+        ],
+        "constraints": []
+      },
+      "related": []
+    }
+  ]
+}

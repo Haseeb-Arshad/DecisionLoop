@@ -65,3 +65,5 @@ evals/reports/
 /video-v2/**/renders/
 /video-v2/**/*.test.mp4
 /video-v2/hyperframes/test.mp4
+/video-v2/film/public/clips/
+/video-v2/film/public/audio/

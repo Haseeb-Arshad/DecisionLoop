@@ -1,0 +1,11 @@
+{
+  "name": "hyperframes",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.8.98 preview",
+    "check": "npx --yes hyperframes@0.8.98 check",
+    "render": "npx --yes hyperframes@0.8.98 render -c compositions/opening.html -o renders/opening.mp4 && npx --yes hyperframes@0.8.98 render -c compositions/rise.html -o renders/rise.mp4 && npx --yes hyperframes@0.8.98 render -c compositions/closing.html -o renders/closing.mp4",
+    "publish": "npx --yes hyperframes@0.8.98 publish"
+  }
+}

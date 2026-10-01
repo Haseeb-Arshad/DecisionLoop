@@ -1,0 +1,54 @@
+/* Shared look for every scene: the product's own palette and system type. */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html,
+body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #ffffff;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: #0a0a0a;
+}
+#root {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+}
+.clip {
+  position: absolute;
+  inset: 0;
+}
+#stage svg {
+  position: absolute;
+  inset: 0;
+}
+.caption {
+  inset: auto;
+  left: 140px;
+  top: 120px;
+  width: 1100px;
+  font-size: 62px;
+  line-height: 1.12;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.caption .line {
+  display: block;
+}
+.caption .accent {
+  color: #1d4ed8;
+}
+.caption .risk {
+  color: #b42318;
+}
+.footnote {
+  inset: auto;
+  left: 140px;
+  bottom: 48px;
+  font-size: 20px;
+  color: #8c8c8c;
+}

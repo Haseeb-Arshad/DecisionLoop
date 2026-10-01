@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <link rel="stylesheet" href="shared/film.css" />
+    <style>
+      .kicker {
+        inset: auto;
+        left: 140px;
+        top: 96px;
+        font-size: 30px;
+        color: #8c8c8c;
+      }
+      .row {
+        inset: auto;
+        left: 140px;
+        width: 1640px;
+        height: 200px;
+      }
+      .row .domain {
+        position: absolute;
+        left: 0;
+        top: 18px;
+        font-size: 20px;
+        color: #8c8c8c;
+      }
+      .row .decision {
+        position: absolute;
+        left: 0;
+        top: 44px;
+        font-size: 34px;
+        font-weight: 600;
+      }
+      .row .assumes {
+        position: absolute;
+        left: 0;
+        top: 98px;
+        font-size: 22px;
+        color: #1d4ed8;
+      }
+      .row .threshold {
+        position: absolute;
+        left: 0;
+        top: 138px;
+        width: 1360px;
+        border-top: 3px dashed #1d4ed8;
+        transform-origin: 0 50%;
+      }
+      .row .reality {
+        position: absolute;
+        left: 980px;
+        top: 150px;
+        width: 380px;
+        font-size: 22px;
+        color: #b42318;
+      }
+      .row .marker {
+        position: absolute;
+        left: 950px;
+        top: 150px;
+        width: 14px;
+        height: 14px;
+        background: #d92d20;
+      }
+      .row .trace {
+        position: absolute;
+        left: 956px;
+        top: 112px;
+        width: 2px;
+        height: 96px;
+        background: #d92d20;
+        transform-origin: 50% 100%;
+      }
+      .row .status {
+        position: absolute;
+        right: 0;
+        top: 124px;
+        font-size: 24px;
+        font-weight: 600;
+        color: #b42318;
+      }
+      .row .status::before {
+        content: "";
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        margin-right: 10px;
+        background: #d92d20;
+      }
+      .title {
+        inset: auto;
+        left: 0;
+        right: 0;
+        top: 330px;
+        text-align: center;
+      }
+      .title .name {
+        font-size: 104px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+      .title .line1 {
+        margin-top: 18px;
+        font-size: 44px;
+        font-weight: 600;
+      }
+      .title .line2 {
+        margin-top: 36px;
+        font-size: 28px;
+        color: #4d4d4d;
+      }
+      .title .rule {
+        width: 520px;
+        margin: 40px auto 0;
+        border-top: 3px dashed #1d4ed8;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Scene 7, "Any line, anywhere": the same loop under three unrelated decisions, then the title. -->
+    <div id="root" data-composition-id="closing" data-start="0" data-duration="11" data-width="1920" data-height="1080">
+      <p id="kicker" class="kicker clip" data-start="0" data-duration="11" data-track-index="0">The same line runs under every kind of decision.</p>
+
+      <div id="row-software" class="row clip" style="top: 190px" data-start="0" data-duration="11" data-track-index="1">
+        <div class="domain">Software</div>
+        <div class="decision">Keep user sessions on the server</div>
+        <div class="assumes">Assumes: customers need instant sign-out</div>
+        <div class="threshold"></div>
+        <div class="trace"></div><div class="marker"></div>
+        <div class="reality">Security review: no longer required</div>
+        <div class="status">At risk</div>
+      </div>
+      <div id="row-supply" class="row clip" style="top: 430px" data-start="0" data-duration="11" data-track-index="2">
+        <div class="domain">Supply</div>
+        <div class="decision">Ship everything through the northern strait</div>
+        <div class="assumes">Assumes: transit stays under 12 days</div>
+        <div class="threshold"></div>
+        <div class="trace"></div><div class="marker"></div>
+        <div class="reality">Strait closed: 31 days</div>
+        <div class="status">At risk</div>
+      </div>
+      <div id="row-space" class="row clip" style="top: 670px" data-start="0" data-duration="11" data-track-index="3">
+        <div class="domain">Space</div>
+        <div class="decision">Build the mission around one spectrometer</div>
+        <div class="assumes">Assumes: the sensor lasts ten years</div>
+        <div class="threshold"></div>
+        <div class="trace"></div><div class="marker"></div>
+        <div class="reality">Telemetry: degrading in year six</div>
+        <div class="status">At risk</div>
+      </div>
+
+      <div id="title" class="title clip" data-start="0" data-duration="11" data-track-index="4">
+        <div class="name">DecisionLoop</div>
+        <div class="line1">Decisions, with their reasons, checked against reality.</div>
+        <div class="rule"></div>
+        <div class="line2">Open source · github.com/Haseeb-Arshad/DecisionLoop</div>
+      </div>
+      <p id="footnote" class="footnote clip" data-start="0" data-duration="11" data-track-index="5">Riverton and every example here are fictional.</p>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const rows = ["#row-software", "#row-supply", "#row-space"];
+      gsap.set("#kicker", { opacity: 0, y: 12 });
+      gsap.set(rows.map((r) => `${r} .domain, ${r} .decision, ${r} .assumes`).join(","), { opacity: 0, y: 12 });
+      gsap.set(rows.map((r) => `${r} .threshold`).join(","), { scaleX: 0 });
+      gsap.set(rows.map((r) => `${r} .marker`).join(","), { y: 44, opacity: 0 });
+      gsap.set(rows.map((r) => `${r} .trace`).join(","), { scaleY: 0 });
+      gsap.set(rows.map((r) => `${r} .reality, ${r} .status`).join(","), { opacity: 0 });
+      gsap.set("#title", { opacity: 0 });
+      gsap.set("#title > *", { opacity: 0, y: 16 });
+      gsap.set(".title .rule", { scaleX: 0 });
+      gsap.set("#footnote", { opacity: 0 });
+
+      const tl = gsap.timeline({ paused: true, defaults: { ease: "power2.out" } });
+      tl.to("#kicker", { opacity: 1, y: 0, duration: 0.6 }, 0.1);
+      rows.forEach((r, i) => {
+        const t = 0.35 + i * 0.75;
+        tl.to(`${r} .domain, ${r} .decision, ${r} .assumes`, { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 }, t)
+          .to(`${r} .threshold`, { scaleX: 1, duration: 0.9, ease: "power3.inOut" }, t + 0.1)
+          // Reality rises through the line; the line turns red when it crosses.
+          .to(`${r} .marker`, { opacity: 1, duration: 0.2 }, t + 1.1)
+          .to(`${r} .marker`, { y: -40, duration: 0.8, ease: "power2.inOut" }, t + 1.1)
+          .to(`${r} .trace`, { scaleY: 1, duration: 0.8, ease: "power2.inOut" }, t + 1.1)
+          .to(`${r} .threshold`, { borderTopColor: "#d92d20", duration: 0.2 }, t + 1.5)
+          .to(`${r} .assumes`, { color: "#b42318", duration: 0.2 }, t + 1.5)
+          .to(`${r} .reality`, { opacity: 1, duration: 0.4 }, t + 1.6)
+          .to(`${r} .status`, { opacity: 1, duration: 0.4 }, t + 1.8);
+      });
+      tl.to([...rows, "#kicker"], { opacity: 0, duration: 0.7, ease: "power2.in" }, 5.4)
+        .to("#title", { opacity: 1, duration: 0.01 }, 6.0)
+        .to("#title .name", { opacity: 1, y: 0, duration: 0.7 }, 6.1)
+        .to("#title .line1", { opacity: 1, y: 0, duration: 0.7 }, 6.6)
+        .to("#title .rule", { opacity: 1, y: 0, scaleX: 1, duration: 0.9, ease: "power3.inOut" }, 7.1)
+        .to("#title .line2", { opacity: 1, y: 0, duration: 0.6 }, 7.7)
+        .to("#footnote", { opacity: 1, duration: 0.6 }, 8.0)
+        .set({}, {}, 11);
+      window.__timelines["closing"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

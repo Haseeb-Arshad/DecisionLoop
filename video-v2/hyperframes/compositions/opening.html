@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="shared/river.js"></script>
+    <link rel="stylesheet" href="shared/film.css" />
+  </head>
+  <body>
+    <!-- Scene 1, "The line": the river, the town on its terrace, and the 2.4 m mark everything rests on. -->
+    <div id="root" data-composition-id="opening" data-start="0" data-duration="10" data-width="1920" data-height="1080">
+      <div id="stage" class="clip" data-start="0" data-duration="10" data-track-index="0"></div>
+      <h1 id="caption" class="caption clip" data-start="0" data-duration="10" data-track-index="1">
+        <span class="line">Every decision rests on</span>
+        <span class="line">something believed to be true.</span>
+      </h1>
+      <p id="footnote" class="footnote clip" data-start="0" data-duration="10" data-track-index="2">Riverton is a fictional city.</p>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const river = window.buildRiver(document.getElementById("stage"));
+      const level = { m: 0 };
+      river.setLevel(0.001);
+
+      const len = (node) => node.getTotalLength();
+      const terrainLen = len(river.terrain);
+      gsap.set(river.terrain, { strokeDasharray: terrainLen, strokeDashoffset: terrainLen });
+      gsap.set(river.wall, { strokeDasharray: 300, strokeDashoffset: 300 });
+      gsap.set([river.ground, river.water, river.waterLine, river.bridge, river.gauge], { opacity: 0 });
+      gsap.set(".building", { opacity: 0, y: 14 });
+      const markLine = river.mark24.group.querySelector(".mark-line");
+      gsap.set(markLine, { scaleX: 0, transformOrigin: "100% 50%", transformBox: "fill-box" });
+      gsap.set(river.mark24.text, { opacity: 0 });
+      gsap.set("#caption .line", { opacity: 0, y: 18 });
+      gsap.set(".footnote", { opacity: 0 });
+
+      const tl = gsap.timeline({ paused: true, defaults: { ease: "power2.out" } });
+      tl.to(river.terrain, { strokeDashoffset: 0, duration: 1.8, ease: "power2.inOut" }, 0)
+        .to(river.wall, { strokeDashoffset: 0, duration: 0.8 }, 1.0)
+        .to(river.ground, { opacity: 1, duration: 0.8 }, 1.2)
+        .to([river.water, river.waterLine], { opacity: 1, duration: 0.3 }, 1.4)
+        .to(level, { m: 1.2, duration: 1.6, ease: "power1.out", onUpdate: () => river.setLevel(level.m) }, 1.4)
+        .to(river.bridge, { opacity: 1, duration: 0.6 }, 2.6)
+        .to(".building", { opacity: 1, y: 0, duration: 0.6, stagger: 0.18 }, 2.8)
+        .to(river.gauge, { opacity: 1, duration: 0.5 }, 3.6)
+        .to(markLine, { scaleX: 1, duration: 1.2, ease: "power3.inOut" }, 4.2)
+        .to(river.mark24.text, { opacity: 1, duration: 0.5 }, 5.2)
+        .to("#caption .line", { opacity: 1, y: 0, duration: 0.8, stagger: 0.35 }, 6.0)
+        .to(".footnote", { opacity: 1, duration: 0.6 }, 6.4)
+        // A slow swell keeps the water alive without distracting from the mark.
+        .to(level, { m: 1.28, duration: 1.8, ease: "sine.inOut", yoyo: true, repeat: 2, onUpdate: () => river.setLevel(level.m) }, 3.0)
+        .set({}, {}, 10);
+      window.__timelines["opening"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

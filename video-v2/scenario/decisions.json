@@ -1,0 +1,62 @@
+[
+  {
+    "externalRef": "PLN-014",
+    "title": "Build the new Eastbank primary school on the river terrace",
+    "domain": "planning",
+    "problem": "Eastbank needs a primary school for 420 pupils within walking distance.",
+    "chosenOption": { "name": "River terrace site" },
+    "alternatives": [{ "name": "Hilltop site on Carter Road", "rejectionReason": "Twenty-five minutes' walk for most families; the terrace is safe from flooding." }],
+    "rationale": "The terrace sits above the 100-year flood level and within walking distance of 80% of families.",
+    "assumptions": [
+      { "statement": "The 100-year flood on the east bank stays below 2.4 m", "subject": "river:east_bank", "predicate": "flood_level_100yr_m", "valueType": "NUMBER", "operator": "<", "expected": 2.4, "unit": "m", "importance": 0.95, "authority": 0.8 }
+    ],
+    "resources": ["zone:east_bank", "site:river_terrace"],
+    "importance": 0.9,
+    "tags": ["education"]
+  },
+  {
+    "externalRef": "HLT-006",
+    "title": "Keep Riverton General's backup generators on the ground floor",
+    "domain": "planning",
+    "chosenOption": { "name": "Ground-floor generator hall" },
+    "alternatives": [{ "name": "Move generators to the roof", "rejectionReason": "Structural work for a risk the flood study said we do not have." }],
+    "rationale": "The ground floor is above the 100-year flood level, so relocating the generators was not justified.",
+    "assumptions": [
+      { "statement": "The 100-year flood on the east bank stays below 2.4 m", "subject": "river:east_bank", "predicate": "flood_level_100yr_m", "valueType": "NUMBER", "operator": "<", "expected": 2.4, "unit": "m", "importance": 0.95, "authority": 0.8 }
+    ],
+    "resources": ["facility:riverton_general", "zone:east_bank"],
+    "importance": 0.95,
+    "tags": ["health"]
+  },
+  {
+    "externalRef": "EMR-003",
+    "title": "Route the Eastbank evacuation over the Mill Street bridge",
+    "domain": "planning",
+    "chosenOption": { "name": "Mill Street bridge" },
+    "alternatives": [{ "name": "Northern ring road", "rejectionReason": "Adds eleven minutes; the bridge deck stays clear of a 100-year flood." }],
+    "rationale": "The fastest route out of Eastbank, and the bridge deck is clear of the 100-year flood.",
+    "assumptions": [
+      { "statement": "The 100-year flood on the east bank stays below 2.4 m", "subject": "river:east_bank", "predicate": "flood_level_100yr_m", "valueType": "NUMBER", "operator": "<", "expected": 2.4, "unit": "m", "importance": 0.95, "authority": 0.8 }
+    ],
+    "resources": ["route:mill_street_bridge", "zone:east_bank"],
+    "importance": 0.9,
+    "tags": ["emergency"]
+  },
+  {
+    "externalRef": "PLN-021",
+    "title": "Approve homes on the east bank without an individual flood review",
+    "domain": "planning",
+    "chosenOption": { "name": "Standard permits, no flood review" },
+    "alternatives": [{ "name": "Flood review for every permit", "rejectionReason": "Adds months to every application for a risk below the design level." }],
+    "rationale": "Every east-bank plot sits above the 100-year flood level.",
+    "assumptions": [
+      { "statement": "The 100-year flood on the east bank stays below 2.4 m", "subject": "river:east_bank", "predicate": "flood_level_100yr_m", "valueType": "NUMBER", "operator": "<", "expected": 2.4, "unit": "m", "importance": 0.95, "authority": 0.8 }
+    ],
+    "constraints": [
+      { "statement": "Care homes, schools and hospitals on the east bank need a flood review", "severity": "BLOCKING", "rule": { "kind": "fact_bound", "predicate": "vulnerable_use", "operator": "=", "value": false } }
+    ],
+    "resources": ["zone:east_bank"],
+    "importance": 0.85,
+    "tags": ["permits"]
+  }
+]
