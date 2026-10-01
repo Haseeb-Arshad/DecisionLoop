@@ -15,6 +15,19 @@ governs `src/auth/`?"* and a support agent asking *"what governs this refund?"* 
 
 [Quick start](#quick-start) · [One engine, any domain](#one-engine-any-domain) · [Connect an agent](#connect-an-agent) · [Domains guide](docs/v2/domains.md) · [Deployment](docs/deployment.md)
 
+### The film: *The line on the wall* (1 min 43 s)
+
+A city builds a school, keeps a hospital's generators on the ground floor and plans its evacuation route, all on
+one assumption about a river's 100-year flood. Years later a national study says the assumption is wrong.
+DecisionLoop finds every decision that relied on it, weighs the source, flags them for a person, and tells the
+permit agent to stop before it approves a care home on the flood plain.
+
+[![The line on the wall: watch the film](public/demo/the-line-on-the-wall.png)](public/demo/the-line-on-the-wall.mp4)
+
+**[▶ Watch the film](public/demo/the-line-on-the-wall.mp4)** (with sound and [captions](public/demo/the-line-on-the-wall.vtt)) ·
+[720p](public/demo/the-line-on-the-wall-720p.mp4) · [how it was made](video-v2/README.md).
+The city is fictional; every value on screen came from the real engine running that scenario.
+
 ![Overview: decisions, what needs attention, and what agents were told](docs/media/overview.png)
 
 ## What it does

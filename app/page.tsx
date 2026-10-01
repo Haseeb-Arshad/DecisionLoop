@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HeroLoop } from "@/components/HeroLoop";
 
 const REPO = "https://github.com/Haseeb-Arshad/DecisionLoop";
 
@@ -38,19 +39,15 @@ export default function LandingPage() {
           </a>
         </div>
 
-        <div className="landing-record" aria-label="Example decision">
-          <p className="record-reference">SUP-007 / support policy</p>
-          <h2 className="mt-1 text-base">Auto-approve refunds up to $200</h2>
-          <dl className="kv mt-3">
-            <dt>Why</dt>
-            <dd>Consumer chargebacks are rare, so small refunds are cheaper to grant than to review.</dd>
-            <dt>Rejected</dt>
-            <dd>Escalating every refund to a person: resolution time tripled.</dd>
-            <dt>Assumes</dt>
-            <dd>Consumer chargeback rate stays under 0.5%.</dd>
-            <dt>Evidence</dt>
-            <dd className="text-risk-600">Finance reports 1.2% for September. The decision is marked at risk.</dd>
-          </dl>
+        <div className="mt-8">
+          <HeroLoop
+            src="/demo/the-line-on-the-wall-loop.mp4"
+            poster="/demo/the-line-on-the-wall.png"
+            label="A flood study invalidates the assumption behind four decisions; DecisionLoop flags them and tells an agent to stop. 25-second silent loop."
+          />
+          <p className="landing-demo-note">
+            A fictional city. The screens are the real product. <a className="underline" href="#film">Watch the full film</a>.
+          </p>
         </div>
       </section>
 
@@ -67,17 +64,24 @@ export default function LandingPage() {
         ))}
       </section>
 
-      <section className="landing-demo" aria-labelledby="demo-title">
+      <section id="film" className="landing-demo" aria-labelledby="demo-title">
         <div className="landing-demo-copy">
-          <h2 id="demo-title">Demo film</h2>
-          <p>One decision carried across several agent sessions, then reviewed when evidence changed. 36 seconds.</p>
+          <h2 id="demo-title">The line on the wall</h2>
+          <p>
+            A city decides where to build a school, where to keep a hospital&apos;s generators and how to evacuate, all on one assumption about a
+            river. Years later the assumption stops being true. 1 min 43 s, with sound and captions.
+          </p>
         </div>
-        <video className="landing-video" controls preload="none" playsInline poster="/demo/poster.png" aria-label="DecisionLoop demonstration, 36 seconds">
-          <source src="/demo/decisionloop.mp4" type="video/mp4" />
-          <track kind="captions" src="/demo/decisionloop.vtt" srcLang="en" label="English" />
-          Your browser does not support embedded video. <a href="/demo/decisionloop.mp4">Download the demo.</a>
+        <video className="landing-video" controls preload="none" playsInline poster="/demo/the-line-on-the-wall.png" aria-label="The line on the wall: DecisionLoop explained, 1 minute 43 seconds">
+          <source src="/demo/the-line-on-the-wall.mp4" type="video/mp4" />
+          <track kind="captions" src="/demo/the-line-on-the-wall.vtt" srcLang="en" label="English" default />
+          Your browser does not support embedded video. <a href="/demo/the-line-on-the-wall.mp4">Download the film.</a>
         </video>
-        <p className="landing-demo-note">Synthetic demonstration data.</p>
+        <p className="landing-demo-note">
+          Riverton is fictional; every value on screen comes from the real engine running that scenario.{" "}
+          <a className="underline" href="/demo/the-line-on-the-wall-720p.mp4">720p version</a> ·{" "}
+          <a className="underline" href="/demo/decisionloop.mp4">the earlier 36-second film</a>
+        </p>
       </section>
 
       <footer className="landing-footer">
