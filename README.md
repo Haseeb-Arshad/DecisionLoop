@@ -12,7 +12,7 @@ on it is flagged **at risk** for a person to review, and an agent that asks befo
 
 [![The Line on the Wall: a 1 minute 43 second film about DecisionLoop. Click to watch with sound.](docs/media/the-line-on-the-wall.gif)](https://cdn.jsdelivr.net/gh/Haseeb-Arshad/DecisionLoop@main/public/demo/the-line-on-the-wall.mp4)
 
-**[▶ Watch the film](https://cdn.jsdelivr.net/gh/Haseeb-Arshad/DecisionLoop@main/public/demo/the-line-on-the-wall.mp4)**
+**[Watch the film](https://cdn.jsdelivr.net/gh/Haseeb-Arshad/DecisionLoop@main/public/demo/the-line-on-the-wall.mp4)**
 (1 min 43 s, with sound) ·
 [smaller 720p version](https://cdn.jsdelivr.net/gh/Haseeb-Arshad/DecisionLoop@main/public/demo/the-line-on-the-wall-720p.mp4) ·
 [captions](public/demo/the-line-on-the-wall.vtt) ·
@@ -43,16 +43,11 @@ engine's own output ([scenario](video-v2/scenario/run.mjs), [raw output](video-v
 | 3 | A national flood study puts the level at **3.1 m**. | 3.1 > 2.4, compared by code. The source's trust is 0.95, enough to **invalidate** the assumption. All four decisions are **at risk**, now explained by the study, each with a review waiting for a person. |
 | 4 | The permit agent is about to approve a 60-bed care home on the east bank. It asks first. | **Stop**: a blocking rule requires a flood review for care homes, and the four decisions behind the area rest on an invalidated assumption. |
 
-<table>
-  <tr>
-    <td width="50%"><img src="docs/media/riverton-needs-attention.png" alt="Needs attention: four Riverton decisions at risk, each explained by the 3.1 m observation"></td>
-    <td width="50%"><img src="docs/media/riverton-check.png" alt="An action check for the care-home permit returning Stop"></td>
-  </tr>
-  <tr>
-    <td>Four decisions flagged, with the evidence that flagged them.</td>
-    <td>The agent's question and the answer it received.</td>
-  </tr>
-</table>
+![Needs attention: four Riverton decisions at risk, each explained by the 3.1 m observation](docs/media/riverton-needs-attention.png)
+<sub>Step 3 in the product: four decisions flagged, each with the evidence that flagged it.</sub>
+
+![The care-home permit checked before approval: Stop](docs/media/riverton-check.png)
+<sub>Step 4: the agent's question and the answer it received. The check is advisory and adds no evidence.</sub>
 
 ## What it does
 
@@ -68,6 +63,7 @@ engine's own output ([scenario](video-v2/scenario/run.mjs), [raw output](video-v
    inspectable.
 
 ![A decision page: what was chosen and rejected, the assumption, the rule that checks it, and the evidence that invalidated it](docs/media/riverton-decision.png)
+<sub>One decision, with what it rejected, the assumption, the rule that checks it, and why it is at risk.</sub>
 
 ## One engine, any domain
 
