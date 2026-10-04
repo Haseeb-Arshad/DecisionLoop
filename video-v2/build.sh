@@ -28,6 +28,8 @@ ffmpeg -v error -y -i renders/film-final.mp4 -vf scale=1280:720:flags=lanczos -c
 npm run loop
 ffmpeg -v error -y -i renders/loop.mp4 -vf scale=1280:720:flags=lanczos -c:v libx264 -crf 26 -preset slow -pix_fmt yuv420p -an -movflags +faststart renders/loop-720p.mp4
 npm run poster
+# The README's inline preview: GitHub plays GIFs but not repository videos.
+ffmpeg -v error -y -i renders/loop.mp4 -vf "fps=15,scale=1280:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=256:stats_mode=diff[p];[b][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle" ../../docs/media/the-line-on-the-wall.gif
 
 cp renders/film-final.mp4 ../../public/demo/the-line-on-the-wall.mp4
 cp renders/film-720p.mp4 ../../public/demo/the-line-on-the-wall-720p.mp4

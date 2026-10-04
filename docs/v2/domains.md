@@ -11,7 +11,7 @@ as it did before domains existed; a test pins the wording agents receive.
 ## Use one
 
 ```bash
-decisionloop init --profile support      # or sales, operations, or a path to your own JSON
+decisionloop init --profile support      # or sales, operations, planning, or a path to your own JSON
 decisionloop serve --web
 ```
 
@@ -26,7 +26,7 @@ decisionloop serve --web
 
 List what is loaded with `decisionloop profiles`; check a file with `decisionloop profiles validate my.json`.
 Shipped templates: [`profiles/support.json`](../../profiles/support.json), [`sales.json`](../../profiles/sales.json),
-[`operations.json`](../../profiles/operations.json).
+[`operations.json`](../../profiles/operations.json), [`planning.json`](../../profiles/planning.json).
 
 Several profiles can be loaded at once; decisions carry their own `domain`, and each profile's source
 authority table and extractors apply to events from its sources. Only the **primary** domain decides the

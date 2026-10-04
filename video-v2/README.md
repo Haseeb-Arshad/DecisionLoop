@@ -15,6 +15,7 @@ Outputs (committed to the app so the landing page needs no video tooling):
 | `public/demo/the-line-on-the-wall-loop.mp4` | A 25 s silent loop for the top of the landing page |
 | `public/demo/the-line-on-the-wall.png` | Poster |
 | `public/demo/the-line-on-the-wall.vtt` | Captions (the on-screen text) |
+| `docs/media/the-line-on-the-wall.gif` | The loop as a 1280 px GIF, for the GitHub README (GitHub does not play videos stored in a repository) |
 
 ## What is real
 
